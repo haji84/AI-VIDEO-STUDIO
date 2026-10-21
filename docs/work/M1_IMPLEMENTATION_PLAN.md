@@ -47,9 +47,9 @@ reviewer. Do not deploy an editor or activate cloud resources.
 - [x] Fix material findings with regression tests.
 - [x] Save current facts, requirement matrix, remaining gates and next task in
       `PROJECT_STATE.md`, `ROADMAP.md`, and `docs/work/WORK_CHECKPOINT.md`.
-- [ ] Create one PR against current main, inspect check/merge state, safely
+- [x] Create one PR against current main, inspect check/merge state, safely
       merge, verify the resulting remote tree and run integration on it.
-- [ ] Select the next unblocked requirement. Physical device tests remain
+- [x] Select the next unblocked requirement. Physical device tests remain
       separate; synthetic success cannot close product acceptance.
 
 ## Review focus

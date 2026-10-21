@@ -7,7 +7,25 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current Work implementation (M1, 2026-10-21)
+## Latest Work implementation (M2, 2026-10-21)
+
+Saved common audio timeline is now connected to local FFmpeg output:
+`python -m engine.render_saved_project --help`. Source/narration/BGM/SFX timing,
+gain/mute, fades, selected-tail loop and duck intervals verified by actual
+decoded synthetic PCM. Empty selection is silent; delayed audio keeps its media
+clock. No narration model, mobile GUI or physical platform acceptance claimed.
+Current total: **121 tests PASS** (89 Node + 19 engine/cloud + 3 audio + 10 legacy).
+Independent review's delayed-stream and un-hashed playlist findings have failing
+regressions and fixes. Evidence: `docs/validation/SAVED_PROJECT_AUDIO_M2_2026-10-21.md`.
+M1 merged as PR #11, main `02a0e2d8200d02d157ab8dc48e1f28b70a1b2ddd`;
+remote source tree matched local tests; post-merge pipeline passed.
+
+F6 connected reference mixing is `TESTED_SYNTHETIC`; device preview/export
+parity and real speech quality remain unverified. Next unblocked work is the
+beginner local editor, then native adapters and real-data gates. Product overall
+remains IN_PROGRESS. No paid/cloud/public-product activation.
+
+## Prior Work implementation (M1, 2026-10-21)
 
 **Product: IN_PROGRESS, not complete.** Portable project/save/reopen and checked
 FFmpeg handoff are `TESTED_SYNTHETIC`. See

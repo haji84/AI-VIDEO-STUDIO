@@ -1,57 +1,60 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21
-Status: IN_PROGRESS / M1 TESTED_SYNTHETIC; integration pending in this change
-mainSHA (base of this change): `64cfb20c86a6abcf445124566ff873e887b27dee`
-Canonical goal: `GOAL.md`; operating rules: `docs/work/AUTONOMOUS_EXECUTION.md`
+Status: IN_PROGRESS; M1 integrated, M2 TESTED_SYNTHETIC awaiting this PR integration
+mainSHA (base of M2): `02a0e2d8200d02d157ab8dc48e1f28b70a1b2ddd`
+Canonical goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 
-## Done in this run
+## Verified progress
 
-- Read main, specs, rules/checkpoint and Issue #10; no open PR at start.
-- Verified all 106 remote blobs and base tree `5369333092704f9a4b20059cdad9d4cc9f6aace3`.
-  Git transport is unavailable; authenticated connector supplies read/write.
-  Local snapshot history is not remote history; use real main as commit parent.
-- Implemented portable project v1, source/time/effect/four-bus definitions,
-  strict validation, 50-step durable history, streaming hash relink, atomic
-  Node save/reload, explicit existing-engine manifest CLI.
-- Saved/reopened/relinked three-camera project -> MP4 -> complete decode,
-  audio FFT, frame/caption pixels and unchanged source hashes passed.
-- Independent review reproduced four material issues; regression fixes protect
-  final/temp/report files, check source hash/audio capabilities at render time,
-  migrate real legacy IDs/profile. Combined history budget also checked.
-- 114 tests pass: 88 Node + 13 engine/cloud + 3 audio + 10 legacy.
-  Commands, versions, fixture hashes and limits:
-  `docs/validation/DURABLE_PROJECT_M1_2026-10-21.md`.
+- M1 PR #11 integrated. Remote main tree b20eba5b16548d714935e359f92c25b4c330023e
+  matched tested local source exactly. Post-merge saved/relinked 3-camera
+  MP4/decode/FFT/frame/caption/source-integrity tests passed (2 cases).
+- M2 connects saved source/narration/BGM/SFX plan to actual local MP4:
+  `python -m engine.render_saved_project --help`.
+- Shared project/history/bindings stay local. Source hash/audio/duration checked.
+  Explicit audio selection, mute/gain, trim/speed/timing, fade, selected-tail
+  loop and saved duck intervals verified with actual decoded synthetic tones.
+- Reviewer found delayed source audio shifting early and un-hashed playlist
+  dependencies. Reproduced both; failing regressions -> fixes -> green tests.
+  Delayed media clocks preserved; standalone local demuxer/protocol allowlist
+  rejects normal/disguised playlists. New workspace/output, exclusive temp and
+  no-clobber installation protect existing media/projects.
+- 121 tests pass: 89 Node + 19 engine/cloud + 3 audio + 10 legacy.
+  M2 real mix:4.02s/960x540, duck ratio0.20013271, sample peak0.17222199.
+  Commands/fixture/output hashes/limits:
+  docs/validation/SAVED_PROJECT_AUDIO_M2_2026-10-21.md.
+- M1 evidence: docs/validation/DURABLE_PROJECT_M1_2026-10-21.md.
 
-## Current integration step
+## Integration step
 
-Review/fix/test complete locally. Create one PR, inspect base/checks, merge
-with expected head only if allowed, verify remote main tree, then re-run
-`python -m unittest engine.test_project_pipeline -v`. Save PR/merge SHA and
-post-merge outcome to Issue #10 and next checkpoint. Remote CI has not run;
-workflow is manual-only and main reports no required checks.
+Create one M2 PR from this source tree, inspect actual current main/check state,
+merge with expected head only, verify remote tree equals local tested tree,
+then run both engine.test_project_pipeline and engine.test_saved_project_audio.
+Record resulting PR/merge SHA and post-merge results in Issue #10 and next
+checkpoint. Remote Actions has not run; workflow manual-only. Never mark
+full product COMPLETE from these Linux synthetic results.
 
-## Next bounded task (continue automatically)
+## Next exact unblocked task
 
-Connect saved `audioClips`/`audioBuses` to local FFmpeg rendering. Consume the
-same validated render plan, preserve chosen original audio, honor four buses
-with timing/gain/mute/fade/loop/ducking. Verify actual decoded distinct tones,
-not only mocks. Unsupported visual effects must still stop explicitly.
-Then add beginner editing UI and native platform adapters.
+Build beginner local desktop editing slice reusing packages/project and
+engine.render_saved_project. Suggested files: apps/local-editor/server.mjs,
+apps/local-editor/index.html plus actual browser/API tests. Bind loopback only;
+protect requests and source access; no remote upload or paid dependency.
+Acceptance: choose actual synthetic file -> trim/split/static caption and
+four-bus controls -> undo/redo -> save/restart/reopen -> render same saved plan
+-> download/replay actual MP4 -> independent full decode/audio checks. Keep
+sources immutable, relink by hash, fail clearly for unsupported effects/sync.
+Then native mobile adapters, persisted Japanese TTS, model/real-data evaluation.
+This next task is NOT blocked on physical device response.
 
-## External gates
+## External gates and limitations
 
-- Latest iPhone browser report: `replay.status=NOT_RUN`, acceptance INCOMPLETE.
-  Retest existing compatibility diagnostic; run exported-MP4 replay, confirm
-  original/caption/audio/Files flags, return anonymized JSON. Native gate separate.
-- No physical iOS/Android/Windows/Mac or authorized real training footage in
-  this Linux runtime. Keep platform DoD BLOCKED/unverified; continue portable work.
-- No paid API/GPU/R2, production publication, credential/payment change,
-  recurring job or other product repository touched.
+Latest short iPhone browser replay NOT_RUN/acceptance INCOMPLETE; obtain only
+anonymized replay JSON when relevant. No physical iOS/Android/Windows/Mac or
+real owned training media in this Linux runtime. Four-platform DoD UNVERIFIED.
+No voice model, novice UI, native app, semantic AI, preview parity or long/4K
+performance claimed. Reference audio cap64; hard-link filesystem install and
+power-loss behavior need native tests. Concurrent writers/crash resume pending.
 
-## Known limitations
-
-Persistent audio/effects exceed this narrow renderer's supported subset;
-unsupported edits stop explicitly. No semantic AI/voice-file/native GUI claim.
-Node save lacks parent-directory fsync and concurrent-writer conflict handling;
-physical power-loss and OS filesystem durability remain unverified.
-No final COMPLETE status or completion percentage is justified. Issue #10 open.
+No new paid service/R2/GPU, credential/payment change, production deployment,
+recurring automation or other product repository was touched. Issue #10 open.
