@@ -43,3 +43,6 @@ jobs:
           Path('/tmp/aivs-device-lab-check.js').write_text(s.group(1), encoding='utf8')
           PYCODE
           node --check /tmp/aivs-device-lab-check.js
+
+      - name: Browser audio-mix diagnostic static checks (not mobile acceptance)
+        run: node --test prototypes/device-lab/audio-mix.test.mjs

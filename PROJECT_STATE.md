@@ -55,3 +55,11 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 - **iPhone Safari selected-video export: NOT_RUN.** Prior physical iPhone result proves only synthetic MP4 creation, not real-source video export.
 - Original audio, narration, BGM/SE, full-duration rendering, native apps and AI semantic editing remain UNVERIFIED/NOT IMPLEMENTED.
 - Device Lab GitHub Pages is test-interface-only, not product distribution. No original media uploaded.
+
+
+## Short local browser audio-mix experiment (2026-10-21)
+
+- Added separate static `prototypes/device-lab/AUDIO_MIX_LAB.html`, not a replacement for the primary device lab and not part of the production editor. It imports a local MP4 and optionally BGM/SE/narration files, routes the chosen original soundtrack and audio files through Web Audio, overlays a caption and exports a short clip as browser MediaRecorder MP4.
+- Linux development **Chromium** test with synthetic 8-second H.264/AAC video and synthetic 440/660/880/990 Hz audio: original-only, music-only and four-bus scenarios passed. Generated MP4 H.264/Opus decoded and audio FFT verified four distinct sources and SE timing. Static tests 11/11 PASS. See `docs/validation/BROWSER_AUDIO_MIX_2026-10-21.md`.
+- **Physical iPhone Safari mixed-audio MP4 export: NOT_RUN.** Browser output used Opus in MP4 on Chromium, and variable frame timestamp warnings were observed. Exact cross-device audio compatibility and A/V timing remain unverified.
+- Japanese AI voice generation, BGM ducking, full-length non-destructive editing and Android/native iOS editor still **NOT COMPLETE**. Commercial/public product and R2 remain off.
