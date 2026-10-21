@@ -21,7 +21,9 @@ Actual synthetic HTTP static4s output -> persisted warning -> restart -> exact
 clip navigation -> explicit manual trim -> new0.812s checked MP4/full decode
 passed; source unchanged. CFR moving negative, true variable PTS positive,
 mid-clip hold and video-only tail regressions pass. Current177 tests PASS (122 Node +42 engine/cloud +3 audio +10 legacy).
-Independent final review APPROVE; no blocking findings. Main integration pending; evidence: `docs/validation/OUTPUT_FREEZE_F8_2026-10-21.md`.
+Independent final review APPROVE; no blocking findings. PR #18 integrated at
+1348c88bd9b482d0b501da918b3561a909aa16f4; source tree4655cea34ebfc5f3ce17e3e8250a5cb00d02816f
+matched tested source. Postmerge29 editor and17 actual output/audio QA tests PASS; evidence: `docs/validation/OUTPUT_FREEZE_F8_2026-10-21.md`.
 F8 remains partial: caption bounds, intelligibility/true peak, causal/source-frame
 checks, bounded repair and real-device acceptance are unfinished.
 
