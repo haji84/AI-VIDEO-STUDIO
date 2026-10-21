@@ -37,6 +37,8 @@ jobs:
           node --test packages/project/*.test.mjs
           python -m unittest engine.test_project_pipeline -v
           python -m unittest engine.test_saved_project_audio -v
+      - name: Local editor API and edit operations (not browser acceptance)
+        run: node --test apps/local-editor/*.test.mjs
       - name: Standalone device lab syntax check (not physical device validation)
         run: |
           python - <<'PYCODE'

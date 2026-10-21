@@ -1,0 +1,54 @@
+/** Actual Chromium acceptance. Missing browser exits BLOCKED; never a fake pass. */
+import {createRequire} from 'node:module';
+import {existsSync} from 'node:fs';
+import {mkdtemp,rm,readFile,writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import assert from 'node:assert/strict';
+import {startServer} from './server.mjs';
+const exec=promisify(execFile);let folder,server,browser;
+try{
+  let playwright;
+  try{playwright=await import('playwright');}
+  catch{if(!process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES)throw new Error('PLAYWRIGHT_PACKAGE_UNAVAILABLE');
+    playwright=createRequire(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/aivs-browser.js')('playwright');}
+  const executablePath=process.env.AIVS_BROWSER_EXECUTABLE||playwright.chromium.executablePath();
+  if(!existsSync(executablePath))throw new Error('BROWSER_EXECUTABLE_UNAVAILABLE');
+  folder=await mkdtemp(join(tmpdir(),'aivs-browser-'));
+  const source=join(folder,'synthetic.mp4');
+  await exec('ffmpeg',['-v','error','-f','lavfi','-i','color=c=red:s=320x180:r=30:d=2',
+    '-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=2','-c:v','libx264','-c:a','aac','-shortest',source]);
+  server=await startServer({workspace:join(folder,'project-data'),port:0});
+  browser=await playwright.chromium.launch({executablePath,headless:true,args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:1280,height:1000}}),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));await page.goto(server.url);
+  await page.locator('#video-files').setInputFiles(source);
+  await page.locator('#clips button').first().waitFor();
+  await page.locator('#duration').fill('1');await page.locator('#caption').fill('SYNTHETIC CAPTION');
+  await page.getByRole('button',{name:'このカットを保存',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み');
+  await page.getByRole('button',{name:'戻す',exact:true}).click();
+  await page.waitForFunction(()=>Number(document.getElementById('duration').value)===2);
+  await page.getByRole('button',{name:'やり直す',exact:true}).click();
+  await page.waitForFunction(()=>Number(document.getElementById('duration').value)===1);
+  const projectDownload=page.waitForEvent('download');await page.getByRole('button',{name:'プロジェクト保存',exact:true}).click();
+  const project=await projectDownload,projectPath=join(folder,'downloaded-project.json');await project.saveAs(projectPath);
+  assert.equal(JSON.parse(await readFile(projectPath,'utf8')).project.timeline[0].durationSec,1);
+  await page.reload();await page.waitForFunction(()=>Number(document.getElementById('duration').value)===1);
+  const music=join(folder,'synthetic-bgm.wav');
+  await exec('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=660:sample_rate=48000:duration=0.4','-c:a','pcm_s16le',music]);
+  await page.locator('#bgm-file').setInputFiles(music);
+  await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み'&&document.getElementById('bgm-file').value==='');
+  await page.getByRole('button',{name:'完成動画を作る',exact:true}).click();
+  await page.locator('#download').waitFor({state:'visible',timeout:60000});
+  const result=await page.evaluate(async()=>{const v=document.getElementById('output');await v.play();const a=v.currentTime;
+    await new Promise(resolve=>setTimeout(resolve,400));return {advanced:v.currentTime>a,width:v.videoWidth};});
+  assert.equal(result.advanced,true);assert.ok(result.width>0);
+  const download=page.waitForEvent('download');await page.locator('#download').click();
+  const file=await download,path=join(folder,'browser-output.mp4');await file.saveAs(path);
+  await exec('ffmpeg',['-v','error','-xerror','-i',path,'-f','null','-']);assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({status:'PASS_SYNTHETIC_BROWSER',playback:result,bytes:(await readFile(path)).length,physicalDevice:'NOT_RUN'}));
+}catch(error){const blocked=/UNAVAILABLE/.test(error.message);console.error(JSON.stringify({status:blocked?'BLOCKED':'FAIL',reason:error.message}));process.exitCode=blocked?2:1;}
+finally{if(browser)await browser.close();if(server)await server.close();if(folder)await rm(folder,{recursive:true,force:true});}
