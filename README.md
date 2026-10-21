@@ -58,3 +58,8 @@ The live, static GitHub Pages diagnostic is `https://haji84.github.io/AI-VIDEO-S
 ### Browser audio-mix proof (device diagnostic, not a full editor)
 
 Test-only path: [audio test](https://haji84.github.io/AI-VIDEO-STUDIO/audio.html). This uses a **4-second maximum, 640×360** excerpt of a user-selected local video, adds an animated caption, attempts to preserve original audio and optionally mixes user-selected BGM/SE/narration **audio files** locally through Web Audio. iPhone mixed-MP4 output, AI voice synthesis, codec compatibility and long-duration editing remain unverified. Source files are not uploaded. See `docs/validation/BROWSER_AUDIO_MIX_2026-10-21.md`.
+
+
+### iOS Safari silent-original-audio investigation (diagnostic only)
+
+The latest iPhone JSON reported an original-source audio capture failure: source/output meter RMS=0 despite a replayable short captioned MP4. The new **audio compatibility diagnostic** at `https://haji84.github.io/AI-VIDEO-STUDIO/audio-compat.html` attempts a bounded, local-only audio-buffer route with fail-closed silence checks. The original `audio.html` is left intact. **Desktop synthetic proof exists; physical Safari audio restoration is NOT VERIFIED.** See `docs/validation/IOS_ORIGINAL_AUDIO_ZERO_2026-10-21.md`. Do not upload personal footage/audio to GitHub.

@@ -4,7 +4,7 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 
 | Target | Device/browser decode short MP4 | Local frame analysis | Japanese TTS speech | Caption/effect preview | Output MP4 creation and replay | N-camera/audio/export QA |
 | --- | --- | --- | --- | --- | --- | --- |
-| iPhone / Safari | PASS, short playback advancement (111.09s source; not full-duration playback) | PASS, 3 sampled frames | PASS browser speech playback only; TTS file NOT_RUN | PASS synthetic caption preview | **USER-REPORTED PASS** for 4s actual selected footage + original audio + caption, saved Files replay; machine-readable result and MP4 independent validation pending | N-camera/audio-mix/native export QA NOT_RUN |
+| iPhone / Safari | PASS, short playback advancement (111.09s source; not full-duration playback) | PASS, 3 sampled frames | Browser speech playback PASS, TTS file NOT_RUN | PASS synthetic caption preview | **VIDEO/CAPTION/SAVE PASS, ORIGINAL AUDIO FAIL in latest owner JSON** (613669B, playback advanced but 0 source/output RMS and owner originalSoundAudible=false). Prior screenshot was provisional. | N-camera and native export NOT_RUN; BGM rejected by size / SE by duration guard |
 | Android / Chrome | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
 | Windows / Chrome or Edge | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
 | Mac / Safari or Chrome | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
@@ -63,3 +63,10 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 - Owner-provided iPhone Safari screenshot displays output footage with caption and all **four human confirmation boxes checked**, including hearing the selected video's original soundtrack and replaying the saved output in iPhone Files.
 - **Classification: USER-REPORTED BROWSER PASS** only for the short source-only video/caption/original-audio export. JSON, exported file inspection, codec and audio quantification were not supplied; separate technical acceptance stays **UNVERIFIED**.
 - No media or screenshots committed to this public repository. See `docs/validation/IOS_SOURCE_AUDIO_CAPTION_OWNER_REPORT_2026-10-21.md`.
+
+
+## Latest owner-provided Safari audio JSON (2026-10-21)
+
+- Actual iPhone source-only test: 46.96 MiB 60.82s 1170x1984 selected input, 613669B short output, video replay advanced, source visible, caption visible, Files replay checked. **Original sound not audible; capture source and output RMS=0. Status INCOMPLETE.** More detailed evidence supersedes earlier 4-checkbox screenshot for original sound.
+- Optional BGM: `REJECTED_TOO_LARGE`; optional SE: `AUDIO_DECODE_FAILED` with `AUDIO_DURATION_INVALID_OR_TOO_LONG`. Both extra buses excluded from source-only output.
+- New iOS compatibility diagnostic tries local MP4 audio buffer decoding; **iPhone test NOT_RUN**. No raw media or source filename stored. See `docs/validation/IOS_ORIGINAL_AUDIO_ZERO_2026-10-21.md`.

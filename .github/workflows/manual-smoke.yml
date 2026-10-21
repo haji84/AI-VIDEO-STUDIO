@@ -46,3 +46,6 @@ jobs:
 
       - name: Browser audio-mix diagnostic static checks (not mobile acceptance)
         run: node --test prototypes/device-lab/audio-mix.test.mjs
+
+      - name: Browser iOS audio-buffer compatibility smoke (static only)
+        run: node --test prototypes/device-lab/audio-compat.test.mjs

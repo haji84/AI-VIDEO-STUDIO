@@ -78,3 +78,10 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 - **USER-REPORTED BROWSER PASS** for the short, 640×360, approximately four-second diagnostic: screenshot shows actual selected footage with test caption and four checked owner confirmations (selected footage, caption, audible original sound, and saved MP4 replay via iPhone Files app).
 - This supersedes the earlier **NOT_RUN** marker for the **specific short browser source-only test**, not for native/full-duration audio-video export. No actual MP4 bytes or device JSON are available for independent codec, audio-spectrum or full-file validation.
 - Next acceptance: receive anonymized `aivs-audio-mix-results.json`, then test iPhone BGM+SE mixing and separately validate the saved MP4. Details: `docs/validation/IOS_SOURCE_AUDIO_CAPTION_OWNER_REPORT_2026-10-21.md`.
+
+
+## Latest iPhone audio result: silent original source (2026-10-21)
+
+- **LATEST PHYSICAL iPhone REPORT = FAIL/INCOMPLETE for original soundtrack.** Owner-supplied 2026-10-21T08:37:53Z JSON shows a playable 613669-byte `SOURCE_ONLY` MP4 Blob and visible original footage/caption, but `originalSoundAudible=false`, `originalSignalPeakRms=0`, `outputSignalPeakRms=0` across 241 samples. This overrides the earlier provisional owner screenshot's checked sound item for the same milestone. The original source audio did not pass.
+- BGM was rejected by the local prototype file size guard and SE by its 90-second decode-duration guard; neither was included in the source-only MP4.
+- Added a **separate local compatibility diagnostic** `prototypes/device-lab/AUDIO_COMPAT_LAB.html`: iOS defaults to MP4 `decodeAudioData` + `AudioBufferSource` path (96 MiB cap) and fails closed on silent source/output WebAudio measurements. Desktop Chromium synthetic audio trial passed; negative (opening silence) failed safely, static 10/10 tests passed. **Physical iPhone compatibility fix still UNVERIFIED.** See `docs/validation/IOS_ORIGINAL_AUDIO_ZERO_2026-10-21.md`.
