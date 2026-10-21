@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="dark"><title>AI VIDEO STUDIO | 実機チェック</title>
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob: data:; img-src blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>AI VIDEO STUDIO | 実機チェック</title>
 <style>
 :root{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;color:#f0f5fa;background:#101923}
 *{box-sizing:border-box}body{margin:0;padding:20px 16px 70px;max-width:750px;margin-inline:auto}
@@ -10,11 +14,8 @@ button,.file,select{color:white;border:1px solid #46748e;background:#245778;bord
 button:disabled{opacity:.4;cursor:not-allowed}.secondary{background:#223a4c}button{margin:4px 5px 5px 0}
 input[type=file]{display:block;width:100%;margin:12px 0;color:#bce2ed}video,canvas{display:block;width:100%;border-radius:9px;background:black;aspect-ratio:16/9;object-fit:contain}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.78rem;background:#0d1720;padding:12px;border-radius:9px;color:#c7d4e0}
-.good{color:#66dfa5}.warn{color:#ffca78}.bad{color:#ff9797}.small{font-size:.79rem}.pill{border:1px solid #62808b;border-radius:15px;padding:3px 10px;font-size:.75rem;color:#b1e9eb}
-</style><meta name="robots" content="noindex,nofollow,noarchive">
-<meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob: data:; img-src blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-</head><body>
+.good{color:#66dfa5}.warn{color:#ffca78}.bad{color:#ff9797}#exportOutcome[hidden]{display:none}#sourceDownload{display:inline-block;color:#fff;background:#217d70;border:1px solid #40ac97;border-radius:10px;text-decoration:none;padding:13px;margin:5px 0 6px}.small{font-size:.79rem}.pill{border:1px solid #62808b;border-radius:15px;padding:3px 10px;font-size:.75rem;color:#b1e9eb}
+</style></head><body>
 <h1>🎬 AI VIDEO STUDIO <span class="pill">端末実機チェック</span></h1>
 <p>端末で使える動画・日本語音声・エフェクト・MP4出力の能力を調べる試験用ページ。<strong>このページ自体は動画をアップロードしません。</strong>音声の読み上げ方式はOS依存で、必ずしも完全オフラインとは限りません。完成アプリではありません。</p>
 <div class="card"><h2>1. 端末の基本機能</h2><button id="system">端末の機能を調べる</button><pre id="caps">未検査</pre></div>
@@ -32,15 +33,28 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.78rem;background:#0d1
 <div class="card"><h2>4. テロップと画面エフェクト</h2>
 <p>同じ描画関数をプレビューと出力テストで使用。現在は人工映像のみで、読み込んだ動画の合成書き出しではない。</p>
 <canvas id="preview" width="640" height="360"></canvas>
-<button id="previewBtn">エフェクト再生</button><button id="exportBtn">MP4出力を試す</button>
+<button id="previewBtn">人工エフェクト再生</button><button id="exportBtn">人工動画のMP4出力</button>
 <pre id="renderStatus">未検査</pre></div>
-<div class="card"><h2>5. 検査結果を保存</h2><p>機種・ファイル名・映像内容・音声は送らない。テスト判定と匿名の数値だけを保存。これをChatGPTへ渡すと実機の到達点を確認できる。</p><button id="download">結果JSONを保存</button><pre id="summary">未検査</pre></div>
+<div class="card" id="realVideoExport"><h2>5. 実動画＋字幕のMP4書き出し試験</h2>
+<p>上の「自分の短い動画を読み込む」で選んだ動画を使い、<strong>現在の再生位置から最大4秒</strong>を字幕付きで書き出します。元動画は変更されず、サーバーへ送信もしません。</p>
+<p class="warn small">初回は音声なし・最大640×360・最大4秒の試作です。BGM、SE、AI音声、長時間動画、音声付き書き出しはまだ未対応。端末で処理できない場合はエラーを記録します。</p>
+<canvas id="sourceCanvas" width="640" height="360" aria-label="実動画とテロップの合成プレビュー"></canvas>
+<button id="exportSelected">選んだ動画にテロップを付けてMP4作成</button>
+<pre id="sourceExportStatus">未検査。まず動画を選んでください。</pre>
+<div id="exportOutcome" hidden>
+<p>生成した動画をここで再生して確認してください。確認後に保存できます。</p>
+<video id="sourceOutput" controls playsinline webkit-playsinline preload="metadata"></video>
+<button id="verifySourceOutput" class="secondary">出力動画の再生を検査</button>
+<a id="sourceDownload" href="#" download="aivs-selected-video-test.mp4">字幕付きMP4を保存</a>
+</div>
+</div>
+<div class="card"><h2>6. 検査結果を保存</h2><p>端末の能力、処理状態、出力容量などの匿名数値のみ保存します。選択動画・映像・音声・ファイル名を含めません。</p><button id="download">結果JSONを保存</button><pre id="summary">未検査</pre></div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const result={schema:'aivs-device-lab-v1',testScope:'browser_only_not_native_app',timestampUTC:null,
  browser:{},capabilities:{},media:{status:'NOT_RUN'},voice:{status:'NOT_RUN'},effect:{status:'NOT_RUN'},export:{status:'NOT_RUN'},
- limitations:['No native AVFoundation or Android Media3 acceptance','No semantic scene understanding','No upload of source media','No full original-video export']};
+ limitations:['No native AVFoundation or Android Media3 acceptance','No semantic scene understanding','No upload of source media','No original audio or long video export','Selected-video export only tests up to 4 seconds and a silent caption overlay']};
 const say=(id,msg,cl='')=>{$(id).textContent=msg;$(id).className=cl;};
 function record(){result.timestampUTC=new Date().toISOString();$('summary').textContent=JSON.stringify(result,null,2);}
 $('system').onclick=()=>{
@@ -56,10 +70,11 @@ $('system').onclick=()=>{
 let mediaUrl=null;
 $('videoFile').addEventListener('change',()=>{
  const file=$('videoFile').files?.[0];if(mediaUrl){URL.revokeObjectURL(mediaUrl);mediaUrl=null;}
- if(!file){result.media={status:'NOT_RUN'};return;}
+ if(!file){result.media={status:'NOT_RUN'};resetSourceOutput();record();return;}
  if(!file.type.startsWith('video/') && !/\.(mov|mp4)$/i.test(file.name)){say('media','動画以外は選択できません。','bad');return;}
  const video=$('video');video.pause();video.removeAttribute('src');video.load();
  mediaUrl=URL.createObjectURL(file);video.src=mediaUrl;video.load();
+ resetSourceOutput();
  result.media={status:'SELECTED',sizeMiB:Math.round(file.size/1048576*100)/100,playback:{status:'NOT_RUN'}};
  say('playbackResult','再生未検査。選択した動画の「再生を検査」を押してください。');
  say('media','ファイル選択済み（端末内のみ）');record();
@@ -178,6 +193,136 @@ $('exportBtn').onclick=async()=>{
    say('renderStatus','人工エフェクトMP4を生成。ファイルを再生して確認してね。','good');record();
  }catch(e){result.export={status:'EXPORT_FAILED',reason:String(e.message).slice(0,100)};
    say('renderStatus','書き出し不可: '+e.message,'warn');record();}
+};
+// Browser-only short source-footage export experiment. No uploads, audio or full-length rendering.
+const sourceCanvas=$('sourceCanvas'),sourceCtx=sourceCanvas.getContext('2d');
+const sourceVideo=$('video');
+let sourceBusy=false,sourceURL=null;
+function resetSourceOutput(){
+ $('exportOutcome').hidden=true;
+ $('sourceOutput').pause();$('sourceOutput').removeAttribute('src');$('sourceOutput').load();
+ $('sourceDownload').removeAttribute('href');
+ if(sourceURL){URL.revokeObjectURL(sourceURL);sourceURL=null;}
+ result.selectedVideoExport={status:'NOT_RUN'};
+ say('sourceExportStatus','未検査。動画を選んでください。');
+}
+function drawSourceFrame(seconds){
+ const W=sourceCanvas.width,H=sourceCanvas.height,v=sourceVideo;
+ sourceCtx.fillStyle='#070e17';sourceCtx.fillRect(0,0,W,H);
+ const sourceW=v.videoWidth,sourceH=v.videoHeight;
+ if(sourceW>0&&sourceH>0&&v.readyState>=2){
+   const scale=Math.min(W/sourceW,H/sourceH);const sw=sourceW*scale,sh=sourceH*scale;
+   sourceCtx.drawImage(v,(W-sw)/2,(H-sh)/2,sw,sh);
+ }
+ const progress=Math.max(0,Math.min(1,seconds/4));
+ sourceCtx.fillStyle='rgba(8,19,33,.68)';sourceCtx.fillRect(0,273,W,75);
+ sourceCtx.save();
+ sourceCtx.globalAlpha=Math.max(0,Math.min(1,seconds/.6));
+ sourceCtx.fillStyle='white';sourceCtx.strokeStyle='#0b1526';sourceCtx.lineWidth=7;
+ sourceCtx.font='bold 35px sans-serif';sourceCtx.textAlign='center';
+ sourceCtx.strokeText('実動画のテロップ試験',W/2,321);
+ sourceCtx.fillText('実動画のテロップ試験',W/2,321);
+ sourceCtx.restore();
+ sourceCtx.fillStyle='#41c6b3';sourceCtx.fillRect(0,H-6,W*progress,6);
+ sourceCtx.fillStyle='#fff';sourceCtx.font='14px sans-serif';sourceCtx.textAlign='left';
+ sourceCtx.fillText('SOURCE VIDEO  /  SILENT TEST',14,27);
+}
+$('exportSelected').onclick=async()=>{
+ if(sourceBusy)return;
+ if(!mediaUrl){say('sourceExportStatus','先に動画を選択してください。','warn');return;}
+ if(playing){say('sourceExportStatus','人工エフェクトの終了後に試してください。','warn');return;}
+ const formats=['video/mp4;codecs="avc1.42E01E"','video/mp4'];
+ const mime=(typeof MediaRecorder==='function')?formats.find(type=>MediaRecorder.isTypeSupported(type)):null;
+ if(!mime||typeof sourceCanvas.captureStream!=='function'){
+   result.selectedVideoExport={status:'UNSUPPORTED',reason:'MP4 MediaRecorder or canvas.captureStream unavailable'};
+   say('sourceExportStatus','このブラウザではMP4の録画ができません。','warn');record();return;
+ }
+ // Play() is initiated synchronously from the tap to retain iOS gesture activation.
+ sourceBusy=true;const controls=['exportSelected','videoFile','testPlayback','analyze','exportBtn','previewBtn'];
+ controls.forEach(id=>$(id).disabled=true);
+ $('exportOutcome').hidden=true;
+ result.selectedVideoExport={status:'RUNNING',scope:'selected source video with a silent animated caption, max 4 seconds'};
+ say('sourceExportStatus','選択動画を再生しながら合成しています。画面を閉じずにお待ちください…');record();
+ const v=sourceVideo;let recorder=null,stream=null,raf=0,finished=false,stopTimer=null;
+ const startTime=performance.now();let sampleStart=0,sampleEnd=0,drawCount=0;
+ try{
+   v.pause();v.muted=true;v.playsInline=true;
+   if(Number.isFinite(v.duration)&&v.duration>0&&v.duration-v.currentTime<.7)v.currentTime=0;
+   const playPromise=v.play(); // keep before any await
+   await playPromise;
+   if(v.error)throw new Error('INPUT_DECODE_ERROR');
+   if(v.readyState<2)throw new Error('NO_DECODED_VIDEO_FRAME');
+   sampleStart=v.currentTime;
+   drawSourceFrame(0);
+   stream=sourceCanvas.captureStream(24);
+   recorder=new MediaRecorder(stream,{mimeType:mime});
+   const chunks=[];
+   const ended=new Promise((resolve,reject)=>{
+     recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+     recorder.onerror=e=>reject(new Error(e?.error?.name||'RECORDER_ERROR'));
+     recorder.onstop=resolve;
+   });
+   recorder.start();
+   const recordingStart=performance.now();
+   const stop=()=>{
+     if(finished)return;finished=true;
+     if(recorder&&recorder.state!=='inactive')recorder.stop();
+   };
+   function frame(now){
+     if(finished)return;
+     const elapsed=(now-recordingStart)/1000;
+     if(document.visibilityState==='hidden'){
+       // Mark the run inconclusive if Safari backgrounded. The browser can still end the recorder.
+       result.selectedVideoExport.backgrounded=true;
+     }
+     if(v.readyState>=2&&!v.paused){drawSourceFrame(elapsed);drawCount++;sampleEnd=v.currentTime;}
+     if(elapsed>=4||v.ended||v.paused||result.selectedVideoExport.backgrounded){stop();return;}
+     raf=requestAnimationFrame(frame);
+   }
+   raf=requestAnimationFrame(frame);
+   stopTimer=setTimeout(stop,6500);
+   await ended;
+   if(result.selectedVideoExport.backgrounded)throw new Error('BACKGROUND_INTERRUPTED');
+   if(drawCount<3||sampleEnd-sampleStart<.3)throw new Error('VIDEO_FRAMES_NOT_ADVANCING');
+   const blob=new Blob(chunks,{type:recorder.mimeType||mime});
+   if(blob.size<1000)throw new Error('EMPTY_MP4');
+   if(sourceURL)URL.revokeObjectURL(sourceURL);
+   sourceURL=URL.createObjectURL(blob);
+   $('sourceOutput').src=sourceURL;
+   $('sourceDownload').href=sourceURL;
+   $('exportOutcome').hidden=false;
+   result.selectedVideoExport={status:'SOURCE_CAPTION_MP4_CREATED',bytes:blob.size,
+     sourceTimeAdvanceSeconds:Math.round((sampleEnd-sampleStart)*100)/100,
+     outputMimeType:recorder.mimeType||mime,
+     recordingMs:Math.round(performance.now()-startTime),drawnFrames:drawCount,
+     replay:'NOT_RUN',audio:'NOT_INCLUDED',scope:'up to 4 seconds; muted source; browser MediaRecorder'};
+   say('sourceExportStatus','元動画から字幕付きMP4を作成しました。下の出力を再生して確認してください。','good');
+ }catch(e){
+   result.selectedVideoExport={status:'SOURCE_EXPORT_FAILED',reason:String(e?.message||e).slice(0,110),audio:'NOT_INCLUDED'};
+   say('sourceExportStatus','実動画の書き出しに失敗: '+result.selectedVideoExport.reason,'warn');
+ }finally{
+   finished=true;cancelAnimationFrame(raf);if(stopTimer)clearTimeout(stopTimer);
+   if(recorder&&recorder.state!=='inactive')try{recorder.stop()}catch(e){}
+   if(stream)stream.getTracks().forEach(track=>track.stop());
+   v.pause();sourceBusy=false;controls.forEach(id=>$(id).disabled=false);record();
+ }
+};
+$('verifySourceOutput').onclick=async()=>{
+ if(!sourceURL){return;}
+ const v=$('sourceOutput');if(v.ended||v.currentTime>=v.duration-.2)v.currentTime=0;const start=v.currentTime;
+ try{
+   await v.play();
+   const ok=await new Promise(resolve=>{
+     let done=false;const finish=val=>{if(done)return;done=true;clearTimeout(timer);v.removeEventListener('timeupdate',tick);v.removeEventListener('error',bad);resolve(val);};
+     const tick=()=>{if(v.readyState>=2&&v.currentTime-start>.15)finish(true);};
+     const bad=()=>finish(false);
+     v.addEventListener('timeupdate',tick);v.addEventListener('error',bad,{once:true});
+     const timer=setTimeout(()=>finish(false),5000);tick();
+   });
+   result.selectedVideoExport.replay=ok?'REPLAY_ADVANCED':'REPLAY_NOT_CONFIRMED';
+   say('sourceExportStatus',ok?'生成したMP4が実際に再生できました。':'出力動画の再生を確認できませんでした。',ok?'good':'warn');
+ }catch(e){result.selectedVideoExport.replay='REPLAY_FAILED';say('sourceExportStatus','出力再生に失敗: '+String(e?.name||e),'warn')}
+ finally{record();}
 };
 $('download').onclick=()=>{
  record();const data=new Blob([JSON.stringify(result,null,2)],{type:'application/json'}),url=URL.createObjectURL(data),a=document.createElement('a');
