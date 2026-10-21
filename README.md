@@ -53,3 +53,8 @@ See `docs/validation/LOCAL_FIRST_CUT_2026-10-21.md` for the integration test and
 ### Browser-only device test (separate from the editor)
 
 The live, static GitHub Pages diagnostic is `https://haji84.github.io/AI-VIDEO-STUDIO/`. It keeps the selected video in the browser, offers an **experimental four-second, silent** selected-video + caption MP4 output, and reports replay separately. Full video/audio editing, AI semantics and native phone exports are not implemented by this test page. See `docs/validation/SELECTED_VIDEO_BROWSER_EXPORT_2026-10-21.md`.
+
+
+### Browser audio-mix proof (device diagnostic, not a full editor)
+
+Test-only path: [audio test](https://haji84.github.io/AI-VIDEO-STUDIO/audio.html). This uses a **4-second maximum, 640×360** excerpt of a user-selected local video, adds an animated caption, attempts to preserve original audio and optionally mixes user-selected BGM/SE/narration **audio files** locally through Web Audio. iPhone mixed-MP4 output, AI voice synthesis, codec compatibility and long-duration editing remain unverified. Source files are not uploaded. See `docs/validation/BROWSER_AUDIO_MIX_2026-10-21.md`.

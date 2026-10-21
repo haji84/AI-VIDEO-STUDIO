@@ -40,3 +40,11 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Genuine FFmpeg short synthetic 3-camera signal extraction -> proposal -> video export -> full decode integration test in Linux container.
 - [ ] Review proposal quality against actual owned multi-camera footage and establish timing/semantic metrics.
 - [ ] iPhone / Android / Windows / Mac real-device evidence from `prototypes/device-lab/DEVICE_LAB.html` and future native app; **all physical devices still pending**.
+
+
+## New audio integration milestone (2026-10-21)
+
+- [x] Four-route source/BGM/SE/narration **short browser test prototype**, verified on synthetic files in desktop Chromium; static tests 11/11 PASS and actual exported PCM frequency evidence.
+- [ ] Physical iPhone Safari export with real selected source + optional owned BGM/SE; verify audio codec, output playback and audible track correctness.
+- [ ] Android Chrome and desktop manual browser runs; record anonymous JSON and independent output QA.
+- [ ] General full-duration / high-resolution audio exporter with frame timestamps, ducking, voice file synthesis and durable project timeline; device-native backends where needed.
