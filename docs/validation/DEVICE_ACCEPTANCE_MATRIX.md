@@ -49,3 +49,10 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 - Desktop Chromium generated synthetic H.264/AAC input → caption output H.264 MP4 + replay + FFmpeg decode: PASS (non-iPhone).
 - iPhone Safari source-derived MP4+caption output/replay: **NOT_RUN**. Do not substitute the prior iPhone artificial-test-clip result.
 - Detailed trace: `docs/validation/SELECTED_VIDEO_BROWSER_EXPORT_2026-10-21.md`.
+
+
+## Original-audio acceptance isolation (2026-10-21)
+
+- Desktop Chromium with synthetic 440Hz original audio, even with 660Hz BGM and 990Hz narration preselected: source-only output contained only 440Hz; FFmpeg decoded the MP4 and browser replay advanced.
+- New iPhone source-only button and four observable owner checks require selected source video, visible caption, audible original sound, and downloaded-files playback. **Physical iPhone test pending**.
+- See `docs/validation/IPHONE_ORIGINAL_AUDIO_ACCEPTANCE_2026-10-21.md`.
