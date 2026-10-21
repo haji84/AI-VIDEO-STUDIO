@@ -56,3 +56,11 @@ No item becomes checked merely because a design document or test stub exists.
 - [ ] Physical iPhone Safari: save a selected-source MP4 with visible caption and original audio, replay the saved file in Files, submit anonymous JSON.
 - [ ] For iPhone failure, choose the smallest native iOS AVFoundation export slice instead of retrying identical browser recording without evidence.
 - [ ] Expand only after success: BGM+SE mix, actual Japanese AI-voice file, full-duration and high-resolution export.
+
+
+## Owner iPhone visual/audible acceptance (2026-10-21)
+
+- [x] Owner checked the four short browser output criteria: real selected video, test caption, audible original audio and Files-app saved-MP4 playback. This is **USER-REPORTED PASS**, not independent codec validation.
+- [ ] Capture anonymized JSON/codec observations for the same iPhone result, without uploading sensitive video.
+- [ ] Real iPhone BGM+SE mix export and playback; verify original sound intelligibility, audio sync and saved MP4 support.
+- [ ] Complete reusable timeline, long video/4K export, high-quality Japanese TTS audio file creation and native mobile backends.

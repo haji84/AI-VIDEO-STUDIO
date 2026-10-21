@@ -4,7 +4,7 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 
 | Target | Device/browser decode short MP4 | Local frame analysis | Japanese TTS speech | Caption/effect preview | Output MP4 creation and replay | N-camera/audio/export QA |
 | --- | --- | --- | --- | --- | --- | --- |
-| iPhone / Safari | PASS, short playback advancement (111.09s source; not full-duration playback) | PASS, 3 sampled frames | PASS browser playback only; audio file NOT_RUN | PASS synthetic caption preview | PARTIAL, 178386-byte synthetic MP4 generated; independent replay NOT_RUN | NOT_RUN |
+| iPhone / Safari | PASS, short playback advancement (111.09s source; not full-duration playback) | PASS, 3 sampled frames | PASS browser speech playback only; TTS file NOT_RUN | PASS synthetic caption preview | **USER-REPORTED PASS** for 4s actual selected footage + original audio + caption, saved Files replay; machine-readable result and MP4 independent validation pending | N-camera/audio-mix/native export QA NOT_RUN |
 | Android / Chrome | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
 | Windows / Chrome or Edge | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
 | Mac / Safari or Chrome | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
@@ -56,3 +56,10 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 - Desktop Chromium with synthetic 440Hz original audio, even with 660Hz BGM and 990Hz narration preselected: source-only output contained only 440Hz; FFmpeg decoded the MP4 and browser replay advanced.
 - New iPhone source-only button and four observable owner checks require selected source video, visible caption, audible original sound, and downloaded-files playback. **Physical iPhone test pending**.
 - See `docs/validation/IPHONE_ORIGINAL_AUDIO_ACCEPTANCE_2026-10-21.md`.
+
+
+## iPhone short source-only output, owner confirmation (2026-10-21)
+
+- Owner-provided iPhone Safari screenshot displays output footage with caption and all **four human confirmation boxes checked**, including hearing the selected video's original soundtrack and replaying the saved output in iPhone Files.
+- **Classification: USER-REPORTED BROWSER PASS** only for the short source-only video/caption/original-audio export. JSON, exported file inspection, codec and audio quantification were not supplied; separate technical acceptance stays **UNVERIFIED**.
+- No media or screenshots committed to this public repository. See `docs/validation/IOS_SOURCE_AUDIO_CAPTION_OWNER_REPORT_2026-10-21.md`.

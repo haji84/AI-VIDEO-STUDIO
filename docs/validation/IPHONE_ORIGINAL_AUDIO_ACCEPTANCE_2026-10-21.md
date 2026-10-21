@@ -34,3 +34,10 @@ The owner observed audible narration, but it was **not established whether the o
 3. Use the page's **出力MP4を再生して検査** button; listen specifically for the **original video's** audio.
 4. Save the MP4, open the saved copy in the Files app, and confirm source footage, visible subtitle and audible original audio. Check the four boxes only if true.
 5. Save only the anonymous results JSON and share that report, not the private video.
+
+
+## Owner screenshot follow-up (2026-10-21)
+
+- Owner supplied a physical iPhone Safari screenshot of the output video with the test caption and **four checked acceptance items**: chosen footage, caption, original audio audible in exported video, and MP4 saved/replayed in the Files app. Treat this as **USER-REPORTED BROWSER PASS** for the scoped short diagnostic.
+- Screenshot/video intentionally not saved to this public repository. Browser result JSON and actual MP4 bytes not received; independent codec, audio-waveform, full decode and multi-run validation remain open.
+- See `docs/validation/IOS_SOURCE_AUDIO_CAPTION_OWNER_REPORT_2026-10-21.md` for exact claims and future checks.
