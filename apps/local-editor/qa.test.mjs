@@ -25,3 +25,11 @@ test('legacy, failed and unknown reports never claim the new inspection passed',
   assert.match(inspectionMessage({inspection:{schema:'aivs-output-inspection-v1',status:'UNKNOWN'}}),/未検査/);
   assert.match(inspectionMessage({inspection:{schema:'aivs-output-inspection-v1',status:'CHECKED_LIMITED'}}),/範囲で要確認箇所はありません/);
 });
+
+test('reopening old reports never claims new freeze/cadence detector coverage',async()=>{
+ const {inspectionScope}=await import('./qa.mjs');const old={inspection:{schema:'aivs-output-inspection-v1',status:'CHECKED_LIMITED'}};
+ assert.match(inspectionScope(old),/フリーズ候補は未検査/);assert.match(inspectionScope(old),/フレーム間隔の検査は未完了/);
+ const current=structuredClone(old);Object.assign(current.inspection,{detectors:['freezedetect-v1','vfrdet-v1'],cadence:{status:'CONSTANT_INTERVALS'}});
+ assert.match(inspectionScope(current),/フレーム間隔の変化を集計/);assert.match(inspectionScope(current),/意図した静止画/);
+ current.inspection.cadence.status='INCOMPLETE';assert.match(inspectionScope(current),/フレーム間隔の検査は未完了/);
+});

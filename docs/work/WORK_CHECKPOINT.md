@@ -55,3 +55,16 @@ decode/identity gates, add GUI descriptions and re-edit navigation. Intentional
 stills/VFR require human review, no automatic repair. Aggregate cadence cannot
 prove every frame's intended content or source cadence. Then tests/review/PR/main
 and postmerge output replay, exact next checkpoint. Product DoD still NOT MET.
+
+## F8-B implementation complete, integration next
+
+Local branch work/output-freeze-f8 against local31e3b95 / main0be8e706a8c42486706e5a854d9ae70ecdcd6ce2 tree32150f05ebeb3d745fa9590a7001b41ba533be7b.
+Freeze/cadence warning-only checks, bounded tail, counts and legacy UI scope
+implemented. Current177 cases PASS (122 Node +42 engine/cloud +3 audio +10 legacy),
+full logs /tmp/aivs-f8-full-{node,python}.log. Actual HTTP/restart/re-edit/new MP4
+evidence in docs/validation/OUTPUT_FREEZE_F8_2026-10-21.md. Independent final
+review APPROVE; no blockers, direct-run unittest-layout nit corrected. Next verify
+fresh main, create one PR, integrate expected head/tree, rerun actual QA/export,
+then record exact SHA. No unmerged PR accumulation or synthetic-history push.
+After this bounded slice choose F8 caption raster/safe-bounds and Japanese glyph
+evidence using existing compositor and fonts first. Product remains unfinished.
