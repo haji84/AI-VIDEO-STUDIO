@@ -80,3 +80,24 @@ test('acceptance requires independent replay and four explicit user checks',()=>
  assert.match(script,/result\.export\.mode==='SOURCE_ONLY'&&result\.replay\.status==='REPLAY_ADVANCED'/);
  assert.match(script,/Object\.values\(checks\)\.every\(Boolean\)/);
 });
+test('source-only mode excludes supplementary BGM/SE/narration even if selected',()=>{
+ assert.match(html,/id="sourceOnlyExport"/);
+ assert.match(script,/exportMix\(true\)/);
+ assert.match(script,/!sourceOnly&&\$\(inputId\)\.files/);
+ assert.match(script,/if\(!sourceOnly\)for\(const bus of Object\.keys\(outputs\)\)/);
+ assert.match(script,/original\.gain\.value=sourceOnly\|\|\$\('originalTrack'\)\.checked\?1:0/);
+ assert.match(script,/extraTracks:sourceOnly\?\[\]/);
+});
+test('local audio signal observability does not auto assert success',()=>{
+ assert.match(script,/createAnalyser\(\)/);
+ assert.match(script,/getFloatTimeDomainData/);
+ assert.match(script,/originalSignalPeakRms/);
+ assert.match(script,/RMS is a signal observation, not proof/);
+});
+test('real-source audio and caption require playback and owner verification',()=>{
+ for(const id of ['checkSource','checkCaption','checkAudio','checkFiles','acceptanceStatus']) assert.match(html,new RegExp('id="'+id+'"'));
+ assert.match(script,/status:success\?'REPLAY_ADVANCED':'REPLAY_NOT_CONFIRMED'/);
+ assert.match(script,/USER_REPORTED_BROWSER_SOURCE_AUDIO_CAPTION_PASS/);
+ assert.match(script,/result\.export\.mode==='SOURCE_ONLY'&&result\.replay\.status==='REPLAY_ADVANCED'/);
+ assert.match(script,/Object\.values\(checks\)\.every\(Boolean\)/);
+});

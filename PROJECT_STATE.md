@@ -71,3 +71,11 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 - Diagnostic audio page now isolates original video audio from loaded BGM/SE/narration by a dedicated source-only button and records separate browser replay + explicit human audio/caption/files checks. Browser-side waveform RMS telemetry is advisory only.
 - Local dev tests: 14/14 static Node PASS, two desktop Chromium exported short H.264+Opus MP4s passed FFmpeg decode and browser replay. FFT of source-only output proved 440Hz original audio present and selected 660/990Hz extra audio absent. See `docs/validation/IPHONE_ORIGINAL_AUDIO_ACCEPTANCE_2026-10-21.md`.
 - Physical iPhone source-audio/caption saved-MP4 replay: **NOT_RUN**, and Opus in MP4 may be incompatible with Safari. No native/full-duration functionality claimed.
+
+
+## Source-only iPhone acceptance gate (2026-10-21)
+
+- Added a separate button to the audio browser diagnostic for selected video + **original soundtrack** + caption, intentionally excluding extra BGM/SE/narration. The old four-bus experimental mode remains available separately.
+- Local development validation: Node tests 14/14 PASS, desktop Chromium source-only and mixed-audio regression tested using synthetic H.264/AAC video/audio, browser output playback and independent FFmpeg PCM frequency checks. H.264/Opus MP4 was generated in desktop Chromium. See `docs/validation/IPHONE_SOURCE_AUDIO_CAPTION_GATE_2026-10-21.md`.
+- **Actual iPhone Safari selected-video + original sound + caption saved MP4/replay: NOT RUN**. User's earlier narration-audible report is not evidence of original audio retention in the MP4.
+- Public GitHub Pages diagnostic-only update permitted under prior owner approval; no cloud processing or original media transfer. Product editor remains UNDEPLOYED.

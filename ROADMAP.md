@@ -56,3 +56,10 @@ No item becomes checked merely because a design document or test stub exists.
 - [ ] Physical iPhone Safari: save a selected-source MP4 with visible caption and original audio, replay the saved file in Files, submit anonymous JSON.
 - [ ] For iPhone failure, choose the smallest native iOS AVFoundation export slice instead of retrying identical browser recording without evidence.
 - [ ] Expand only after success: BGM+SE mix, actual Japanese AI-voice file, full-duration and high-resolution export.
+
+
+## iPhone selected-original-sound export gate (2026-10-21)
+
+- [x] Isolated source-only diagnostic, with explicit original soundtrack inclusion, no BGM/narration bleed, replay status, user confirmation, and local signal evidence.
+- [ ] **Physical iPhone Safari**: selected actual MP4 + original sound + caption output, audible original sound, and Files-app replay, with JSON evidence.
+- [ ] If native audio codec or browser recording fails, implement verified alternative media backend; do not claim that existing Web Audio + MediaRecorder works universally on iOS.
