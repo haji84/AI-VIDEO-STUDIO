@@ -28,3 +28,18 @@ jobs:
         run: |
           python -m pip install numpy
           cd prototypes/audio && python -m unittest test_mix -v
+      - name: Offline multi-camera proposal tests
+        run: node --test packages/edit-planner/auto-edit.test.mjs
+      - name: FFmpeg signal extraction and end-to-end test
+        run: python -m unittest engine.test_local_signals engine.test_autoplan_pipeline -v
+      - name: Standalone device lab syntax check (not physical device validation)
+        run: |
+          python - <<'PYCODE'
+          from pathlib import Path
+          import re
+          p=Path('prototypes/device-lab/DEVICE_LAB.html').read_text(encoding='utf8')
+          s=re.search(r'<script>(.*?)</script>',p,re.S)
+          assert s, 'script missing'
+          Path('/tmp/aivs-device-lab-check.js').write_text(s.group(1), encoding='utf8')
+          PYCODE
+          node --check /tmp/aivs-device-lab-check.js

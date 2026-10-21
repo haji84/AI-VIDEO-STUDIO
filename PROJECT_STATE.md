@@ -37,3 +37,12 @@ Subscription / billing: deferred.
 - Cloud billing/marketplace and public launch deferred until a separate owner decision.
 
 If a test has not run on a physical phone with an actual MP4 export, its state is **UNVERIFIED**, not PASS.
+
+## L0 proposal / device-lab development (2026-10-21)
+
+- Scope: signal-assisted first-cut proposal, **not** trained AI semantic editing.
+- Added offline FFmpeg numerical signal extractor and deterministic browser/Node edit planner with verified clock-source gating and decision evidence. Portable 3-camera synthetic media → FFmpeg analysis → edit proposal → FFmpeg MP4 → whole-file decode tested. See `docs/validation/LOCAL_FIRST_CUT_2026-10-21.md` for commands and test scope.
+- Added standalone smartphone/desktop capability/preview test page; an actual device run has **not** been observed. iPhone, Android, Windows, Mac acceptance is still `NOT_RUN`.
+- These additions are distinct from the prior v0.3.1 synthetic 41/41 baseline. Do not add test counts from repeated runs as unique completed product requirements.
+- Public repository means source is readable. It does not mean a public video-processing service has been deployed or user media sent anywhere.
+- No R2, payment, cloud GPU, GORIQ, real training footage, or app distribution is authorized by this change.

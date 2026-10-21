@@ -33,3 +33,10 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [ ] GORIQ integration for development workflow only, separately authorized.
 
 No item becomes checked merely because a design document or test stub exists.
+
+## L0 baseline added in development (2026-10-21)
+
+- [x] Dependency-free numerical **first-cut proposal** on 1/2/3+ synthetic cameras, tested in Node (10 cases). This is not semantic AI editing.
+- [x] Genuine FFmpeg short synthetic 3-camera signal extraction -> proposal -> video export -> full decode integration test in Linux container.
+- [ ] Review proposal quality against actual owned multi-camera footage and establish timing/semantic metrics.
+- [ ] iPhone / Android / Windows / Mac real-device evidence from `prototypes/device-lab/DEVICE_LAB.html` and future native app; **all physical devices still pending**.

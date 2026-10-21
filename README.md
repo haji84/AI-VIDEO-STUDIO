@@ -42,3 +42,9 @@ The optional Cloudflare preview must NOT be deployed unless separately approved:
 ## Security, costs and copyright
 
 Do not commit real filming footage, sensitive audio, names, access credentials, local workspace paths with personal data, secret configurations, or unlicensed stock media. Local-first storage is the default. The eventual cloud adapter will require explicit per-job permission and cost controls. There is no subscription/Stripe system yet. See `SECURITY.md`.
+
+## In-progress local first-cut analysis (portable, no account or cloud required)
+
+`engine/local_signals.py` captures low-level brightness/motion/audio-energy signals on local owned media, and `packages/edit-planner/auto-edit.mjs` generates a deterministic, editable camera/timeline proposal from 1–100 verified-clock sources. This is a basic **numerical first cut**; it does NOT recognize people/roles or deliver a final educational video.
+
+See `docs/validation/LOCAL_FIRST_CUT_2026-10-21.md` for the integration test and `docs/validation/DEVICE_ACCEPTANCE_MATRIX.md` for physical device testing. Offline device capability page: `prototypes/device-lab/DEVICE_LAB.html`. No file uploads or cloud calls are made by the new prototype.
