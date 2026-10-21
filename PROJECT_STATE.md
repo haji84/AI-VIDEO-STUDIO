@@ -7,7 +7,31 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Latest Work implementation (M3, 2026-10-21)
+## Latest Work implementation (M4-A, 2026-10-21)
+
+Full-output technical inspection is connected to the saved-project renderer.
+Every video frame/selected audio stream is decoded, container/decoded frame
+counts compared when available, black/silent intervals and sample peaks measured.
+Selected missing audio tails are inspected on the output media clock; explicit
+absent/muted audio is preserved. Portable reports bind output SHA256, project
+revision and clip references. Local API/journal restores reports; a manual re-edit
+and fresh render can remove a known synthetic fault without overwriting output.
+
+**F8: TESTED_SYNTHETIC, still incomplete.** CHECKED_LIMITED is a limited technical
+result. Black/silence remain REVIEW. No automatic subjective edits, freeze/cadence,
+caption raster safe-bound, speech intelligibility, true-peak or semantic pass.
+Review found short-audio-tail and legacy-report false-clean cases; regression
+tests and fixes added. Late packet corruption silently skipped by FFmpeg is now
+detected through decoded/container frame-count disagreement.
+GUI browser acceptance remains BLOCKED; no physical/novice result added.
+Full local suite: 139 PASS (100 Node +26 engine/cloud +3 audio +10 legacy).
+Evidence: `docs/validation/OUTPUT_INSPECTION_M4A_2026-10-21.md`.
+
+M3 PR #13 integrated at fba046fedac395f0709c7c9faab615ce6cdc801f, source tree
+a17a03351c892ecebe27580442a038e103af8294 matched local tests. Post-merge 7 editor
+and 8 saved-output tests passed. M1–M3 checkpoint commit912ba3aa8d422a535cb37fe55dcc4ae520636d7b.
+
+## Prior Work implementation (M3, 2026-10-21)
 
 Local desktop editor source/server added; launch: `apps/local-editor/README.md`.
 Actual loopback API covers source import -> trim/caption edit -> history ->

@@ -1,80 +1,78 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21
-Status: IN_PROGRESS; M1/M2/M3 code integrated; backend/edit operations TESTED_SYNTHETIC.
-GUI browser acceptance BLOCKED; product completion criteria NOT MET.
-mainSHA (last verified implementation): `fba046fedac395f0709c7c9faab615ce6cdc801f`
-verifiedSourceTree: `a17a03351c892ecebe27580442a038e103af8294`
+Status: IN_PROGRESS; M1/M2/M3 integrated; M4-A implementation/review complete locally,
+integration pending. Product DoD NOT MET. GUI browser acceptance BLOCKED.
+mainSHA (verified implementation): `fba046fedac395f0709c7c9faab615ce6cdc801f`
+M4-A remote parent: `912ba3aa8d422a535cb37fe55dcc4ae520636d7b` (M3 checkpoint only)
 Canonical goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 
 ## Integrated and verified
 
-- M1 PR #11: versioned portable projects, durable history, source hash/relink,
-  existing-engine handoff. Main02a0e2d8200d02d157ab8dc48e1f28b70a1b2ddd.
-- M2 PR #12: saved four-bus actual MP4 renderer. Main
-  8ae096242752b46ce652505fd9ddc43c7b01ebd2, tested tree
-  37d5fe12128f04ef1f0c42482785c8bb57513b7d. Source tree equality and post-merge
-  8 project/audio output tests passed. No remote Actions run; CodeRabbit status
-  success, zero check-runs and clean merge state confirmed before integration.
-- Evidence: docs/validation/DURABLE_PROJECT_M1_2026-10-21.md and
-  docs/validation/SAVED_PROJECT_AUDIO_M2_2026-10-21.md.
+- M1 PR #11: durable project, history, source hash/relink and existing-engine handoff.
+- M2 PR #12: saved four-bus actual MP4 renderer; main8ae096242752b46ce652505fd9ddc43c7b01ebd2.
+- M3 PR #13: local desktop app/API, import/edit/save/restart/reopen/MP4.
+  Main fba046fedac395f0709c7c9faab615ce6cdc801f, tested source tree
+  a17a03351c892ecebe27580442a038e103af8294. Exact remote tree verified;
+  post-merge 7 editor and8 saved-output tests PASS.
+- Evidence: docs/validation/DURABLE_PROJECT_M1_2026-10-21.md,
+  SAVED_PROJECT_AUDIO_M2_2026-10-21.md, LOCAL_EDITOR_M3_2026-10-21.md.
 
-## M3 tangible work (not a product completion claim)
+## M4-A tangible work (limited technical inspection)
 
-- apps/local-editor: loopback-only private workspace app/server, local streamed
-  import, immutable identities, trim/caption/source selection, audio buses,
-  undo/redo/save/reopen, snapshot render and actual MP4 download.
-- 7 actual HTTP/pure-edit tests passed. Same-source bytes, edit history, range
-  response, restart/project/output restore, complete MP4 decode checked.
-- Independent review: stale tab overwrites, invented/doubled source audio, and
-  destructive caption normalization reproduced with failing tests and fixed.
-  All mutations require expected revision; UI offers unsaved-draft JSON. Shared
-  edit functions preserve explicit audio and refuse unsupported effects unchanged.
-- Dedicated workspace lock prevents double writer; source checkout cannot be a
-  runtime media/project destination. No user media, voice, key or output pushed.
-- Total128 tests PASS:96 Node +19 engine/cloud +3 audio +10 legacy. Runtime:
-  Linux / Node24.19.0 / Python3.12.14 / FFmpeg6.1.1. Repeated runs are not extra
-  completed requirements. Evidence: docs/validation/LOCAL_EDITOR_M3_2026-10-21.md.
+- Whole decode, decoded/container frame comparison where available, video stream
+  timing, black/silence intervals and sample peak. All selected output samples
+  scanned; absent audio tails/gaps reconstructed for inspection only.
+- SHA256/project revision/clip-bound reports persist and restore; protected API,
+  report download and read-only replay/re-edit UI entry. Stale revision refused.
+- Actual HTTP synthetic faulty render -> restart/report restore -> explicit trim
+  -> new checked MP4; no original/output overwrite. No automatic subjective edits.
+- Review findings (short missing audio tail and legacy false-clean display) and
+  locally discovered silent packet loss/early video end reproduced RED, fixed
+  with regressions. Report statuses CHECKED_LIMITED/NEEDS_REVIEW/FAILED_TECHNICAL.
+- Full local suite139 PASS:100 Node +26 engine/cloud +3 audio +10 legacy.
+  Linux / Node24.19.0 / Python3.12.14 / FFmpeg6.1.1. Synthetic only.
+- Evidence: docs/validation/OUTPUT_INSPECTION_M4A_2026-10-21.md.
+  Plan: docs/work/M4_OUTPUT_QA_PLAN.md. Actual browser UI still NOT_RUN.
 
-## M3 integration / verification
+## Integration / next exact active step
 
-PR #13 merged: head136a98ed1f4ec31ea102d94e7554a22c50c84eb2,
-main fba046fedac395f0709c7c9faab615ce6cdc801f. Remote main source tree equals
-the tested local tree a17a03351c892ecebe27580442a038e103af8294 exactly.
-Post-merge checks: 7 local-editor HTTP/edit tests PASS; 8 saved-project/audio
-actual-output tests PASS. No remote Actions run; CodeRabbit status success,
-zero check-runs and clean merge state confirmed before integration. No open
-implementation PR remains from M1–M3. GUI/browser/device acceptance NOT_RUN.
+Create one M4-A PR against the current main; inspect base/head/check state and
+safely merge expected head. Verify remote main tree equals tested local tree.
+Post-merge run node --test apps/local-editor/*.test.mjs and
+python -m unittest engine.test_output_qa engine.test_project_pipeline engine.test_saved_project_audio -v.
+Record actual PR/main/tree and post-merge outcomes here and in Issue #10.
+No remote Actions success is implied; existing workflow is manual-only.
 
-## Exact browser blocker / next resume
+## Exact browser blocker / resume
 
-Actual command `node apps/local-editor/browser-acceptance.mjs` returned
-BLOCKED / BROWSER_EXECUTABLE_UNAVAILABLE, exit2. Playwright package exists,
-Chromium executable does not; no available browser was found in inspected
-runtime/PATH locations. CDN connectivity probe timed out in Proxy CONNECT.
-The inline module syntax checks, but actual DOM/media/touch playback did not run.
+Actual M3 command node apps/local-editor/browser-acceptance.mjs returned
+BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE, exit2. Package exists; Chromium executable
+does not. No available browser found in inspected runtime/PATH. CDN connectivity
+probe timed out in Proxy CONNECT. Do not repeat identical failed downloads.
 
-Resume with a usable Chromium executable (or AIVS_BROWSER_EXECUTABLE pointing
-at an existing Chrome). Run browser-acceptance.mjs: synthetic import -> trim
-and caption -> undo/redo -> project save/reload -> actual render -> MP4 playback
-advance/download -> independent full decode. Record observed result, fix actual
-failures, then owner/novice testing. Do not repeat identical download attempts
-or count API/model tests as browser/device success. Startup/recovery instructions:
-apps/local-editor/README.md. Current GUI acceptance is the next critical gate;
-independent engine/model/QA work remains unfinished and can proceed separately.
+Resume with a usable Chromium executable or AIVS_BROWSER_EXECUTABLE pointing to
+an installed Chrome. Run browser-acceptance.mjs: synthetic import -> trim/caption
+-> undo/redo -> save/reload -> real MP4 -> inspection-record download -> browser
+playback advance/download -> independent full decode. Record observed results;
+fix failures before GUI success claims. Startup/recovery: apps/local-editor/README.md.
 
-## Next independent implementation
+## Next independent requirement after integration
 
-While browser acceptance is blocked, inspect and improve full-output quality
-inspection, persisted findings and re-edit handoff. Continue from verified M3
-source. Do not classify black/silence heuristics as proof of editorial quality.
+Implement beginner audio-clip timing/fade controls using the existing persisted
+four-bus project and renderer; test import -> change start/end/trim/fades ->
+save/restart -> actual audio timing -> undo/redo, without inventing tracks or
+destroying custom edits. Browser/novice acceptance remains a distinct gate.
+Full-output packet PTS/cadence/freeze, caption safe bounds and bounded automatic
+correction remain additional independent work. Do not wait on physical devices
+to start these tasks in a resumed active Work run.
 
 ## Product gates still open
 
-All four physical-device E2E paths, advanced UI/audio/effects and preview parity,
+All four physical-device E2E paths, full beginner/audio/effects preview parity,
 persisted natural Japanese TTS, learned semantic AI/model evaluation, authorized
-real footage/11GB performance, full-output fault QA/repair, native apps and novice
-acceptance. Latest historical iPhone browser diagnostic replay still NOT_RUN.
-No private footage/voice available in current Linux runtime. DoD NOT MET.
+real footage/11GB performance, complete output QA/automatic repair, native apps
+and novice acceptance. Historical iPhone diagnostic replay still NOT_RUN.
+No private footage/voices in this Linux runtime. DoD NOT MET.
 
 No paid API/R2/GPU, credential/payment change, public production launch,
-recurring automation or other product repository was enabled. Issue #10 stays open.
+recurring automation or other-product operation. Issue #10 remains open.

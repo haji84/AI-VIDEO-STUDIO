@@ -43,6 +43,10 @@ try{
   await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み'&&document.getElementById('bgm-file').value==='');
   await page.getByRole('button',{name:'完成動画を作る',exact:true}).click();
   await page.locator('#download').waitFor({state:'visible',timeout:60000});
+  await page.getByRole('button',{name:'検査記録を保存',exact:true}).waitFor();
+  const qaDownload=page.waitForEvent('download');await page.getByRole('button',{name:'検査記録を保存',exact:true}).click();
+  const qaPath=join(folder,'inspection.json');await(await qaDownload).saveAs(qaPath);
+  assert.equal(JSON.parse(await readFile(qaPath,'utf8')).inspection.schema,'aivs-output-inspection-v1');
   const result=await page.evaluate(async()=>{const v=document.getElementById('output');await v.play();const a=v.currentTime;
     await new Promise(resolve=>setTimeout(resolve,400));return {advanced:v.currentTime>a,width:v.videoWidth};});
   assert.equal(result.advanced,true);assert.ok(result.width>0);
