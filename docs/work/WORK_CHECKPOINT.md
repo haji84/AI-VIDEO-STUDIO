@@ -1,8 +1,9 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21
-Status: IN_PROGRESS; M1/M2/M3 integrated; M4-A implementation/review complete locally,
-integration pending. Product DoD NOT MET. GUI browser acceptance BLOCKED.
-mainSHA (verified implementation): `fba046fedac395f0709c7c9faab615ce6cdc801f`
+Status: IN_PROGRESS; M1/M2/M3/M4-A code integrated. Product DoD NOT MET.
+GUI browser acceptance BLOCKED; physical-platform acceptance NOT_RUN.
+mainSHA (last verified implementation before this docs-only update): `c480cfe87fcb238dd4736e4747272d7405695c88`
+verifiedSourceTree: `3d508ef23431f1735900289d606419d9f183403b`
 M4-A remote parent: `912ba3aa8d422a535cb37fe55dcc4ae520636d7b` (M3 checkpoint only)
 Canonical goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 
@@ -34,14 +35,17 @@ Canonical goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 - Evidence: docs/validation/OUTPUT_INSPECTION_M4A_2026-10-21.md.
   Plan: docs/work/M4_OUTPUT_QA_PLAN.md. Actual browser UI still NOT_RUN.
 
-## Integration / next exact active step
+## M4-A integration / post-merge verification
 
-Create one M4-A PR against the current main; inspect base/head/check state and
-safely merge expected head. Verify remote main tree equals tested local tree.
-Post-merge run node --test apps/local-editor/*.test.mjs and
-python -m unittest engine.test_output_qa engine.test_project_pipeline engine.test_saved_project_audio -v.
-Record actual PR/main/tree and post-merge outcomes here and in Issue #10.
-No remote Actions success is implied; existing workflow is manual-only.
+PR #14 merged with expected head db816f51ee7a0cea884b2dbba067200a4c6bcbf4.
+Implementation main c480cfe87fcb238dd4736e4747272d7405695c88; source tree
+3d508ef23431f1735900289d606419d9f183403b equals the tested local tree exactly.
+Post-merge node --test apps/local-editor/*.test.mjs:11 PASS.
+Post-merge python -m unittest engine.test_output_qa engine.test_project_pipeline
+engine.test_saved_project_audio -v:15 PASS, including actual MP4 render/decode.
+Clean merge state and CodeRabbit success confirmed; check-runs0. Existing
+Actions workflow is manual-only and NOT_RUN. Open PR collection confirmed empty.
+No orphan implementation PR or uncommitted source diff remains.
 
 ## Exact browser blocker / resume
 
@@ -65,6 +69,15 @@ destroying custom edits. Browser/novice acceptance remains a distinct gate.
 Full-output packet PTS/cadence/freeze, caption safe bounds and bounded automatic
 correction remain additional independent work. Do not wait on physical devices
 to start these tasks in a resumed active Work run.
+
+## Work continuation boundary
+
+This active run ends with verified code integrated and the continuation state
+persisted. No invisible background execution is claimed. Resume an active Work
+run from current remote main and this file. Browser/device acceptance is blocked
+in this runtime, but the independent audio-control task above is not blocked;
+continue it without waiting on device evidence. Do not repeat completed M1–M4-A
+work or label all remaining code blocked.
 
 ## Product gates still open
 
