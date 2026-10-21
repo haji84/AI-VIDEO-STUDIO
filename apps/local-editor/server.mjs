@@ -99,9 +99,12 @@ export async function startServer({workspace,port=8765}={}){
       res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'`);
       const url=new URL(req.url,origin),path=url.pathname;
       if(req.method==='GET'&&path==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
-      if(req.method==='GET'&&['/editor-edits.mjs','/editor-qa.mjs','/packages/project/project.mjs'].includes(path)){
+      const modules={'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
+        '/audio-panel.mjs':join(HERE,'audio-panel.mjs'),'/audio-edits.mjs':join(HERE,'audio-edits.mjs'),
+        '/packages/project/project.mjs':join(ROOT,'packages/project/project.mjs')};
+      if(req.method==='GET'&&Object.hasOwn(modules,path)){
         res.writeHead(200,{'Content-Type':'application/javascript; charset=utf-8'});
-        res.end(await readFile(path==='/editor-edits.mjs'?join(HERE,'edits.mjs'):path==='/editor-qa.mjs'?join(HERE,'qa.mjs'):join(ROOT,'packages/project/project.mjs')));return;
+        res.end(await readFile(modules[path]));return;
       }
       if(!authorized(req.headers['x-aivs-token'])&&!authorized(url.searchParams.get('token')))fail('画面を開き直してください',403);
       if(req.method==='GET'&&path==='/api/state'){send(res,200,state());return;}
