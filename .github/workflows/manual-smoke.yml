@@ -1,0 +1,30 @@
+name: AI VIDEO STUDIO - manual smoke checks
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-prototype-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check runtime
+        run: |
+          node --version
+          python --version
+          ffmpeg -version | head -1
+      - name: Cloud mock tests
+        run: cd cloud && node --test tests/*.test.mjs
+      - name: FFmpeg engine tests
+        run: python -m unittest engine.test_manifest cloud.processor.test_r2_run -v
+      - name: Audio smoke (requires NumPy)
+        run: |
+          python -m pip install numpy
+          cd prototypes/audio && python -m unittest test_mix -v

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+workspace/projects/
+workspace/*.json
+*.mp4
+*.mov
+*.mkv
+*.insv
+*.wav
+*.tmp

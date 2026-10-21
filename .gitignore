@@ -1,0 +1,46 @@
+# Bytecode, dependencies, local state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+node_modules/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.log
+# Raw video and audio must never enter the repository
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.insv
+*.INSV
+*.lrv
+*.m4v
+*.avi
+*.mkv
+*.wav
+*.WAV
+*.mp3
+*.m4a
+*.aac
+*.flac
+# Runtime outputs
+work/
+workspace/
+outputs/
+renders/
+temp/
+.tmp/
+.cache/
+*.sqlite
+*.db
+*.zip
+# SDK and build artifacts
+.gradle/
+build/
+dist/
+DerivedData/
