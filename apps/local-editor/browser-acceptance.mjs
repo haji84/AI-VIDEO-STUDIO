@@ -26,6 +26,18 @@ try{
   page.on('pageerror',error=>errors.push(error.message));await page.goto(server.url);
   await page.locator('#video-files').setInputFiles(source);
   await page.locator('#clips button').first().waitFor();
+  const clear=join(folder,'synthetic-clear.mp4');
+  await exec('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=320x180:r=30:d=2','-c:v','libx264',clear]);
+  await page.locator('#video-files').setInputFiles(clear);
+  await page.waitForFunction(()=>document.querySelectorAll('#camera option').length===2&&document.getElementById('video-files').value==='');
+  await page.locator('#camera').selectOption({index:1});await page.locator('#sync-offset').fill('0');await page.locator('#sync-confirm').check();
+  await page.locator('#apply-sync').click();await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み');
+  await page.locator('#first-cut-analyse').click();await page.locator('#first-cut-confirm').waitFor({timeout:60000});
+  assert.equal(await page.locator('#first-cut-apply').isDisabled(),true);await page.locator('#first-cut ol button').first().click();
+  await page.waitForFunction(()=>document.getElementById('first-cut-preview').currentTime>.1);
+  await page.locator('#first-cut-confirm').check();await page.locator('#first-cut-apply').click();
+  await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み'&&document.getElementById('first-cut-confirm')===null);
+  assert.equal(await page.locator('#camera option:checked').textContent(),'synthetic-clear.mp4');
   await page.locator('#duration').fill('1');await page.locator('#caption').fill('SYNTHETIC CAPTION');
   await page.getByRole('button',{name:'このカットを保存',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み');

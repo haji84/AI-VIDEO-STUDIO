@@ -1,6 +1,6 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21 (Japan)
-Status: IN_PROGRESS. M1/M2/M3/M4-A/A1/S1 code integrated.
+Status: IN_PROGRESS. M1/M2/M3/M4-A/A1/S1 integrated; P1 tested, review/integration pending.
 Actual GUI/native/physical acceptance NOT_RUN/BLOCKED; product DoD NOT MET.
 mainSHA (last verified implementation): `fbad7612905a3b4b3a3d0fdde21bccbed571f264`
 verifiedSourceTree: `8e482a686f8f12ccb246f3ca750fe75e8d3d3fa6`
@@ -73,3 +73,20 @@ advanced effects/audio preview parity, authorized real11GB performance and full
 QA/bounded automatic repair. Product DoD NOT MET.
 No paid service/R2/GPU, billing/credential change, public production deployment,
 recurring task, private footage/voice upload or GORIQ operation.
+
+## P1 active implementation (after S1, 2026-10-21)
+
+Local branch work/first-cut-p1 against local291180b / remote mainb6b755ff41914ac908cddc7eedad34597738b394, treefecfde9a1a8e5c91cbf39b924f4ad1610d326068.
+No open PRs observed before work. Explicit local signal first-cut report, worker,
+shared lifecycle, UI preview/confirmation, protected effects/audio and actual
+manual-re-edit MP4 implemented. Full171 PASS (120 Node +38 engine/cloud +3 audio
++10 legacy); logs /tmp/aivs-p1-final-node.log and /tmp/aivs-p1-final-python.log.
+Evidence: docs/validation/FIRST_CUT_P1_2026-10-21.md. Independent final review
+/root/review_first_cut_p1 found2 Important/P2 issues; fractional-tail and tiny
+verified-boundary regressions reproduced RED, fixed GREEN with real-gap/missing-
+video-tail gates retained. No Critical findings. Next PR/integrate
+against fresh main, verify tree and focused postmerge actual export. Do not push
+synthetic local history. Save exact main/PR result.
+Next independent bounded task: add whole-output freeze/cadence evidence to F8,
+preserving warning-only human review and distinguishing intentional stills;
+re-use existing output_qa. Do not call this semantic AI or full output quality.
