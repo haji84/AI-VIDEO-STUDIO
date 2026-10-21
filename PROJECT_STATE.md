@@ -46,3 +46,12 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 - These additions are distinct from the prior v0.3.1 synthetic 41/41 baseline. Do not add test counts from repeated runs as unique completed product requirements.
 - Public repository means source is readable. It does not mean a public video-processing service has been deployed or user media sent anywhere.
 - No R2, payment, cloud GPU, GORIQ, real training footage, or app distribution is authorized by this change.
+
+
+## Selected-video 4-second browser export prototype (2026-10-21)
+
+- Added an opt-in, no-upload, 640×360, silent, max 4-second source-video+animated-caption MP4 recorder to the Device Lab. It is a separate button from the old artificial test clip.
+- Headless desktop Chromium with a generated H.264/AAC test video: selected video → composited preview → H.264 MP4 → page replay and independent FFmpeg whole-file decode PASS. Static no-network/safety tests 8/8 PASS. Details: `docs/validation/SELECTED_VIDEO_BROWSER_EXPORT_2026-10-21.md`.
+- **iPhone Safari selected-video export: NOT_RUN.** Prior physical iPhone result proves only synthetic MP4 creation, not real-source video export.
+- Original audio, narration, BGM/SE, full-duration rendering, native apps and AI semantic editing remain UNVERIFIED/NOT IMPLEMENTED.
+- Device Lab GitHub Pages is test-interface-only, not product distribution. No original media uploaded.

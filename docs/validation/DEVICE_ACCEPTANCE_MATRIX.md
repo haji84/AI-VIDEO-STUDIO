@@ -41,3 +41,11 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 - Synthetic caption preview finished, and a 178386-byte synthetic MP4 was reported as created. Independent replay/decode of that MP4 is **NOT VERIFIED**.
 - No selected-video caption export, BGM/SE mixing, native iOS renderer, or semantic AI analysis has been accepted.
 - Details: `docs/validation/IOS_SAFARI_BROWSER_RESULT_2026-10-21.md`. The public repository stores no source video or filename.
+
+
+## Selected-video export candidate, 2026-10-21
+
+- New experiment: a separate `選んだ動画にテロップを付けてMP4作成` control records up to four seconds of the actual selected video with Japanese caption as a **silent** 640×360 MP4, then offers an independent replay check and manual download link.
+- Desktop Chromium generated synthetic H.264/AAC input → caption output H.264 MP4 + replay + FFmpeg decode: PASS (non-iPhone).
+- iPhone Safari source-derived MP4+caption output/replay: **NOT_RUN**. Do not substitute the prior iPhone artificial-test-clip result.
+- Detailed trace: `docs/validation/SELECTED_VIDEO_BROWSER_EXPORT_2026-10-21.md`.
