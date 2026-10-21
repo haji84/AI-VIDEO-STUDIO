@@ -7,6 +7,32 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Current Work implementation (M1, 2026-10-21)
+
+**Product: IN_PROGRESS, not complete.** Portable project/save/reopen and checked
+FFmpeg handoff are `TESTED_SYNTHETIC`. See
+`docs/validation/DURABLE_PROJECT_M1_2026-10-21.md` and `packages/project/README.md`.
+Current run: 114 tests pass (88 Node, 13 engine/cloud, 3 audio, 10 legacy).
+Saved/reopened/relinked three-camera edit -> H.264/AAC MP4 -> complete decode +
+selected soundtrack FFT + frame/caption pixels + unchanged source hashes pass
+on Linux. Independent review findings have regression fixes.
+
+| Goal | Actual current classification/evidence |
+|---|---|
+| F1 project/history/relink | TESTED_SYNTHETIC: v1 JSON, disk I/O, 50-step history, hashes, migration; phone UI/autosave pending |
+| F2 multi-camera | TESTED_SYNTHETIC: numerical sync/proposals + saved 3-camera/split export; real drift/manual UX pending |
+| F3 local semantic AI | NOT_STARTED: signal scoring exists, trained model accuracy unproven |
+| F4 beginner manual UI | NOT_STARTED for new portable editor; legacy/prototype UI is not final acceptance |
+| F5 effects | TESTED_SYNTHETIC static caption renderer; other effect data needs renderer/preview parity |
+| F6 four-bus sound | TESTED_SYNTHETIC separate mixer + persistent definitions; common-timeline mixer pending |
+| F7 Japanese persisted voice | NOT_STARTED: browser speech is not an exported narration file |
+| F8 export/self-QA | TESTED_SYNTHETIC whole decode/streams and sample frame/audio checks; full defect/self-repair coverage pending |
+| F9 devices | BLOCKED for physical acceptance in this Linux runtime; no four-platform E2E pass claimed |
+
+Next path: common project -> four-bus rendering -> beginner local editor ->
+native adapters/real footage/model evaluation -> full acceptance.
+Earlier sections below are historical evidence, not a later success override.
+
 ## Verified in prepared source package
 
 - Current sandbox re-run: **41/41 tests PASS** (21 Node, 7 Python engine, 3 Python audio, 10 Python legacy), on synthetic media / mocked cloud. Details: `docs/validation/CURRENT_INTEGRATION_REPORT.md`.
