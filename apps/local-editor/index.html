@@ -9,7 +9,7 @@
 <section><h2>音声</h2><div id="buses"></div><label class="field">BGM<input id="bgm-file" type="file" accept="audio/*"></label><label class="field">ナレーション音源<input id="narration-file" type="file" accept="audio/*"></label><label class="field">効果音<input id="sfx-file" type="file" accept="audio/*"></label><p class="muted">利用権のある音源を選んでください。読み込んだ音源は先頭へ配置します。音声生成には未対応です。</p></section></div></div></main>
 <script type="module" nonce="__NONCE__">
 import {applyClipEdit,splitClip,moveClip,appendClip,cameraSourceIn} from '/editor-edits.mjs';
-import {reviewTarget,inspectionMessage} from '/editor-qa.mjs';
+import {reviewTarget,inspectionMessage,inspectionScope} from '/editor-qa.mjs';
 import {mountAudioPanel} from '/audio-panel.mjs';
 import {mountSyncPanel} from '/sync-panel.mjs';
 import {mountFirstCutPanel} from '/first-cut-panel.mjs';
@@ -60,12 +60,12 @@ for(const id of ['undo','redo'])$(id).onclick=()=>act(async()=>{state=await api(
 $('save-project').onclick=()=>{const blob=new Blob([JSON.stringify(state.session,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ai-video-project.aivs.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('open-project').onchange=()=>act(async()=>{const file=$('open-project').files[0];if(!file)return;state=await api('/api/open',{method:'POST',body:await file.text()});$('open-project').value='';});
 const quality=document.createElement('div');quality.id='quality-review';$('download').after(quality);
-const findingNames={BLACK_INTERVAL:'黒い映像の可能性',SILENCE_WHILE_AUDIO_SELECTED:'選択した音声が無音',SILENCE_REQUIRES_CONTEXT:'無音区間',NEAR_SAMPLE_CLIPPING:'音量ピークが大きい'};
+const findingNames={BLACK_INTERVAL:'黒い映像の可能性',SILENCE_WHILE_AUDIO_SELECTED:'選択した音声が無音',SILENCE_REQUIRES_CONTEXT:'無音区間',NEAR_SAMPLE_CLIPPING:'音量ピークが大きい',STATIC_OR_FREEZE_INTERVAL:'静止画・フリーズの候補（意図した静止画の場合あり）',VARIABLE_FRAME_CADENCE:'フレーム間隔の変化（意図した可変間隔の場合あり）'};
 function showQA(report){
  quality.replaceChildren();const heading=document.createElement('h3');heading.textContent='完成動画の技術検査';
  const explanation=document.createElement('p');explanation.className='muted';explanation.textContent=inspectionMessage(report);
  if(report.inspection?.schema!=='aivs-output-inspection-v1'||!['CHECKED_LIMITED','NEEDS_REVIEW','FAILED_TECHNICAL'].includes(report.inspection.status)){quality.append(heading,explanation);return;}
- const limits=document.createElement('p');limits.className='muted';limits.textContent='全編デコード・黒画面・無音・サンプル音量ピークを検査します。字幕位置、音声の明瞭度、内容の正しさは未検査です。';
+ const limits=document.createElement('p');limits.className='muted';limits.textContent=inspectionScope(report);
  const save=document.createElement('button');save.textContent='検査記録を保存';save.onclick=()=>downloadJson(JSON.stringify(report,null,2),'aivs-output-inspection.json');quality.append(heading,explanation,limits,save);
  for(const [i,f] of (report.inspection?.findings??[]).entries()){
    const row=document.createElement('p'),label=document.createElement('span');label.textContent=`${f.startSec.toFixed(1)}–${f.endSec.toFixed(1)}秒 ${findingNames[f.code]??f.code} `;

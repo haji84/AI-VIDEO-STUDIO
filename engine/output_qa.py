@@ -55,6 +55,7 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
     timing_match=video_end is None or (abs(video_start)<=max(.1,2*frame_sec) and abs(video_end-duration)<=max(.1,2*frame_sec))
     if not timing_match:issues.append('映像トラックの開始・終了が出力全体の時間に一致しません')
     findings=[];omitted=0;peak=None;silence_start=None;decoded_frames=None;ended=False;peak_stats=False
+    freeze_start=None;cadence_counts=None
     frame_text=video.get('nb_frames','')
     container_frames=int(frame_text) if str(frame_text).isdigit() else None
     def add(code,start,end,**extra):
@@ -77,7 +78,7 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
         if windows:add('SILENCE_WHILE_AUDIO_SELECTED',min(x[0] for x in windows),max(x[1] for x in windows),
                        audioClipIds=[x[2] for x in windows])
     args=[core._which('ffmpeg'),'-hide_banner','-nostats','-nostdin','-v','info','-xerror',*INPUT_OPTIONS,'-i',str(path),
-          '-map','0:v:0','-vf','blackdetect=d=0.5:pix_th=0.10:pic_th=0.98']
+          '-map','0:v:0','-vf','blackdetect=d=0.5:pix_th=0.10:pic_th=0.98,freezedetect=n=0.001:d=1,vfrdet']
     if audio:
         # Inspection only: reconstruct leading/PTS gaps and the absent tail on
         # the output media clock. Otherwise a short stream supplies no samples
@@ -97,6 +98,14 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
             if line.strip()=='progress=end':ended=True
             match=re.search(r'black_start:('+NUMBER+r')\s+black_end:('+NUMBER+r')',line)
             if match:add('BLACK_INTERVAL',float(match[1]),float(match[2]))
+            match=re.search(r'lavfi\.freezedetect\.freeze_start:\s*('+NUMBER+r')',line)
+            if match:freeze_start=float(match[1])
+            match=re.search(r'lavfi\.freezedetect\.freeze_end:\s*('+NUMBER+r')',line)
+            if match and freeze_start is not None:
+                add('STATIC_OR_FREEZE_INTERVAL',freeze_start,float(match[1]),interpretation='INTENTIONAL_STILL_OR_FREEZE_REQUIRES_REVIEW');freeze_start=None
+            # Counts are authoritative. FFmpeg prints -nan for the valid one-frame 0/0 case.
+            match=re.search(r'\bVFR:\S+\s+\((\d+)/(\d+)\)',line) if 'vfrdet' in line else None
+            if match:cadence_counts=(int(match[1]),int(match[2]))
             match=re.search(r'silence_start:\s*('+NUMBER+r')',line)
             if match:silence_start=float(match[1])
             match=re.search(r'silence_end:\s*('+NUMBER+r')',line)
@@ -107,6 +116,21 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
                 if math.isfinite(value) or value==float('-inf'):peak_stats=True
                 if math.isfinite(value):peak=value if peak is None else max(peak,value)
     if silence_start is not None:silence(silence_start,duration)
+    if freeze_start is not None:
+        # Never invent frozen video throughout a longer, audio-only tail.
+        tail_end=min(duration,video_end) if video_end is not None else min(duration,freeze_start+1)
+        add('STATIC_OR_FREEZE_INTERVAL',freeze_start,tail_end,
+            interpretation='INTENTIONAL_STILL_OR_FREEZE_REQUIRES_REVIEW',
+            endEvidence='VIDEO_STREAM_END' if video_end is not None else 'MINIMUM_OBSERVED_DURATION_ONLY')
+    cadence={'status':'UNAVAILABLE','examinedIntervals':None,'variableIntervals':None,'constantIntervals':None,
+             'scope':'AGGREGATE_OUTPUT_PTS_INTERVAL_CHANGES_ONLY'}
+    if cadence_counts is not None:
+        variable,constant=cadence_counts;total=variable+constant
+        cadence.update(examinedIntervals=total,variableIntervals=variable,constantIntervals=constant,
+                       status='VARIABLE_INTERVALS' if variable else 'CONSTANT_INTERVALS' if total else 'INSUFFICIENT_FRAMES')
+        if variable:add('VARIABLE_FRAME_CADENCE',0,duration,interpretation='INTENTIONAL_VFR_OR_TIMING_CHANGE_REQUIRES_REVIEW')
+    if process.returncode or not ended or cadence_counts is None or decoded_frames is None or cadence['examinedIntervals']!=max(0,decoded_frames-1):
+        cadence['status']='INCOMPLETE';issues.append('フレーム間隔の全編検査を確認できません')
     if process.returncode:issues.append('出力の全編デコード・検査に失敗しました')
     if not ended or decoded_frames is None or decoded_frames<=0:issues.append('全編のデコード完了を確認できません')
     frame_match=container_frames is None or decoded_frames==container_frames
@@ -128,8 +152,11 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
               'videoStreamTimingCheck':'UNAVAILABLE' if video_end is None else 'MATCH' if timing_match else 'MISMATCH',
               'audioClockInspection':'PTS_GAPS_AND_ABSENT_TAIL_INSPECTED_AS_SILENCE',
               'containerFrameCountCheck':'MATCH' if container_frames is not None and frame_match else 'MISMATCH' if not frame_match else 'UNAVAILABLE',
-              'findings':findings,'omittedFindings':omitted,'audioSamplePeakDbfs':peak,'truePeak':'NOT_MEASURED',
-              'thresholds':{'minimumBlackSec':.5,'blackPixelLuma':.1,'blackPictureRatio':.98,'minimumSilenceSec':.5,'silenceDbfs':-50,'nearClippingDbfs':-.1},
-              'limitations':['Black and silence may be intentional; replay and re-edit manually.',
-                'No freeze/cadence, caption raster, speech intelligibility, semantic or physical-device acceptance.']},
+              'detectors':['blackdetect-v1','silencedetect-v1','sample-peak-v1','freezedetect-v1','vfrdet-v1'],
+              'cadence':cadence,'findings':findings,'omittedFindings':omitted,'audioSamplePeakDbfs':peak,'truePeak':'NOT_MEASURED',
+              'thresholds':{'minimumBlackSec':.5,'blackPixelLuma':.1,'blackPictureRatio':.98,'minimumSilenceSec':.5,'silenceDbfs':-50,'nearClippingDbfs':-.1,'minimumFreezeSec':1,'freezeNoiseRatio':.001},
+              'limitations':['Black, silence, still images and variable cadence may be intentional; replay and re-edit manually.',
+                'Cadence is aggregate output PTS evidence, not source-frame loss detection; freeze does not identify cause.',
+                'Open freeze tails use video stream end, or only minimum observed duration if it is unavailable.',
+                'No caption raster, speech intelligibility, true peak, semantic or physical-device acceptance; no automatic repair.']},
             'semantic_review':'NOT_EVALUATED'}

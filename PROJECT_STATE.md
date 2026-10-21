@@ -7,7 +7,29 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Latest Work implementation (first-cut P1, 2026-10-21)
+## Latest Work implementation (output freeze/cadence F8-B, 2026-10-21)
+
+The existing full-output scan now records still/freeze intervals >=1s and aggregate
+output PTS interval changes in the same disk-backed decode pass. REVIEW only:
+intentional still images/VFR remain user decisions. Open frozen tails stop at
+actual video end; missing video/audio/corrupt packet/frame-count/identity gates
+remain. Valid one-frame output reports insufficient cadence evidence instead of
+a broken decode. Findings retain time/clip references and saved output identity.
+GUI names, scope and legacy-report coverage are explicit. No automatic repair.
+
+Actual synthetic HTTP static4s output -> persisted warning -> restart -> exact
+clip navigation -> explicit manual trim -> new0.812s checked MP4/full decode
+passed; source unchanged. CFR moving negative, true variable PTS positive,
+mid-clip hold and video-only tail regressions pass. Current177 tests PASS (122 Node +42 engine/cloud +3 audio +10 legacy).
+Independent final review APPROVE; no blocking findings. Main integration pending; evidence: `docs/validation/OUTPUT_FREEZE_F8_2026-10-21.md`.
+F8 remains partial: caption bounds, intelligibility/true peak, causal/source-frame
+checks, bounded repair and real-device acceptance are unfinished.
+
+P1 PR #17 integrated at bb872b8f9aeb9b85659d88cff59719ddd56d909c,
+source381d740874cfe93a44287ee8644f1f0d7e3d1b8f matched, postmerge27 editor+11
+actual-signal/proposal/output PASS. Checkpoint main0be8e706a8c42486706e5a854d9ae70ecdcd6ce2.
+
+## Prior Work implementation (first-cut P1, 2026-10-21)
 
 Existing signal extractor/planner connected to private revision/source-bound
 candidates, persistent reports and explicit video-only replacement in the local

@@ -114,7 +114,8 @@ class OutputQATests(unittest.TestCase):
             # Deliberate audio ending at1s is not missing audio.
             plan=self._plan();plan['audio'][0]['endSec']=1
             deliberate=inspect_output(file,expected=8,plan=plan)
-            self.assertEqual(deliberate['inspection']['findings'],[])
+            self.assertNotIn('SILENCE_WHILE_AUDIO_SELECTED',[x['code'] for x in deliberate['inspection']['findings']])
+            self.assertIn('STATIC_OR_FREEZE_INTERVAL',[x['code'] for x in deliberate['inspection']['findings']], 'intentional static video remains a review warning')
 
     def test_video_ending_early_is_not_hidden_by_a_long_audio_track(self):
         from .output_qa import inspect_output
@@ -127,6 +128,44 @@ class OutputQATests(unittest.TestCase):
             self.assertFalse(qa['technical_ok'],qa)
             self.assertEqual(qa['inspection']['status'],'FAILED_TECHNICAL')
             self.assertLess(qa['inspection']['videoStreamEndSec'],2)
+
+class FreezeCadenceTests(unittest.TestCase):
+    def test_middle_freeze_is_warning_with_time_clip_hash_and_no_rewrite(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as t:
+            f=Path(t)/'held.mp4'
+            run(['ffmpeg','-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=10:d=4','-f','lavfi','-i','sine=frequency=440:duration=6',
+                 '-filter_complex','[0:v]split[a][b];[a]trim=0:2,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=2[held];[b]trim=2:4,setpts=PTS-STARTPTS[moving];[held][moving]concat=n=2:v=1:a=0[v]',
+                 '-map','[v]','-map','1:a:0','-c:v','libx264','-c:a','aac',str(f)])
+            before=f.read_bytes();qa=inspect_output(f,expected=6,plan=OutputQATests._plan());self.assertTrue(qa['technical_ok'],qa);self.assertTrue(qa['whole_file_decode_checked'])
+            finding=next(x for x in qa['inspection']['findings'] if x['code']=='STATIC_OR_FREEZE_INTERVAL')
+            self.assertAlmostEqual(finding['startSec'],1.9,delta=.15);self.assertAlmostEqual(finding['endSec'],4,delta=.15);self.assertIn('clip_early',finding['clipIds']);self.assertEqual(finding['severity'],'REVIEW')
+            self.assertEqual(f.read_bytes(),before);self.assertEqual(qa['sha256'],hashlib.sha256(before).hexdigest());self.assertNotIn(str(f),json.dumps(qa))
+    def test_static_tail_is_context_warning_and_stops_at_actual_video_end(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as t:
+            f=Path(t)/'still.mp4';run(['ffmpeg','-v','error','-f','lavfi','-i','color=c=blue:s=160x90:r=10:d=3','-f','lavfi','-i','sine=frequency=440:duration=6','-c:v','libx264','-c:a','aac',str(f)])
+            qa=inspect_output(f,expected=6,plan=OutputQATests._plan());finding=next(x for x in qa['inspection']['findings'] if x['code']=='STATIC_OR_FREEZE_INTERVAL')
+            self.assertLessEqual(finding['endSec'],3.001);self.assertEqual(finding['severity'],'REVIEW');self.assertFalse(qa['technical_ok'],'short video must still fail timing gate')
+    def test_moving_cfr_negative_and_real_variable_pts_positive(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as t:
+            for variable in (False,True):
+                f=Path(t)/('vfr.mp4' if variable else 'cfr.mp4')
+                args=['ffmpeg','-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=10:d=2','-f','lavfi','-i','sine=frequency=440:duration=2.7']
+                if variable:args+=['-vf',"setpts=if(lt(N\\,10)\\,N/(10*TB)\\,1/TB+(N-10)/(5*TB))",'-fps_mode','vfr']
+                else:args+=['-t','2']
+                run([*args,'-c:v','libx264','-c:a','aac',str(f)]);qa=inspect_output(f)
+                self.assertTrue(qa['technical_ok'],qa);codes=[x['code'] for x in qa['inspection']['findings']];self.assertNotIn('STATIC_OR_FREEZE_INTERVAL',codes)
+                cadence=qa['inspection']['cadence'];self.assertGreater(cadence['examinedIntervals'],10)
+                self.assertEqual(cadence['status'],'VARIABLE_INTERVALS' if variable else 'CONSTANT_INTERVALS')
+                self.assertEqual('VARIABLE_FRAME_CADENCE' in codes,variable);self.assertTrue(qa['whole_file_decode_checked'])
+
+    def test_one_frame_is_insufficient_cadence_evidence_not_a_broken_decode(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as t:
+            f=Path(t)/'one-frame.mp4';run(['ffmpeg','-v','error','-f','lavfi','-i','color=c=blue:s=160x90:r=10:d=0.1','-f','lavfi','-i','sine=frequency=440:duration=0.1','-c:v','libx264','-c:a','aac',str(f)])
+            qa=inspect_output(f);self.assertTrue(qa['technical_ok'],qa);self.assertEqual(qa['inspection']['cadence']['status'],'INSUFFICIENT_FRAMES');self.assertEqual(qa['inspection']['cadence']['examinedIntervals'],0);self.assertTrue(qa['whole_file_decode_checked'])
 
 
 if __name__=='__main__':unittest.main()

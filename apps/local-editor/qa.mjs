@@ -17,3 +17,12 @@ export function reviewTarget(report,project,findingIndex){
   const c=project.timeline[clipIndex],outputSec=Math.max(finding.startSec,c.startSec);
   return {clipIndex,sourceSec:c.sourceInSec+(outputSec-c.startSec)*c.speed,outputSec};
 }
+/** Older saved reports cannot acquire detector coverage merely by reopening. */
+export function inspectionScope(report){
+  const i=report?.inspection;if(i?.schema!=='aivs-output-inspection-v1')return 'この出力の検査範囲は未確認です。編集内容から再作成して検査できます。';
+  const base='全編デコード・黒画面・無音・サンプル音量ピークを検査します。';
+  const freeze=i.detectors?.includes('freezedetect-v1'),cadence=i.detectors?.includes('vfrdet-v1')&&['VARIABLE_INTERVALS','CONSTANT_INTERVALS','INSUFFICIENT_FRAMES'].includes(i.cadence?.status);
+  return base+(freeze?'1秒以上ほぼ変化しない静止・フリーズ候補も検査します。':'静止・フリーズ候補は未検査です。')+
+    (cadence?'出力のフレーム間隔の変化を集計します。':'フレーム間隔の検査は未完了です。')+
+    '意図した静止画や可変のフレーム間隔の場合もあります。再生して判断してください。字幕位置、音声の明瞭度、内容の正しさは未検査です。自動修復は行いません。';
+}
