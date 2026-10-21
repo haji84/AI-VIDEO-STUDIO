@@ -11,7 +11,7 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 
 ## Repeatable procedure
 
-1. Open `prototypes/device-lab/DEVICE_LAB.html` **locally** on a compatible device. If iPhone Files/Safari refuses to run scripts from a local HTML file, report this as a **BLOCKER**, do not assume the test passed. Public hosting requires a separate deployment/security decision.
+1. For iPhone Safari, open the already approved static device diagnostic at `https://haji84.github.io/AI-VIDEO-STUDIO/` over HTTPS; the product editor is not publicly deployed. For a local developer test, open `prototypes/device-lab/DEVICE_LAB.html` directly on a compatible device. Local HTML sandbox restrictions may prevent JavaScript execution; report that separately. The public diagnostic is a client-side page and does not upload selected video.
 2. Tap **端末の機能を調べる** and save the capability results.
 3. Select a small, non-sensitive MP4 recorded with that device; tap **短い映像を解析** and verify it displays 3 sample frames' aggregate metrics. No file contents are transmitted.
 4. Tap **日本語音声を再生**, listen on a physical speaker, and rate naturalness. The browser TTS result is **playback-only**; it cannot prove audio file synthesis.
@@ -30,7 +30,7 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 
 - Linux-hosted headless Chromium: 3-second artificial MP4 decoded; frame luminance sampled; animated caption previewed; 2.499-second synthetic MP4 recorded and FFmpeg-decoded.
 - Browser TTS playback output and recording/export of synthesized Japanese voice: **NOT_RUN**.
-- Physical Safari / physical Android Chrome / physical desktop browsers: **NOT_RUN**.
+- Physical iPhone Safari browser smoke: **PARTIAL/PASS by column above** from owner-provided JSON (selected-video full replay and native export not proved). Physical Android Chrome and physical desktop browsers: **NOT_RUN**.
 - The device lab does not upload source files, but the OS browser's speech voice implementation may use external services. Offline guarantees require airplane-mode test.
 
 ## 2026-10-21 owner-supplied iPhone Safari run
