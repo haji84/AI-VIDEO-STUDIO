@@ -78,3 +78,14 @@ test('bridge rejects unverified sync and inconsistent secondary clock mappings',
   s.syncStatus='verified';p.timeline[0].secondaryInSec=2;
   await assert.rejects(adapter.createManifest(p,bindings),/SYNC_CLOCK_MISMATCH/);
 }));
+test('audio render bundle preserves requested four-bus edits separately from video composition',()=>withFiles(async({media,sha})=>{
+  const p=fixture(sha);p.audioClips[0].gainDb=-9;p.audioBuses.source.muted=true;
+  for(const bus of ['narration','bgm','sfx'])p.audioClips.push({...p.audioClips[0],id:'audio_'+bus,bus,gainDb:-12});
+  const bundle=await adapter.createRenderBundle(p,[{assetId,path:media}]);
+  assert.equal(bundle.schema,'aivs-local-render-bundle-v1');assert.equal(bundle.plan.audio.length,4);
+  assert.deepEqual(bundle.plan.audio,p.audioClips);assert.equal(bundle.plan.audioBuses.source.muted,true);
+  assert.equal(bundle.videoManifest.timeline.length,1);assert.equal(bundle.mediaPaths[assetId],media);
+  assert.equal(bundle.intermediateAudio,'IGNORED_BY_FINAL_MIX');
+  p.timeline[0].effects=[{effectId:'effect_zoom',version:1,type:'zoom',startSec:0,endSec:2,parameters:{scale:2},keyframes:[]}];
+  await assert.rejects(adapter.createRenderBundle(p,[{assetId,path:media}]),/UNSUPPORTED/);
+}));

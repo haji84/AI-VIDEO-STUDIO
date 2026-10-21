@@ -71,6 +71,34 @@ non-default audio routing/mixing and unsupported effects; it does not discard
 them. Additional audio/effect data remains in the project for later backends.
 The original engine renders numeric/signal-assisted edits, not semantic AI.
 
+## Connected four-bus local export
+
+The M2 reference backend now consumes the entire saved audio plan:
+
+```sh
+python -m engine.render_saved_project --project /local/project.aivs.json --bindings /local/bindings.json --workspace /local/new-audio-job --output /local/new-mixed.mp4
+```
+
+Workspace and output must be new. This runs the checked bundle builder locally,
+renders video with the existing engine, then ignores its intermediate audio and
+mixes the project's explicitly selected audio tracks. An empty audio plan means
+silence. Source/narration/BGM/SFX gains and mutes are independent. Audio trim,
+constant speed, output timing, fades, repeated selected tails and saved duck
+intervals are honored. Delayed audio stream starts keep their leading silence
+before trim/speed/loop; the camera soundtrack is never implicitly added twice.
+
+Only standalone local containers are accepted; playlist/reference demuxers are refused before following un-hashed dependencies. At most 64 audio clips are accepted by this reference backend. Loops are decoded
+to temporary PCM on disk, so disk-space checks can refuse large jobs. Node,
+Python 3.11+, FFmpeg and a filesystem supporting hard links are required. Final
+output uses an exclusive temporary file and an atomic no-clobber install.
+Repeated export uses a new workspace/output; automatic crash resume is pending.
+
+This is a Linux-tested local command, not an installed beginner/native app.
+It does not generate narration audio or detect speech intervals. Supply owned
+audio files and explicit duck intervals. Sample limiting is not a measured
+true-peak/loudness guarantee. Long-media performance, native devices and audio
+preview parity still need separate verification.
+
 `migrateLegacyProject` accepts `engine/core_v01.py` project JSON only alongside
 explicit verified source identities. It strips old machine paths, converts
 shared/source/output clocks and static captions, and preserves source audio.

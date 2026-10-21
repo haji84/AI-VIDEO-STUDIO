@@ -47,3 +47,16 @@ export async function createManifest(project,bindings){
     // requires explicit master/verified status and checks secondary clock parity.
     allowUnverifiedSync:true};
 }
+
+/** Full audio plan is retained; intermediate camera audio is explicitly ignored. */
+export async function createRenderBundle(project,bindings){
+  const plan=buildRenderPlan(project),videoProject=structuredClone(project);
+  const refs=new Map(project.sourceRefs.map(s=>[s.assetId,s]));
+  videoProject.audioBuses=Object.fromEntries(Object.keys(project.audioBuses).map(bus=>[bus,{gainDb:0,muted:false}]));
+  videoProject.audioClips=plan.video.filter(c=>refs.get(c.sourceId).hasAudio).map((c,i)=>({
+    id:'audio_intermediate_'+i,assetId:c.sourceId,bus:'source',startSec:c.startSec,endSec:c.endSec,
+    trimInSec:c.sourceInSec,speed:c.speed,gainDb:0,loop:false,fadeInSec:0,fadeOutSec:0}));
+  const videoManifest=await createManifest(videoProject,bindings);
+  return {schema:'aivs-local-render-bundle-v1',plan,videoManifest,
+    mediaPaths:Object.fromEntries(bindings.map(b=>[b.assetId,b.path])),intermediateAudio:'IGNORED_BY_FINAL_MIX'};
+}
