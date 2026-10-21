@@ -8,6 +8,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import * as app from './server.mjs';
+import {editAudioClip,removeAudioClip} from './audio-edits.mjs';
 const exec=promisify(execFile);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
@@ -28,6 +29,7 @@ test('local import/edit/history/restart/render is usable and protected',async()=
     let state={session:{project:{revision:0}}};
     const request=async(path,opts={})=>{const r=await fetch(server.url+path,{...opts,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':String(state.session.project.revision),...opts.headers}});
       if(r.ok&&r.headers.get('content-type')?.startsWith('application/json')){const d=await r.clone().json();if(d.session)state=d;}return r;};
+    for(const module of ['/audio-panel.mjs','/audio-edits.mjs']){const script=await fetch(server.url+module);assert.equal(script.status,200);assert.match(script.headers.get('content-type'),/javascript/);}
     assert.equal((await fetch(server.url+'/api/state')).status,403);
     assert.equal((await fetch(server.url+'/api/qa')).status,403);
     assert.equal((await request('/api/qa')).status,404);
@@ -127,5 +129,50 @@ test('late output findings survive restart and explicit re-edit creates a checke
     assert.notEqual(replacement.id,originalJob.id);assert.equal(checked.inspection.status,'CHECKED_LIMITED');
     assert.equal(checked.projectRevision,state.session.project.revision);assert.deepEqual(checked.inspection.findings,[]);
     assert.deepEqual(await readFile(source),bytes);
+  }finally{if(server)await server.close();await rm(dir,{recursive:true,force:true});}
+});
+
+test('shared audio controls survive disk restart and change actual MP4 timing and fades',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'aivs-audio-controls-'));let server;
+  try{
+    const source=join(dir,'synthetic.mp4'),music=join(dir,'synthetic.wav');
+    await exec('ffmpeg',['-v','error','-f','lavfi','-i','color=c=blue:s=320x180:r=30:d=4',
+      '-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=4','-c:v','libx264','-c:a','aac','-shortest',source]);
+    await exec('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=660:sample_rate=48000:duration=0.4',
+      '-f','lavfi','-i','sine=frequency=1320:sample_rate=48000:duration=1.6',
+      '-filter_complex','[0:a][1:a]concat=n=2:v=0:a=1[out]','-map','[out]','-c:a','pcm_s16le',music]);
+    const bytes=await readFile(source),sounds=await readFile(music);
+    server=await app.startServer({workspace:join(dir,'data'),port:0});let state;
+    const call=async(path,opts={})=>{const r=await fetch(server.url+path,{...opts,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':String(state?.session.project.revision??0),...opts.headers}});
+      if(r.ok&&r.headers.get('content-type')?.startsWith('application/json')){const data=await r.clone().json();if(data.session)state=data;}return r;};
+    for(const [kind,name,body] of [['video','synthetic.mp4',bytes],['bgm','synthetic.wav',sounds]]){
+      const r=await call('/api/import?kind='+kind,{method:'POST',headers:{'X-File-Name':name,'Content-Length':String(body.length)},body});assert.equal(r.status,200,await r.clone().text());}
+    const before=structuredClone(state.session.project),original=before.audioClips[0],id=before.audioClips[1].id;
+    const q=editAudioClip(before,id,{startSec:1,endSec:3,trimInSec:.5,speed:2,gainDb:-6,loop:true,fadeInSec:.5,fadeOutSec:.5});q.audioBuses.bgm.gainDb=0;
+    assert.equal((await call('/api/edit',{method:'POST',body:JSON.stringify(q)})).status,200);
+    assert.equal((await call('/api/undo',{method:'POST'})).status,200);assert.deepEqual(state.session.project.audioClips,before.audioClips);
+    assert.equal((await call('/api/redo',{method:'POST'})).status,200);assert.deepEqual(state.session.project.audioClips,q.audioClips);
+    const removed=removeAudioClip(state.session.project,state.session.project.audioClips[1].id);
+    assert.equal((await call('/api/edit',{method:'POST',body:JSON.stringify(removed)})).status,200);assert.equal(state.session.project.audioClips.length,1);
+    await call('/api/undo',{method:'POST'});assert.deepEqual(state.session.project.audioClips,q.audioClips);
+    await server.close();server=await app.startServer({workspace:join(dir,'data'),port:0});
+    const reopened=await call('/api/state');state=await reopened.json();assert.deepEqual(state.session.project.audioClips,q.audioClips);assert.deepEqual(state.session.project.audioClips[0],original);
+    assert.equal((await call('/api/render',{method:'POST'})).status,202);let job;
+    for(let i=0;i<300;i++){job=await(await call('/api/job')).json();if(job.status!=='RUNNING')break;await delay(100);}
+    assert.equal(job.status,'PASS',JSON.stringify(job));const output=join(dir,'edited.mp4');
+    await writeFile(output,Buffer.from(await(await call(job.download+'?token='+server.token)).arrayBuffer()));
+    await exec('ffmpeg',['-v','error','-xerror','-i',output,'-f','null','-']);
+    const pcm=(await exec('ffmpeg',['-v','error','-i',output,'-vn','-ac','1','-ar','48000','-f','f32le','pipe:1'],{encoding:'buffer',maxBuffer:1024**2})).stdout;
+    function amplitude(hz,start,end){let real=0,imaginary=0;const n=Math.round((end-start)*48000),offset=Math.round(start*48000);
+      for(let i=0;i<n;i++){const value=pcm.readFloatLE((offset+i)*4),phase=2*Math.PI*hz*i/48000;real+=value*Math.cos(phase);imaginary-=value*Math.sin(phase);}return 2*Math.hypot(real,imaginary)/n;}
+    const middle=amplitude(1320,1.8,2.1),early=amplitude(1320,1.02,1.1),late=amplitude(1320,2.9,2.98);
+    assert.ok(middle>.04);assert.ok(early<middle*.35);assert.ok(late<middle*.35);
+    for(const [start,end] of [[.3,.7],[3.3,3.7]])assert.ok(amplitude(1320,start,end)<.002);
+    assert.ok(amplitude(660,1.8,2.1)<.002,'trimmed source lead-in unexpectedly repeated');
+    assert.ok(amplitude(440,.3,.7)>.05,'selected original audio changed');
+    const qa=await(await call('/api/qa')).json();assert.equal(qa.projectRevision,state.session.project.revision);
+    assert.equal(qa.sha256,createHash('sha256').update(await readFile(output)).digest('hex'));
+    assert.deepEqual(await readFile(source),bytes);assert.deepEqual(await readFile(music),sounds);
+    console.log('audio-controls synthetic evidence '+JSON.stringify({sourceSha256:createHash('sha256').update(bytes).digest('hex'),musicSha256:createHash('sha256').update(sounds).digest('hex'),outputSha256:qa.sha256,middle1320:middle,fadeInRatio:early/middle,fadeOutRatio:late/middle,qualityStatus:qa.inspection.status}));
   }finally{if(server)await server.close();await rm(dir,{recursive:true,force:true});}
 });

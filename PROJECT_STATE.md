@@ -7,7 +7,27 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Latest Work implementation (M4-A, 2026-10-21)
+## Latest Work implementation (audio controls A1, 2026-10-21)
+
+The local desktop UI now exposes existing per-clip audio start/end, source trim,
+speed, gain, loop, fade-in/out and explicit removal. Shared pure operations use
+the existing version1 validator and actual renderer. Custom audio/ducking data
+is preserved; manually changed automatic slots become independent audio so later
+video edits cannot overwrite their timing. No inferred tracks or automatic clamp.
+Actual HTTP edit -> undo/redo -> remove/undo -> disk restart -> real MP4 proves
+selected1320Hz at1–3s, retained440Hz original audio and fade amplitude ratios
+0.1244/0.1264. Sources unchanged. UI DOM/browser acceptance remains BLOCKED.
+Evidence: `docs/validation/AUDIO_CONTROLS_A1_2026-10-21.md`.
+Current full local suite:146 PASS (107 Node +26 engine/cloud +3 audio +10 legacy).
+Independent review's Undo/Redo wrong-target removal was reproduced RED and fixed
+GREEN with the real panel module in a DOM stub; no implicit target fallback.
+F4/F6 remain partial TESTED_SYNTHETIC; native platforms/novices not accepted.
+
+M4-A PR #14 integrated at c480cfe87fcb238dd4736e4747272d7405695c88;
+verified tree3d508ef23431f1735900289d606419d9f183403b. Post-merge11 editor +15
+actual-output/QA tests passed. Last checkpoint maincc8974f8460b69899558814237c2d7289c250c1b.
+
+## Prior Work implementation (M4-A, 2026-10-21)
 
 Full-output technical inspection is connected to the saved-project renderer.
 Every video frame/selected audio stream is decoded, container/decoded frame

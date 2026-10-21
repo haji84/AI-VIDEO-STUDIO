@@ -42,6 +42,7 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Bind persisted four-bus timeline to FFmpeg mix; actual synthetic PCM checks timing, mute, loop, fade, ducking and delayed source audio (M2, Linux only).
 - [x] Local desktop server import/edit/history/restart/reopen and real MP4 download API; preserve explicit audio/effects and reject stale edits (M3, synthetic).
 - [x] Whole-output decode/frame-count check, black/silence/sample-peak evidence, output-hash/revision-bound report persistence and explicit manual re-edit -> fresh inspected MP4 (M4-A, synthetic Linux).
+- [x] Per-audio timing/trim/speed/gain/loop/fade and explicit removal connected to common save/history/actual export; protect independent audio from later video auto-follow (A1, synthetic HTTP/PCM, GUI acceptance blocked).
 - [ ] Complete F8 freeze/cadence, caption safe bounds, intelligibility/true peak, bounded automatic repair and real-device evidence. Limited technical checks are not full output quality acceptance.
 - [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED: missing browser executable in current runtime; script prepared).
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.

@@ -10,11 +10,14 @@
 <script type="module" nonce="__NONCE__">
 import {applyClipEdit,splitClip,moveClip,appendClip} from '/editor-edits.mjs';
 import {reviewTarget,inspectionMessage} from '/editor-qa.mjs';
+import {mountAudioPanel} from '/audio-panel.mjs';
 const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll;
 const names={source:'元音声',narration:'ナレーション',bgm:'BGM',sfx:'効果音'};
 function notice(message){$('notice').textContent=message;}
 async function api(path,{method='GET',body,headers={}}={}){const r=await fetch(path,{method,body,headers:{'X-AIVS-Token':token,'X-AIVS-Revision':String(state?.session?.project?.revision??0),...headers}});const data=await r.json();if(!r.ok){const e=new Error(data.error||'処理に失敗しました');e.status=r.status;throw e;}return data;}
 function sourceUrl(asset){return '/media/'+asset+'?token='+token;}
+const audioContainer=document.createElement('div');audioContainer.id='audio-clips';$('buses').after(audioContainer);
+const audioPanel=mountAudioPanel({container:audioContainer,current:()=>state,commit:edit,act,mediaUrl:sourceUrl});
 function show(){const p=state.session.project;selected=Math.min(selected,Math.max(0,p.timeline.length-1));$('project-name').value=p.name;
  $('undo').disabled=!state.session.undo.length;$('redo').disabled=!state.session.redo.length;
  $('clips').replaceChildren();p.timeline.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.textContent=(i+1)+' · '+(c.durationSec/c.speed).toFixed(1)+'秒';b.className=i===selected?'selected':'';b.onclick=()=>{selected=i;show();};li.append(b);$('clips').append(li);});
@@ -27,6 +30,7 @@ function show(){const p=state.session.project;selected=Math.min(selected,Math.ma
  $('caption-preview').replaceChildren();if($('caption').value){const label=document.createElement('span');label.textContent=$('caption').value;$('caption-preview').append(label);}showSync();}
  $('buses').replaceChildren();for(const bus of Object.keys(names)){const row=document.createElement('div');row.className='bus';const label=document.createElement('label');label.textContent=names[bus];const gain=document.createElement('input');gain.type='range';gain.min='-40';gain.max='6';gain.step='1';gain.id='gain-'+bus;gain.value=p.audioBuses[bus].gainDb;gain.setAttribute('aria-label',names[bus]+' 音量');const value=document.createElement('span');value.textContent=gain.value+' dB';gain.oninput=()=>{value.textContent=gain.value+' dB';};gain.onchange=()=>act(async()=>{const q=structuredClone(state.session.project);q.audioBuses[bus].gainDb=Number(gain.value);await edit(q);});
  const mute=document.createElement('input');mute.type='checkbox';mute.id='mute-'+bus;mute.checked=p.audioBuses[bus].muted;const ml=document.createElement('label');ml.append(mute,document.createTextNode('消音'));mute.onchange=()=>act(async()=>{const q=structuredClone(state.session.project);q.audioBuses[bus].muted=mute.checked;await edit(q);});label.append(gain,value);row.append(label,ml);$('buses').append(row);}
+ audioPanel.show();
 }
 function showSync(){const s=state.session.project.sourceRefs.find(s=>s.assetId===$('camera').value);if(!s)return;$('sync-offset').value=s.offsetSec;$('sync-confirm').checked=['master','verified'].includes(s.syncStatus);}
 async function act(action){if(working)return;working=true;try{notice('処理中…');await action();show();notice('端末内に保存済み');}catch(e){if(e.status===409&&e.message.includes('REVISION_CONFLICT')){try{state=await api('/api/state');show();if(e.draft){$('conflict-save').hidden=false;$('conflict-save').onclick=()=>downloadJson(e.draft,'unsaved-edit.aivs.json');}notice('別の画面の更新を読み直しました。未保存の変更は保存ボタンから取り出せます。');}catch{notice(e.message);}}else notice(e.message);}finally{working=false;}}
