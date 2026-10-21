@@ -1,9 +1,9 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21 (Japan)
-Status: IN_PROGRESS. M1/M2/M3/M4-A/A1 integrated; S1 locally reviewed/tested,
-integration pending. Actual GUI/native/physical acceptance NOT_RUN/BLOCKED.
-mainSHA (parent): `7fed306e67da59c59dadf03c1a89000a55b450d6`
-baselineTree: `5436950433fda5df99a370fe5a22a59acde6e3ba`
+Status: IN_PROGRESS. M1/M2/M3/M4-A/A1/S1 code integrated.
+Actual GUI/native/physical acceptance NOT_RUN/BLOCKED; product DoD NOT MET.
+mainSHA (last verified implementation): `fbad7612905a3b4b3a3d0fdde21bccbed571f264`
+verifiedSourceTree: `8e482a686f8f12ccb246f3ca750fe75e8d3d3fa6`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 
 ## Prior integrated state
@@ -36,14 +36,14 @@ All prior evidence: docs/validation/*_2026-10-21.md. Do not repeat finished work
   reviewer independently ran8 edit/sync cases PASS.
 - Evidence: docs/validation/SYNC_CANDIDATES_S1_2026-10-21.md.
 
-## Exact integration step
+## S1 main integration / post-merge evidence
 
-Create one S1 PR; inspect current base/head/checks; merge expected head only.
-Verify remote main tree equals tested local source. Post-merge run
-node --test apps/local-editor/*.test.mjs
-python -m unittest engine.test_saved_sync engine.test_project_pipeline engine.test_saved_project_audio -v
-Persist actual SHA/tree/PR and outcome here/Issue #10, then continue next task.
-Actions remain manual-only/NOT_RUN; do not imply CI from local tests.
+PR #16 merged with expected head1997b17d8caf6d5e7e75e899350600190ab3ca06.
+Mainfbad7612905a3b4b3a3d0fdde21bccbed571f264/tree8e482a686f8f12ccb246f3ca750fe75e8d3d3fa6
+matches the tested local source exactly. Post-merge local-editor23 PASS;
+engine.test_saved_sync/project_pipeline/saved_project_audio13 PASS (actual MP4).
+CodeRabbit success, clean merge and check-runs0 observed. Actions manual-only and
+NOT_RUN. Continue the first-cut proposal task below in this active run.
 
 ## Next independent task after S1
 
