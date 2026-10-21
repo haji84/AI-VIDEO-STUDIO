@@ -14,3 +14,10 @@
 ## v0.1 (historical)
 
 - Desktop Python editing concept retained in `legacy/desktop-v0.1`.
+
+## Local-first initial signal-assisted editing baseline (development)
+
+- Portable 1–N-camera first-cut proposal with candidate sync exclusion, review flags, and no semantic claims.
+- FFmpeg numerical signal extraction limited by explicit runtime/coverage budget; three-camera synthetic MP4 render/decode integration.
+- Standalone device capability test page for iPhone/Android/desktop, all hardware acceptance pending.
+- No billing, external uploads, device-native editor, or production release included.
