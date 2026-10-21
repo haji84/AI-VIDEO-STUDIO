@@ -34,6 +34,16 @@ Evaluation is based on verified, usable product requirements, not number of comm
 
 No item becomes checked merely because a design document or test stub exists.
 
+## Current verified M1 slice (Work, 2026-10-21)
+
+- [x] Portable v1 project/time/source/audio/effect contract, strict reload and undo/redo; actual local disk roundtrip tested.
+- [x] Streamed source hash/relink, fail-closed manifest bridge, real saved 3-camera caption/source-audio MP4 and full decode on Linux.
+- [x] Fix renderer protected-file/temp/report aliases, verify source hash/capabilities at render boundary, migrate actual legacy IDs/profile.
+- [ ] Bind persisted four-bus timeline to FFmpeg mix; test original/narration/BGM/SFX timing, mute, loop, fade and ducking.
+- [ ] Actual beginner editor autosave/reopen, preview/export parity, native platforms and real-user tests.
+
+These M1 items are TESTED_SYNTHETIC. Broader P0/platform boxes stay open.
+
 ## L0 baseline added in development (2026-10-21)
 
 - [x] Dependency-free numerical **first-cut proposal** on 1/2/3+ synthetic cameras, tested in Node (10 cases). This is not semantic AI editing.

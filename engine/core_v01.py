@@ -565,10 +565,18 @@ def render_project(project:dict, directory:Path, output:Path, quality:str="fullh
                 raise
         else:
             raise last_error or StudioError("動画の書き出しに失敗しました。")
-        final_tmp=out.with_name(out.name+".new")
-        if final_tmp in originals:raise StudioError("元動画への上書きは禁止です。")
-        shutil.copyfile(candidate,final_tmp)
-        os.replace(final_tmp,out)
+        # Never follow a predictable `.new` symlink/hardlink supplied by another
+        # file or a previous failed run. Install from a private exclusive file.
+        final_tmp=None
+        try:
+            with tempfile.NamedTemporaryFile(prefix=out.name+".",suffix=".new",dir=out.parent,delete=False) as target:
+                final_tmp=Path(target.name)
+                with candidate.open('rb') as source_file:
+                    shutil.copyfileobj(source_file,target)
+                target.flush();os.fsync(target.fileno())
+            os.replace(final_tmp,out)
+        finally:
+            if final_tmp is not None:final_tmp.unlink(missing_ok=True)
     qa["path"]=str(out)
     qa["source_files"]=[s["name"] for s in project["sources"]]
     qa["finished_at"]=utcnow()

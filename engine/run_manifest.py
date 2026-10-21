@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import math
+import os
 import re
 import sys
 import time
+import tempfile
 from pathlib import Path
 
 from . import core_v01 as core
@@ -53,6 +56,33 @@ def _check_manifest(m: dict) -> None:
         raise ManifestError('Invalid manual sync offsets')
     if m.get('allowUnverifiedSync') not in {True, False, None}:
         raise ManifestError('Invalid sync gate')
+    protected=m.get('protectedPaths',[])
+    if not isinstance(protected,list) or len(protected)>200 or any(not isinstance(x,str) or not x for x in protected):
+        raise ManifestError('Invalid protected paths')
+
+
+def _assert_safe_destinations(manifest:dict, workspace:Path, output:Path) -> None:
+    protected=[Path(x['path']) for x in manifest['sources']]+[Path(x) for x in manifest.get('protectedPaths',[])]
+    destinations=[output,output.with_name(output.name+'.new'),workspace/'technical_qa.json']
+    for dest in destinations:
+        for source in protected:
+            if dest.resolve()==source.resolve() or (dest.exists() and source.exists() and dest.samefile(source)):
+                raise ManifestError('PROTECTED_FILE_OVERWRITE')
+
+
+def _check_source_identity(expected:dict, observed:dict) -> None:
+    if 'hasAudio' in expected and (type(expected['hasAudio']) is not bool or expected['hasAudio']!=observed['has_audio']):
+        raise ManifestError('SOURCE_METADATA_MISMATCH: audio availability')
+    if 'durationSec' in expected:
+        duration=expected['durationSec']
+        if type(duration) not in (int,float) or not math.isfinite(duration) or abs(duration-observed['duration'])>.05:
+            raise ManifestError('SOURCE_METADATA_MISMATCH: duration')
+    if 'sha256' in expected:
+        if not isinstance(expected['sha256'],str) or not re.fullmatch(r'[0-9a-f]{64}',expected['sha256']):
+            raise ManifestError('SOURCE_HASH_MISMATCH: invalid hash')
+        with Path(expected['path']).open('rb') as file:
+            actual=hashlib.file_digest(file,'sha256').hexdigest()
+        if actual!=expected['sha256']:raise ManifestError('SOURCE_HASH_MISMATCH')
 
 
 def _remap_clips(clips, sources) -> list[dict]:
@@ -83,11 +113,15 @@ def process_manifest(manifest: dict, workspace: Path, output: Path, progress=Non
     _check_manifest(manifest)
     workspace=Path(workspace).resolve()
     output=Path(output).resolve()
+    if output.suffix.lower()!='.mp4':raise ManifestError('Output must be MP4')
+    _assert_safe_destinations(manifest,workspace,output)
     workspace.mkdir(parents=True,exist_ok=True)
     start_time=time.monotonic()
     project=core.new_project(str(manifest.get('name','動画プロジェクト')))
     core.add_sources(project,[s['path'] for s in manifest['sources']])
     mapped=list(zip([x['assetId'] for x in manifest['sources']],project['sources']))
+    for expected,observed in zip(manifest['sources'],project['sources']):
+        _check_source_identity(expected,observed)
     manual_offsets=manifest.get('manualOffsets') or {}
     all_manual=len(mapped)>1 and all(asset in manual_offsets for asset,_ in mapped[1:])
     if len(mapped)>1 and not all_manual:
@@ -113,6 +147,7 @@ def process_manifest(manifest: dict, workspace: Path, output: Path, progress=Non
     core.validate_timeline(project)
     if output in [Path(x['path']).resolve() for x in project['sources']]:
         raise ManifestError('Cannot overwrite original footage')
+    _assert_safe_destinations(manifest,workspace,output)
     report=core.render_project(project,workspace/'scratch',output,quality=manifest.get('quality','review'),gpu=False,callback=progress)
     report.update({'executionMode':'portable_ffmpeg_processor','semantic_editing':'not_implemented',
                    'final_educational_accuracy':'not_evaluated',
@@ -120,7 +155,15 @@ def process_manifest(manifest: dict, workspace: Path, output: Path, progress=Non
                    'source_ids':[asset for asset,_ in mapped],
                    'sync_estimates':sync})
     report_path=workspace/'technical_qa.json'
-    report_path.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+    _assert_safe_destinations(manifest,workspace,output)
+    report_tmp=None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',prefix='technical_qa.',suffix='.tmp',dir=workspace,delete=False) as handle:
+            report_tmp=Path(handle.name)
+            json.dump(report,handle,ensure_ascii=False,indent=2);handle.flush();os.fsync(handle.fileno())
+        os.replace(report_tmp,report_path)
+    finally:
+        if report_tmp is not None:report_tmp.unlink(missing_ok=True)
     return report
 
 
@@ -132,6 +175,9 @@ def cli():
     args=ap.parse_args()
     try:
         manifest=json.loads(Path(args.manifest).read_text(encoding='utf-8'))
+        # The manifest is itself local editing evidence, not an output destination.
+        if isinstance(manifest,dict) and isinstance(manifest.get('protectedPaths',[]),list):
+            manifest.setdefault('protectedPaths',[]).append(str(Path(args.manifest).resolve()))
         result=process_manifest(manifest,Path(args.workspace),Path(args.output))
         print(json.dumps({'ok':True,'path':result['path'],'technical_ok':result['technical_ok'],
                           'semantic_editing':result['semantic_editing']},ensure_ascii=False))

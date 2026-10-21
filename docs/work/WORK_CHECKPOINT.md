@@ -1,29 +1,57 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21
-Status: PREPARED_FOR_WORK (Work task not started by creating this file)
-Canonical goal: `GOAL.md`
-Execution protocol: `docs/work/AUTONOMOUS_EXECUTION.md`
+Status: IN_PROGRESS / M1 TESTED_SYNTHETIC; integration pending in this change
+mainSHA (base of this change): `64cfb20c86a6abcf445124566ff873e887b27dee`
+Canonical goal: `GOAL.md`; operating rules: `docs/work/AUTONOMOUS_EXECUTION.md`
 
-## Repo state at Goal preparation
+## Done in this run
 
-- Public code repository: `haji84/AI-VIDEO-STUDIO`.
-- Baseline `main` SHA before adding this Work handoff: `ea34241e16672bce2fe2652b4ad5928dcb5f7a99`.
-- Existing `v0.3.1` is **draft/product prototypes**, not a shippable native app.
-- Current physical iPhone browser evidence: `DECODED_BUFFER` path generated a short selected-video MP4, original/output WebAudio RMS were nonzero and owner checked audible sound + Files replay. But `replay.status=NOT_RUN`, `acceptance.status=INCOMPLETE`, and actual MP4 codec/PCM inspection is unverified. Read `docs/validation/IOS_BUFFER_AUDIO_OWNER_RETEST_2026-10-21.md`.
-- Separate short browser video/effects and audio tests do **not** prove full-length, native iOS, Android, Windows or Mac export.
-- GORIQ and the Cloudflare prototype are separate and must not be enabled/modified.
+- Read main, specs, rules/checkpoint and Issue #10; no open PR at start.
+- Verified all 106 remote blobs and base tree `5369333092704f9a4b20059cdad9d4cc9f6aace3`.
+  Git transport is unavailable; authenticated connector supplies read/write.
+  Local snapshot history is not remote history; use real main as commit parent.
+- Implemented portable project v1, source/time/effect/four-bus definitions,
+  strict validation, 50-step durable history, streaming hash relink, atomic
+  Node save/reload, explicit existing-engine manifest CLI.
+- Saved/reopened/relinked three-camera project -> MP4 -> complete decode,
+  audio FFT, frame/caption pixels and unchanged source hashes passed.
+- Independent review reproduced four material issues; regression fixes protect
+  final/temp/report files, check source hash/audio capabilities at render time,
+  migrate real legacy IDs/profile. Combined history budget also checked.
+- 114 tests pass: 88 Node + 13 engine/cloud + 3 audio + 10 legacy.
+  Commands, versions, fixture hashes and limits:
+  `docs/validation/DURABLE_PROJECT_M1_2026-10-21.md`.
 
-## First Work action
+## Current integration step
 
-Confirm current `main` SHA, existing open PRs and all formal specs; do not assume this checkpoint is still current. Verify and update `PROJECT_STATE.md` and outdated duplicate ROADMAP checkboxes without deleting contradictory historical evidence. Implement the **highest-value unblocked next requirement** from M1/M2 while requesting physical iPhone replay JSON only when it becomes necessary. First tangible output should be an actual implementation + runnable tests + saved checkpoint + reviewed integration, not another broad planning memo.
+Review/fix/test complete locally. Create one PR, inspect base/checks, merge
+with expected head only if allowed, verify remote main tree, then re-run
+`python -m unittest engine.test_project_pipeline -v`. Save PR/merge SHA and
+post-merge outcome to Issue #10 and next checkpoint. Remote CI has not run;
+workflow is manual-only and main reports no required checks.
 
-## Resume contract
+## Next bounded task (continue automatically)
 
-After every verified implementation:
-- Update `mainSHA`, milestones, actual test evidence, current blocker, next exact task below.
-- Record any waiting physical device action separately and proceed with other independent work.
-- Never mark the whole Goal COMPLETE until `GOAL.md` DoD holds.
+Connect saved `audioClips`/`audioBuses` to local FFmpeg rendering. Consume the
+same validated render plan, preserve chosen original audio, honor four buses
+with timing/gain/mute/fade/loop/ducking. Verify actual decoded distinct tones,
+not only mocks. Unsupported visual effects must still stop explicitly.
+Then add beginner editing UI and native platform adapters.
 
-**CURRENT TASK:** Start Work coding environment/repository connection, inspect real code, establish tests; implement first shared project/timeline/media contract or equivalent critical path selected from evidence.
-**NEXT TASK:** Determined by first Work run and persisted here.
-**OWNER REQUIRED NOW:** No action until Work identifies a real account/permission/runtime blocker.
+## External gates
+
+- Latest iPhone browser report: `replay.status=NOT_RUN`, acceptance INCOMPLETE.
+  Retest existing compatibility diagnostic; run exported-MP4 replay, confirm
+  original/caption/audio/Files flags, return anonymized JSON. Native gate separate.
+- No physical iOS/Android/Windows/Mac or authorized real training footage in
+  this Linux runtime. Keep platform DoD BLOCKED/unverified; continue portable work.
+- No paid API/GPU/R2, production publication, credential/payment change,
+  recurring job or other product repository touched.
+
+## Known limitations
+
+Persistent audio/effects exceed this narrow renderer's supported subset;
+unsupported edits stop explicitly. No semantic AI/voice-file/native GUI claim.
+Node save lacks parent-directory fsync and concurrent-writer conflict handling;
+physical power-loss and OS filesystem durability remain unverified.
+No final COMPLETE status or completion percentage is justified. Issue #10 open.
