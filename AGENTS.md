@@ -1,5 +1,7 @@
 # AI VIDEO STUDIO development rules
 
+0. **Highest product outcome:** read `GOAL.md` first and follow `docs/work/AUTONOMOUS_EXECUTION.md` for Work sessions. These do not weaken any security, copyright, owner approval or testing rules below. Update `docs/work/WORK_CHECKPOINT.md` after each verified change. Work cannot claim endless background execution merely from a text instruction.
+
 1. Treat `docs/specs/PRODUCT_SPEC_v0.3.1.md`, `docs/specs/AUDIO_SPEC_v0.3.1.md`, `PROJECT_STATE.md`, and `ROADMAP.md` as the present draft product source of truth. This repository is independent of GORIQ.
 2. Before coding, determine current implementation and limitations. Do not fabricate test results, mobile support, deployment status, or video understanding ability.
 3. Prefer existing code reuse (`engine/`, `cloud/`, `prototypes/audio/`) but never force the optional cloud architecture on the offline-first product.

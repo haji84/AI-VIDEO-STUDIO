@@ -1,5 +1,12 @@
 # AI VIDEO STUDIO
 
+## Top-level Goal and Work autonomy
+
+**Canonical outcome:** [GOAL.md](GOAL.md). Operational rules: [docs/work/AUTONOMOUS_EXECUTION.md](docs/work/AUTONOMOUS_EXECUTION.md). Resume checkpoint: [docs/work/WORK_CHECKPOINT.md](docs/work/WORK_CHECKPOINT.md). Ready-to-copy Work instruction: [docs/work/WORK_LAUNCH.md](docs/work/WORK_LAUNCH.md).
+
+The public GitHub source is independent from GORIQ. This Goal covers a local-first video editing application, **not** immediate paid/public product release. An existing browser device lab is not proof of native/full-duration product completion.
+
+
 **Status: v0.3.1 design + audio prototype, NOT a finished mobile app.**
 
 AI VIDEO STUDIO is a standalone, local-first, non-destructive AI-assisted video editing project. It is **not** part of GORIQ, and does not share GORIQ's release status, repository, credentials or personal media. The goal is a beginner-friendly editor for **iPhone, Android, Windows and macOS**, supporting 1 to N cameras, Japanese subtitles/TTS, animated titles/video effects, BGM/SE, and optional cloud processing with separate consent.
