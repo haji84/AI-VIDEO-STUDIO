@@ -48,3 +48,8 @@ Do not commit real filming footage, sensitive audio, names, access credentials, 
 `engine/local_signals.py` captures low-level brightness/motion/audio-energy signals on local owned media, and `packages/edit-planner/auto-edit.mjs` generates a deterministic, editable camera/timeline proposal from 1–100 verified-clock sources. This is a basic **numerical first cut**; it does NOT recognize people/roles or deliver a final educational video.
 
 See `docs/validation/LOCAL_FIRST_CUT_2026-10-21.md` for the integration test and `docs/validation/DEVICE_ACCEPTANCE_MATRIX.md` for physical device testing. Offline device capability page: `prototypes/device-lab/DEVICE_LAB.html`. No file uploads or cloud calls are made by the new prototype.
+
+
+### Browser-only device test (separate from the editor)
+
+The live, static GitHub Pages diagnostic is `https://haji84.github.io/AI-VIDEO-STUDIO/`. It keeps the selected video in the browser, offers an **experimental four-second, silent** selected-video + caption MP4 output, and reports replay separately. Full video/audio editing, AI semantics and native phone exports are not implemented by this test page. See `docs/validation/SELECTED_VIDEO_BROWSER_EXPORT_2026-10-21.md`.
