@@ -51,3 +51,12 @@ export function appendClip(project,sourceId,clipId,{withSourceAudio=false}={}){
   const c={clipId,sourceId,sourceInSec:0,durationSec:source.durationSec,startSec:0,speed:1,layout:'single',effects:[]};p.timeline.push(c);
   if(withSourceAudio&&source.hasAudio){const a=linkedAudio(c);p.audioClips.push(a);linked.set(clipId,a.id);}return reflow(p,linked);
 }
+export function cameraSourceIn(project,index,targetId){
+  validateProject(project);const c=project.timeline[index],old=project.sourceRefs.find(s=>s.assetId===c?.sourceId),target=project.sourceRefs.find(s=>s.assetId===targetId);
+  if(!c||!old||!target||target.mediaKind!=='video')throw new Error('VIDEO_SOURCE_REQUIRED');
+  if(!['master','verified'].includes(old.syncStatus)||!['master','verified'].includes(target.syncStatus))throw new Error('SYNC_UNVERIFIED: 先に同期位置を確認してください');
+  if(old.driftPpm!==0||target.driftPpm!==0)throw new Error('CLOCK_DRIFT_UNSUPPORTED');
+  const start=c.sourceInSec+old.offsetSec-target.offsetSec;
+  if(start<0||start+c.durationSec>target.durationSec+1e-7)throw new Error('CAMERA_HAS_NO_COVERAGE: この共通時刻は選んだカメラの撮影範囲外です');
+  return start;
+}

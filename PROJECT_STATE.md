@@ -7,7 +7,27 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Latest Work implementation (audio controls A1, 2026-10-21)
+## Latest Work implementation (sync candidates S1, 2026-10-21)
+
+Existing local audio-correlation engine is connected to read-only candidates,
+private SHA/revision-bound reports, restart recovery and explicit confirmation.
+No analysis auto-verifies a camera. Weak/silent/missing audio, changed files,
+stale evidence, confirmed targets and unsupported drift fail closed. Two common
+scene previews and manual fallback are wired; actual browser/paired playback
+remains BLOCKED. Shared-clock camera choice and legacy manifest rebasing fix
+nonzero-offset camera-only MP4 export without changing selected soundtrack.
+
+Full local suite156 PASS:112 Node +31 engine/cloud +3 audio +10 legacy.
+Actual synthetic HTTP analysis -> restart -> confirm -> camera output/decode,
+red-camera pixels and original-audio RMS0.1537 passed. Offset2.0s, audio agreement
+0.998, uniqueness0.591. F2 remains partial TESTED_SYNTHETIC; drift/common-event
+vision, real footage and physical platforms are not accepted. Independent review
+found no Critical/Important issues. Evidence: `docs/validation/SYNC_CANDIDATES_S1_2026-10-21.md`.
+
+A1 PR #15 main30d758bd1cb2f374a729632757dc451fdf0f3078/tree03ae10aea63401e76b82c71820e33632b9f3c49b
+verified; post-merge18 editor+8 actual-output PASS. Previous checkpoint main7fed306e67da59c59dadf03c1a89000a55b450d6.
+
+## Prior Work implementation (audio controls A1, 2026-10-21)
 
 The local desktop UI now exposes existing per-clip audio start/end, source trim,
 speed, gain, loop, fade-in/out and explicit removal. Shared pure operations use

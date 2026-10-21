@@ -148,8 +148,10 @@ def add_sources(project: dict[str, Any], paths: list[str]) -> list[dict[str, Any
 
 def _audio_envelope(path: str, step_seconds: float = 0.1, max_seconds: float = 7200) -> list[float]:
     rate = 1000
-    cp = subprocess.run([_which("ffmpeg"), "-hide_banner", "-nostdin", "-v", "error", "-i", path,
+    cp = subprocess.run([_which("ffmpeg"), "-hide_banner", "-nostdin", "-v", "error",
+                         "-protocol_whitelist", "file,pipe", "-format_whitelist", "mov,matroska,webm,avi,wav,mp3,aac,flac,ogg", "-i", path,
                          "-t", str(int(max_seconds)), "-vn", "-ac", "1", "-ar", str(rate),
+                         "-af", "aresample=1000:async=1:first_pts=0",
                          "-f", "s16le", "pipe:1"], stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE, timeout=3600, check=False)
     if cp.returncode or len(cp.stdout) < rate * 2:
@@ -249,7 +251,9 @@ def _correlate(master: list[float], target: list[float], max_shift: int, min_ove
 
 
 def sync_sources(project: dict[str, Any], max_shift_seconds: int = 600,
-                 callback: Callable[[str], None] | None = None) -> dict[str, Any]:
+                 callback: Callable[[str], None] | None = None, analysis_seconds: float = 7200) -> dict[str, Any]:
+    if not math.isfinite(analysis_seconds) or not 10 <= analysis_seconds <= 7200:
+        raise StudioError("同期解析の長さは10〜7200秒にしてください。")
     sources = project["sources"]
     if not sources:
         raise StudioError("動画が登録されていません。")
@@ -260,7 +264,7 @@ def sync_sources(project: dict[str, Any], max_shift_seconds: int = 600,
     if not sources[0]["has_audio"]:
         raise StudioError("基準動画に音声がありません。基準動画を変えるか手動同期してください。")
     if callback: callback("基準動画の音声を解析中")
-    master = _audio_envelope(sources[0]["path"])
+    master = _audio_envelope(sources[0]["path"], max_seconds=analysis_seconds)
     sources[0]["offset"] = 0.0
     sources[0]["sync"] = {"method":"master", "confidence":1.0}
     details, good = [], 1
@@ -269,7 +273,7 @@ def sync_sources(project: dict[str, Any], max_shift_seconds: int = 600,
         try:
             if not s["has_audio"]:
                 raise StudioError("音声トラックなし")
-            target = _audio_envelope(s["path"])
+            target = _audio_envelope(s["path"], max_seconds=analysis_seconds)
             lag, score, uniqueness = _correlate(master, target, int(max_shift_seconds * 10), min_overlap=100)
             # Do not silently accept weak or ambiguous correlations.
             if score < 0.43 or uniqueness < 0.045:
