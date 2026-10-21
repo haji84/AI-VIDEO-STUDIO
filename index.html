@@ -11,13 +11,19 @@ button:disabled{opacity:.4;cursor:not-allowed}.secondary{background:#223a4c}butt
 input[type=file]{display:block;width:100%;margin:12px 0;color:#bce2ed}video,canvas{display:block;width:100%;border-radius:9px;background:black;aspect-ratio:16/9;object-fit:contain}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.78rem;background:#0d1720;padding:12px;border-radius:9px;color:#c7d4e0}
 .good{color:#66dfa5}.warn{color:#ffca78}.bad{color:#ff9797}.small{font-size:.79rem}.pill{border:1px solid #62808b;border-radius:15px;padding:3px 10px;font-size:.75rem;color:#b1e9eb}
-</style></head><body>
+</style><meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob: data:; img-src blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+</head><body>
 <h1>🎬 AI VIDEO STUDIO <span class="pill">端末実機チェック</span></h1>
 <p>端末で使える動画・日本語音声・エフェクト・MP4出力の能力を調べる試験用ページ。<strong>このページ自体は動画をアップロードしません。</strong>音声の読み上げ方式はOS依存で、必ずしも完全オフラインとは限りません。完成アプリではありません。</p>
 <div class="card"><h2>1. 端末の基本機能</h2><button id="system">端末の機能を調べる</button><pre id="caps">未検査</pre></div>
 <div class="card"><h2>2. 自分の短い動画を読み込む</h2>
 <p>個人情報の含まれない数秒のMP4を推奨。映像の3フレームから明るさと変化量を計測（人物・役割や意味は判断しない）。</p>
-<input type="file" id="videoFile" accept="video/*,.mp4,.mov"/><video id="video" playsinline muted controls preload="metadata"></video>
+<input type="file" id="videoFile" accept="video/*,.mp4,.mov"/><video id="video" playsinline webkit-playsinline muted controls preload="metadata"></video>
+<p class="small">映像が黒画面や斜線付き再生マークでも、フレーム抽出だけ成功している場合があります。再生できるかは「再生を検査」で別に確認してください。読み込んだ動画は送信されません。</p>
+<button id="testPlayback">再生を検査（無音）</button><button id="stopPlayback" class="secondary">停止</button>
+<pre id="playbackResult">再生未検査</pre>
 <button id="analyze">短い映像を解析</button><pre id="media">未検査</pre></div>
 <div class="card"><h2>3. 日本語音声の試聴</h2>
 <p>OS/ブラウザの読み上げだけ。<strong>音声ファイルとして保存できた証明ではない。</strong></p>
@@ -52,9 +58,52 @@ $('videoFile').addEventListener('change',()=>{
  const file=$('videoFile').files?.[0];if(mediaUrl){URL.revokeObjectURL(mediaUrl);mediaUrl=null;}
  if(!file){result.media={status:'NOT_RUN'};return;}
  if(!file.type.startsWith('video/') && !/\.(mov|mp4)$/i.test(file.name)){say('media','動画以外は選択できません。','bad');return;}
- mediaUrl=URL.createObjectURL(file);$('video').src=mediaUrl;
- result.media={status:'SELECTED',sizeMiB:Math.round(file.size/1048576*100)/100};say('media','ファイル選択済み（端末内のみ）');record();
+ const video=$('video');video.pause();video.removeAttribute('src');video.load();
+ mediaUrl=URL.createObjectURL(file);video.src=mediaUrl;video.load();
+ result.media={status:'SELECTED',sizeMiB:Math.round(file.size/1048576*100)/100,playback:{status:'NOT_RUN'}};
+ say('playbackResult','再生未検査。選択した動画の「再生を検査」を押してください。');
+ say('media','ファイル選択済み（端末内のみ）');record();
 });
+const playbackVideo=$('video');
+function mediaErrorCode(v){
+ const e=v.error;return e ? {code:e.code,kind:({1:'ABORTED',2:'NETWORK',3:'DECODE',4:'SOURCE_NOT_SUPPORTED'})[e.code]||'UNKNOWN'} : null;
+}
+playbackVideo.addEventListener('error',()=>{
+ if(!mediaUrl)return;
+ const err=mediaErrorCode(playbackVideo);
+ result.media={...result.media,playback:{status:'ELEMENT_ERROR',error:err}};
+ say('playbackResult','映像を再生できません: '+(err?.kind||'UNKNOWN')+'。対応するMP4コーデックか、開き方を確認してください。','warn');record();
+});
+$('testPlayback').onclick=async()=>{
+ if(!mediaUrl){say('playbackResult','先に短い動画を選択してください。','warn');return;}
+ const v=playbackVideo;
+ result.media={...result.media,playback:{status:'STARTING'}};
+ say('playbackResult','再生を確認中（無音）…');record();
+ $('testPlayback').disabled=true;
+ try {
+   if(v.error)throw new Error('MEDIA_ERROR_'+(v.error.code||'UNKNOWN'));
+   v.muted=true;v.playsInline=true;
+   const start=v.currentTime;
+   await v.play();
+   if(v.paused)throw new Error('PLAYBACK_NOT_STARTED');
+   const advanced=await new Promise(resolve=>{
+     let done=false;let timeout;
+     const finish=state=>{if(done)return;done=true;clearTimeout(timeout);v.removeEventListener('timeupdate',tick);v.removeEventListener('error',bad);resolve(state);};
+     const tick=()=>{if(Math.abs(v.currentTime-start)>=0.10 && v.readyState>=2)finish('PLAYBACK_CONFIRMED');};
+     const bad=()=>finish('DECODE_ERROR');
+     v.addEventListener('timeupdate',tick);v.addEventListener('error',bad,{once:true});
+     timeout=setTimeout(()=>finish('PLAYBACK_STALLED'),4000);
+     tick();
+   });
+   result.media={...result.media,playback:{status:advanced,error:advanced==='DECODE_ERROR'?mediaErrorCode(v):null}};
+   say('playbackResult',advanced==='PLAYBACK_CONFIRMED'?'実際の映像再生を確認できました。':
+        '再生の継続を確認できません: '+advanced,advanced==='PLAYBACK_CONFIRMED'?'good':'warn');
+ }catch(e){
+   result.media={...result.media,playback:{status:'PLAYBACK_FAILED',reason:String(e?.name||e).slice(0,50),mediaError:mediaErrorCode(v)}};
+   say('playbackResult','再生できません: '+String(e?.name||e).slice(0,50)+'。コーデック・ブラウザ表示方法を確認してください。','warn');
+ }finally{$('testPlayback').disabled=false;record();}
+};
+$('stopPlayback').onclick=()=>{playbackVideo.pause();say('playbackResult','再生を停止しました。');};
 function wait(target,type,ms=8000){return new Promise((resolve,reject)=>{
  let settled=false;const done=(error)=>{if(settled)return;settled=true;clearTimeout(timer);target.removeEventListener(type,ok);target.removeEventListener('error',err);error?reject(error):resolve();};
  const ok=()=>done(),err=()=>done(new Error('MEDIA_DECODE_ERROR'));const timer=setTimeout(()=>done(new Error('MEDIA_DECODE_TIMEOUT')),ms);
@@ -63,7 +112,7 @@ function wait(target,type,ms=8000){return new Promise((resolve,reject)=>{
 function signalOfFrame(data){let mean=0;for(let i=0;i<data.length;i+=4)mean+=(data[i]+data[i+1]+data[i+2])/3;return mean/(data.length/4)/255;}
 $('analyze').onclick=async()=>{
  const v=$('video');if(!mediaUrl){say('media','動画を選択してください。','warn');return;}
- result.media={...result.media,status:'RUNNING'};record();$('analyze').disabled=true;
+ v.pause();result.media={...result.media,status:'RUNNING'};record();$('analyze').disabled=true;
  try{
    if(v.readyState<1)await wait(v,'loadedmetadata');
    if(!Number.isFinite(v.duration)||v.duration<=0)throw new Error('INVALID_DURATION');
@@ -77,8 +126,8 @@ $('analyze').onclick=async()=>{
    result.media={...result.media,status:'BROWSER_DECODE_PASS',durationSeconds:Math.round(v.duration*100)/100,
     analyzedFrames:readings.length,meanBrightness:Math.round(readings.reduce((a,b)=>a+b,0)/readings.length*1000)/1000,
     brightnessChange:Math.round((Math.max(...readings)-Math.min(...readings))*1000)/1000,
-    note:'numerical_browser_frame_sampling_not_AI_understanding'};
-   say('media','読み込み・3フレーム解析OK（撮影内容は評価していません）','good');
+    note:'three_seeked_frames_only_not_continuous_playback_or_AI_understanding'};
+   say('media','3フレーム抽出に成功（連続再生は別検査・撮影内容は評価していません）','good');
  }catch(e){result.media={...result.media,status:'BLOCKED',code:String(e.message).slice(0,100)};say('media','映像解析に失敗: '+e.message,'warn');}
  finally{$('analyze').disabled=false;record();}
 };

@@ -1,9 +1,0 @@
-{
-  "name": "ai-video-studio-preview",
-  "main": "src/worker.mjs",
-  "compatibility_date": "2026-10-01",
-  "workers_dev": false,
-  "assets": { "directory": "./public", "binding": "ASSETS" },
-  "d1_databases": [{ "binding": "DB", "database_name": "ai-video-studio-preview", "database_id": "REPLACE_WITH_PRIVATE_D1_ID" }],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "ai-video-studio-private" }]
-}
