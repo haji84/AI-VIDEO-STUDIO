@@ -1,8 +1,9 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-21
-Status: IN_PROGRESS; M1/M2 integrated; M3 backend/edit operations TESTED_SYNTHETIC,
-GUI browser acceptance BLOCKED. M3 integration pending in this change.
-mainSHA (verified implementation before M3): `8ae096242752b46ce652505fd9ddc43c7b01ebd2`
+Status: IN_PROGRESS; M1/M2/M3 code integrated; backend/edit operations TESTED_SYNTHETIC.
+GUI browser acceptance BLOCKED; product completion criteria NOT MET.
+mainSHA (last verified implementation): `fba046fedac395f0709c7c9faab615ce6cdc801f`
+verifiedSourceTree: `a17a03351c892ecebe27580442a038e103af8294`
 Canonical goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 
 ## Integrated and verified
@@ -36,11 +37,13 @@ Canonical goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md
 
 ## M3 integration / verification
 
-Create one PR, inspect actual base/check state, merge with expected head only.
-Verify remote main tree equals tested local tree, then run:
-node --test apps/local-editor/*.test.mjs
-python -m unittest engine.test_project_pipeline engine.test_saved_project_audio -v
-Save PR/merge SHA and actual post-merge outcome to Issue #10 and checkpoint.
+PR #13 merged: head136a98ed1f4ec31ea102d94e7554a22c50c84eb2,
+main fba046fedac395f0709c7c9faab615ce6cdc801f. Remote main source tree equals
+the tested local tree a17a03351c892ecebe27580442a038e103af8294 exactly.
+Post-merge checks: 7 local-editor HTTP/edit tests PASS; 8 saved-project/audio
+actual-output tests PASS. No remote Actions run; CodeRabbit status success,
+zero check-runs and clean merge state confirmed before integration. No open
+implementation PR remains from M1–M3. GUI/browser/device acceptance NOT_RUN.
 
 ## Exact browser blocker / next resume
 
@@ -58,6 +61,12 @@ failures, then owner/novice testing. Do not repeat identical download attempts
 or count API/model tests as browser/device success. Startup/recovery instructions:
 apps/local-editor/README.md. Current GUI acceptance is the next critical gate;
 independent engine/model/QA work remains unfinished and can proceed separately.
+
+## Next independent implementation
+
+While browser acceptance is blocked, inspect and improve full-output quality
+inspection, persisted findings and re-edit handoff. Continue from verified M3
+source. Do not classify black/silence heuristics as proof of editorial quality.
 
 ## Product gates still open
 
