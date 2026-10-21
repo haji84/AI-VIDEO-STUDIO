@@ -9,6 +9,9 @@ export async function createManifest(project,bindings){
   const refs=new Map(project.sourceRefs.map(s=>[s.assetId,s]));
   const used=new Set(plan.video.flatMap(c=>[c.sourceId,...(c.secondarySourceId?[c.secondarySourceId]:[])]));
   const sources=project.sourceRefs.filter(s=>used.has(s.assetId));
+  // The legacy engine fixes its first USED source at offset0, even when the
+  // saved master is not in this render. Rebase both clocks; local trims stay exact.
+  const clockOrigin=sources[0]?.offsetSec??0;
   for(const s of sources){
     if(!['master','verified'].includes(s.syncStatus))throw new Error('SYNC_UNVERIFIED:'+s.assetId);
     if(s.driftPpm!==0)unsupported('CLOCK_DRIFT');
@@ -29,7 +32,7 @@ export async function createManifest(project,bindings){
     }
     if(s.hasAudio)expectedAudio.push({assetId:c.sourceId,bus:'source',startSec:c.startSec,endSec:c.endSec,
       trimInSec:c.sourceInSec,speed:c.speed,gainDb:0,loop:false,fadeInSec:0,fadeOutSec:0});
-    return {id:c.clipId,sourceId:c.sourceId,start:shared,duration:c.durationSec,speed:c.speed,
+    return {id:c.clipId,sourceId:c.sourceId,start:shared-clockOrigin,duration:c.durationSec,speed:c.speed,
       layout:c.layout,caption,...(c.secondarySourceId?{secondarySourceId:c.secondarySourceId}:{})};
   });
   const actual=plan.audio.map(({id,...rest})=>rest).sort((a,b)=>a.startSec-b.startSec);
@@ -42,7 +45,7 @@ export async function createManifest(project,bindings){
   return {schema:1,name:project.name,sources:sources.map(s=>({assetId:s.assetId,path:paths[s.assetId],
       sha256:s.sha256,hasAudio:s.hasAudio,durationSec:s.durationSec})),
     quality:plan.exportProfile,autoPlan:false,timeline,
-    manualOffsets:Object.fromEntries(sources.map(s=>[s.assetId,s.offsetSec])),
+    manualOffsets:Object.fromEntries(sources.map(s=>[s.assetId,s.offsetSec-clockOrigin])),
     // The older engine calls all manual offsets unverified. This bridge already
     // requires explicit master/verified status and checks secondary clock parity.
     allowUnverifiedSync:true};

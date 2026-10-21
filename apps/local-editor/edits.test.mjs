@@ -31,3 +31,9 @@ test('app-linked source audio follows an explicit trim and splits without overla
  const split=edits.splitClip(p,1,1,'clip_c');assert.equal(split.audioClips.length,2);
  assert.equal(split.audioClips.find(a=>a.id==='audio_clip_c').startSec,3);
 });
+test('confirmed camera choice preserves shared event time instead of source file time',()=>{
+ const p=fixture();p.timeline[0].sourceInSec=5;p.sourceRefs.push({...p.sourceRefs[0],assetId:'asset_'+'2'.repeat(32),offsetSec:2,syncStatus:'verified'});
+ assert.equal(edits.cameraSourceIn(p,0,p.sourceRefs[1].assetId),3);
+ p.timeline[0].sourceInSec=1;assert.throws(()=>edits.cameraSourceIn(p,0,p.sourceRefs[1].assetId),/CAMERA_HAS_NO_COVERAGE/);
+ p.sourceRefs[1].syncStatus='unverified';assert.throws(()=>edits.cameraSourceIn(p,0,p.sourceRefs[1].assetId),/SYNC_UNVERIFIED/);
+});

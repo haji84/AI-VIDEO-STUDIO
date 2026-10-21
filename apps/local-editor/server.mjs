@@ -9,6 +9,7 @@ import {execFile,spawn} from 'node:child_process';
 import {promisify} from 'node:util';
 import {createProject,EditSession,buildRenderPlan} from '../../packages/project/project.mjs';
 import {hashFile,saveSession,loadSession,verifyBindings,readLocalJson} from '../../packages/project/local-store.mjs';
+import {createSyncManager} from './sync-job.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
 const mediaExtensions=new Set(['.mp4','.mov','.mkv','.webm','.wav','.mp3','.m4a','.aac','.flac','.ogg']);
 const fail=(message,status=400)=>{const e=new Error(message);e.status=status;throw e;};
@@ -76,8 +77,9 @@ export async function startServer({workspace,port=8765}={}){
       downloads.set(previous.id,file);job={id:previous.id,status:'PASS',download:'/exports/'+previous.id,qualityStatus:qa?.inspection?.status??'NOT_INSPECTED'};
     }else if(previous.status==='RUNNING')job={status:'INTERRUPTED',error:'前の書き出しは中断されました。もう一度作成してください'};
   }catch{job={status:'FAIL',error:'前の出力を確認できません。編集内容から再作成できます'};}}
+  const syncManager=await createSyncManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
   const html=(await readFile(join(HERE,'index.html'),'utf8')).replaceAll('__TOKEN__',token).replaceAll('__NONCE__',nonce);
-  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),job};}
+  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),job,sync:syncManager.state()};}
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   const authorized=value=>{if(typeof value!=='string'||value.length!==token.length)return false;return timingSafeEqual(Buffer.from(value),Buffer.from(token));};
@@ -101,6 +103,8 @@ export async function startServer({workspace,port=8765}={}){
       if(req.method==='GET'&&path==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
       const modules={'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
         '/audio-panel.mjs':join(HERE,'audio-panel.mjs'),'/audio-edits.mjs':join(HERE,'audio-edits.mjs'),
+        '/sync-panel.mjs':join(HERE,'sync-panel.mjs'),'/sync-edits.mjs':join(HERE,'sync-edits.mjs'),
+        '/packages/project/sync.mjs':join(ROOT,'packages/project/sync.mjs'),
         '/packages/project/project.mjs':join(ROOT,'packages/project/project.mjs')};
       if(req.method==='GET'&&Object.hasOwn(modules,path)){
         res.writeHead(200,{'Content-Type':'application/javascript; charset=utf-8'});
@@ -109,11 +113,12 @@ export async function startServer({workspace,port=8765}={}){
       if(!authorized(req.headers['x-aivs-token'])&&!authorized(url.searchParams.get('token')))fail('画面を開き直してください',403);
       if(req.method==='GET'&&path==='/api/state'){send(res,200,state());return;}
       if(req.method==='GET'&&path==='/api/job'){send(res,200,job);return;}
+      if(req.method==='GET'&&path==='/api/sync'){send(res,200,syncManager.state());return;}
       if(req.method==='GET'&&path==='/api/qa'){const qa=reports.get(job.id);if(!qa)fail('検査記録がありません。動画を作成してください',404);send(res,200,qa);return;}
       if(req.method==='GET'&&path.startsWith('/media/')){const source=registry.get(path.slice(7));if(!source)fail('素材がありません',404);await stream(res,req,source.path,source.source.mediaKind==='video'?'video/mp4':'audio/wav');return;}
       if(req.method==='GET'&&path.startsWith('/exports/')){const file=downloads.get(path.slice(9));if(!file)fail('出力がありません',404);await stream(res,req,file,'video/mp4');return;}
-      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render'].includes(path))fail('見つかりません',404);
-      if(mutation||job.status==='RUNNING')fail('処理が終わるまでお待ちください',409);mutation=true;
+      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/sync','/api/sync/apply'].includes(path))fail('見つかりません',404);
+      if(mutation||job.status==='RUNNING'||syncManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
       try{
         if(req.headers['x-aivs-revision']!==String(session.current.revision))fail('REVISION_CONFLICT: 別の画面で更新されています',409);
         if(path==='/api/import'){
@@ -145,6 +150,11 @@ export async function startServer({workspace,port=8765}={}){
               session.apply(p);
             });
           }finally{await unlink(staged).catch(e=>{if(e.code!=='ENOENT')throw e;});}
+        }else if(path==='/api/sync'){
+          const started=await syncManager.start(await jsonBody(req));send(res,202,started);return;
+        }else if(path==='/api/sync/apply'){
+          const body=await jsonBody(req);if(!body||Object.keys(body).some(k=>!['analysisId','confirmed'].includes(k)))fail('同期確認の形式が不正です');
+          const p=await syncManager.apply(body.analysisId,body.confirmed);await transaction(()=>session.apply(p));
         }else if(path==='/api/edit'){
           const p=await jsonBody(req);if(p.revision!==session.current.revision)fail('REVISION_CONFLICT: 別の画面で更新されています',409);checkIdentity(p);await transaction(()=>session.apply(p));
         }else if(path==='/api/open'){
@@ -178,7 +188,7 @@ export async function startServer({workspace,port=8765}={}){
   });
   await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});
   return {url:`http://127.0.0.1:${server.address().port}`,token,
-    close:async()=>{await jobPromise;server.closeAllConnections();await new Promise((done,reject)=>server.close(error=>error?reject(error):done()));if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);}};
+    close:async()=>{await Promise.all([jobPromise,syncManager.wait()]);server.closeAllConnections();await new Promise((done,reject)=>server.close(error=>error?reject(error):done()));if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);}};
   }catch(error){if(await readFile(lockFile,'utf8').catch(()=>null)===lockToken)await unlink(lockFile);throw error;}
 }
 
