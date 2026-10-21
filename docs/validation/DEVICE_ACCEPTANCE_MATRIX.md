@@ -70,3 +70,10 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 - Actual iPhone source-only test: 46.96 MiB 60.82s 1170x1984 selected input, 613669B short output, video replay advanced, source visible, caption visible, Files replay checked. **Original sound not audible; capture source and output RMS=0. Status INCOMPLETE.** More detailed evidence supersedes earlier 4-checkbox screenshot for original sound.
 - Optional BGM: `REJECTED_TOO_LARGE`; optional SE: `AUDIO_DECODE_FAILED` with `AUDIO_DURATION_INVALID_OR_TOO_LONG`. Both extra buses excluded from source-only output.
 - New iOS compatibility diagnostic tries local MP4 audio buffer decoding; **iPhone test NOT_RUN**. No raw media or source filename stored. See `docs/validation/IOS_ORIGINAL_AUDIO_ZERO_2026-10-21.md`.
+
+
+## Latest iPhone decoded-buffer audio retest, 2026-10-21
+
+- Newer user-provided JSON: `DECODED_BUFFER` signal measurements original RMS 0.048032/output RMS 0.060492 (nonzero), selected footage and caption visible, owner checked original audio audible and saved file replay.
+- **Overall flag remains INCOMPLETE** because on-page output replay was `NOT_RUN` and `browserReplayConfirmed=false`. The prior zero-signal test is historical, not the latest audio routing outcome.
+- MIME string is reported, not independently codec verified. No original source or output media provided. Detailed scoped result: `docs/validation/IOS_BUFFER_AUDIO_OWNER_RETEST_2026-10-21.md`.
