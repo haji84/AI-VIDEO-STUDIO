@@ -4,7 +4,7 @@ import {mkdtemp,rm,readFile,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import * as app from './server.mjs';
@@ -29,6 +29,8 @@ test('local import/edit/history/restart/render is usable and protected',async()=
     const request=async(path,opts={})=>{const r=await fetch(server.url+path,{...opts,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':String(state.session.project.revision),...opts.headers}});
       if(r.ok&&r.headers.get('content-type')?.startsWith('application/json')){const d=await r.clone().json();if(d.session)state=d;}return r;};
     assert.equal((await fetch(server.url+'/api/state')).status,403);
+    assert.equal((await fetch(server.url+'/api/qa')).status,403);
+    assert.equal((await request('/api/qa')).status,404);
     assert.equal((await request('/api/state',{headers:{Origin:'https://example.invalid'}})).status,403);
     const result=await request('/api/import?kind=video',{method:'POST',headers:{'X-File-Name':'synthetic.mp4','Content-Length':String(bytes.length)},body:bytes});
     assert.equal(result.status,200,await result.clone().text());
@@ -67,6 +69,13 @@ test('local import/edit/history/restart/render is usable and protected',async()=
     assert.equal(job.status,'PASS',JSON.stringify(job));
     const out=await call(job.download+'?token='+server.token);assert.equal(out.status,200);
     const file=join(dir,'output.mp4');await writeFile(file,Buffer.from(await out.arrayBuffer()));
+    const inspected=await call('/api/qa');assert.equal(inspected.status,200);
+    const report=await inspected.json();
+    assert.equal(report.inspection.status,'CHECKED_LIMITED');
+    assert.equal(job.qualityStatus,report.inspection.status);
+    assert.equal(report.sha256,createHash('sha256').update(await readFile(file)).digest('hex'));
+    assert.equal(report.projectRevision,state.session.project.revision);
+    assert.ok(!JSON.stringify(report).includes(dir),'portable report contains private workspace paths');
     await exec('ffmpeg',['-v','error','-xerror','-i',file,'-f','null','-']);
     const decoded=await exec('ffmpeg',['-v','error','-i',file,'-vn','-ac','1','-ar','48000','-f','f32le','pipe:1'],{encoding:'buffer',maxBuffer:1024**2});
     let real=0,imaginary=0;const sampleCount=24000;
@@ -76,6 +85,47 @@ test('local import/edit/history/restart/render is usable and protected',async()=
     await server.close();server=await app.startServer({workspace:join(dir,'data'),port:0});
     const restored=await(await fetch(server.url+'/api/job',{headers:{'X-AIVS-Token':server.token}})).json();
     assert.equal(restored.status,'PASS');
+    assert.equal(restored.qualityStatus,'CHECKED_LIMITED');
+    const restoredQA=await(await fetch(server.url+'/api/qa',{headers:{'X-AIVS-Token':server.token}})).json();
+    assert.deepEqual(restoredQA,report);
     assert.equal((await fetch(server.url+restored.download+'?token='+server.token)).status,200);
+    await server.close();server=undefined;
+    const oldReport={...report};delete oldReport.inspection;
+    await writeFile(join(dir,'data','jobs',job.id,'render','technical_qa.json'),JSON.stringify(oldReport));
+    server=await app.startServer({workspace:join(dir,'data'),port:0});
+    const legacyJob=await(await fetch(server.url+'/api/job',{headers:{'X-AIVS-Token':server.token}})).json();
+    assert.equal(legacyJob.qualityStatus,'NOT_INSPECTED');
+  }finally{if(server)await server.close();await rm(dir,{recursive:true,force:true});}
+});
+
+test('late output findings survive restart and explicit re-edit creates a checked new export',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'aivs-review-'));let server;
+  try{
+    const source=join(dir,'synthetic-fault.mp4');
+    await exec('ffmpeg',['-v','error','-f','lavfi','-i',
+      'color=c=blue:s=320x180:r=30:d=2,drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill:enable=gte(t\\,1)',
+      '-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=2',
+      '-af',"volume=enable='gte(t,1)':volume=0",'-c:v','libx264','-c:a','aac','-shortest',source]);
+    const bytes=await readFile(source);server=await app.startServer({workspace:join(dir,'data'),port:0});let state;
+    const call=async(path,opts={})=>{const r=await fetch(server.url+path,{...opts,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':String(state?.session.project.revision??0),...opts.headers}});return r;};
+    const imported=await call('/api/import?kind=video',{method:'POST',headers:{'X-File-Name':'synthetic-fault.mp4','Content-Length':String(bytes.length)},body:bytes});
+    assert.equal(imported.status,200);state=await imported.json();
+    async function render(){assert.equal((await call('/api/render',{method:'POST'})).status,202);let job;
+      for(let i=0;i<300;i++){job=await(await call('/api/job')).json();if(job.status!=='RUNNING')break;await delay(100);}
+      assert.equal(job.status,'PASS',JSON.stringify(job));return job;}
+    const originalJob=await render(),qa=await(await call('/api/qa')).json();
+    assert.equal(originalJob.qualityStatus,'NEEDS_REVIEW');assert.equal(qa.inspection.status,'NEEDS_REVIEW');
+    for(const code of ['BLACK_INTERVAL','SILENCE_WHILE_AUDIO_SELECTED']){
+      const f=qa.inspection.findings.find(f=>f.code===code);assert.ok(f,code);assert.ok(f.startSec>.9&&f.endSec>1.9);
+      assert.deepEqual(f.clipIds,[state.session.project.timeline[0].clipId]);
+    }
+    await server.close();server=await app.startServer({workspace:join(dir,'data'),port:0});
+    assert.deepEqual(await(await call('/api/qa')).json(),qa);
+    const p=structuredClone(state.session.project);p.timeline[0].durationSec=.8;p.audioClips[0].endSec=.8;
+    const changed=await call('/api/edit',{method:'POST',body:JSON.stringify(p)});assert.equal(changed.status,200);state=await changed.json();
+    const replacement=await render(),checked=await(await call('/api/qa')).json();
+    assert.notEqual(replacement.id,originalJob.id);assert.equal(checked.inspection.status,'CHECKED_LIMITED');
+    assert.equal(checked.projectRevision,state.session.project.revision);assert.deepEqual(checked.inspection.findings,[]);
+    assert.deepEqual(await readFile(source),bytes);
   }finally{if(server)await server.close();await rm(dir,{recursive:true,force:true});}
 });

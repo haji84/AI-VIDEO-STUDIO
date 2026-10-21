@@ -17,6 +17,7 @@ from pathlib import Path
 
 from . import core_v01 as core
 from .run_manifest import process_manifest, _check_source_identity, _assert_safe_destinations, ManifestError
+from .output_qa import inspect_output
 from prototypes.audio.mix_audio import _volume_expr
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -136,7 +137,7 @@ def render_saved_project(project_file:Path,bindings_file:Path,workspace:Path,out
                         '-c:v','copy','-c:a','aac','-b:a','192k','-ar','48000','-ac','2',
                         '-t',f'{duration:.9f}','-movflags','+faststart',str(candidate)])
         _run(command,timeout=max(180,int(duration*8)+60))
-        qa=core.quality_check(candidate,duration,core.PROFILES[plan['exportProfile']],deep=True)
+        qa=inspect_output(candidate,duration,core.PROFILES[plan['exportProfile']],plan=plan)
         if not qa['technical_ok']:raise core.StudioError('MIXED_OUTPUT_QA_FAILED:'+str(qa['issues']))
         _assert_safe_destinations(manifest,workspace,output)
         output.parent.mkdir(parents=True,exist_ok=True);_install_new(candidate,output)
@@ -157,7 +158,7 @@ def main() -> None:
     args=parser.parse_args()
     try:
         report=render_saved_project(args.project,args.bindings,args.workspace,args.output)
-        print(json.dumps({'ok':True,'technical_ok':report['technical_ok'],'sha256':report['sha256']}))
+        print(json.dumps({'ok':True,'technical_ok':report['technical_ok'],'qualityStatus':report['inspection']['status'],'sha256':report['sha256']}))
     except (OSError,ValueError,KeyError,ManifestError,core.StudioError,subprocess.TimeoutExpired) as error:
         parser.exit(1,json.dumps({'ok':False,'error':str(error)})+'\n')
 

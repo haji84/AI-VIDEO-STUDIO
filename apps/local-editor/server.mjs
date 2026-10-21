@@ -65,11 +65,15 @@ export async function startServer({workspace,port=8765}={}){
   await persist();
   const token=randomBytes(32).toString('hex'),nonce=randomBytes(24).toString('hex');
   let mutation=false,job={status:'NOT_RUN'},jobPromise=Promise.resolve();
-  const downloads=new Map(),jobFile=join(folder,'last-job.json');
+  const downloads=new Map(),reports=new Map(),jobFile=join(folder,'last-job.json');
+  const portableQA=qa=>{const {path,...portable}=qa;return portable;};
   if(await exists(jobFile)){try{const previous=JSON.parse(await readLocalJson(jobFile));
     if(previous.status==='PASS'&&/^[a-f0-9]{32}$/.test(previous.id)){
       const file=join(folder,'exports',previous.id+'.mp4');
-      if(await hashFile(file)!==previous.sha256)throw new Error('OUTPUT_CHANGED');downloads.set(previous.id,file);job={id:previous.id,status:'PASS',download:'/exports/'+previous.id};
+      if(await hashFile(file)!==previous.sha256)throw new Error('OUTPUT_CHANGED');
+      const qaFile=join(folder,'jobs',previous.id,'render','technical_qa.json');
+      let qa;if(await exists(qaFile)){qa=portableQA(JSON.parse(await readLocalJson(qaFile)));if(qa.sha256!==previous.sha256)throw new Error('REPORT_OUTPUT_MISMATCH');reports.set(previous.id,qa);}
+      downloads.set(previous.id,file);job={id:previous.id,status:'PASS',download:'/exports/'+previous.id,qualityStatus:qa?.inspection?.status??'NOT_INSPECTED'};
     }else if(previous.status==='RUNNING')job={status:'INTERRUPTED',error:'前の書き出しは中断されました。もう一度作成してください'};
   }catch{job={status:'FAIL',error:'前の出力を確認できません。編集内容から再作成できます'};}}
   const html=(await readFile(join(HERE,'index.html'),'utf8')).replaceAll('__TOKEN__',token).replaceAll('__NONCE__',nonce);
@@ -95,13 +99,14 @@ export async function startServer({workspace,port=8765}={}){
       res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'`);
       const url=new URL(req.url,origin),path=url.pathname;
       if(req.method==='GET'&&path==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
-      if(req.method==='GET'&&['/editor-edits.mjs','/packages/project/project.mjs'].includes(path)){
+      if(req.method==='GET'&&['/editor-edits.mjs','/editor-qa.mjs','/packages/project/project.mjs'].includes(path)){
         res.writeHead(200,{'Content-Type':'application/javascript; charset=utf-8'});
-        res.end(await readFile(path==='/editor-edits.mjs'?join(HERE,'edits.mjs'):join(ROOT,'packages/project/project.mjs')));return;
+        res.end(await readFile(path==='/editor-edits.mjs'?join(HERE,'edits.mjs'):path==='/editor-qa.mjs'?join(HERE,'qa.mjs'):join(ROOT,'packages/project/project.mjs')));return;
       }
       if(!authorized(req.headers['x-aivs-token'])&&!authorized(url.searchParams.get('token')))fail('画面を開き直してください',403);
       if(req.method==='GET'&&path==='/api/state'){send(res,200,state());return;}
       if(req.method==='GET'&&path==='/api/job'){send(res,200,job);return;}
+      if(req.method==='GET'&&path==='/api/qa'){const qa=reports.get(job.id);if(!qa)fail('検査記録がありません。動画を作成してください',404);send(res,200,qa);return;}
       if(req.method==='GET'&&path.startsWith('/media/')){const source=registry.get(path.slice(7));if(!source)fail('素材がありません',404);await stream(res,req,source.path,source.source.mediaKind==='video'?'video/mp4':'audio/wav');return;}
       if(req.method==='GET'&&path.startsWith('/exports/')){const file=downloads.get(path.slice(9));if(!file)fail('出力がありません',404);await stream(res,req,file,'video/mp4');return;}
       if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render'].includes(path))fail('見つかりません',404);
@@ -158,7 +163,7 @@ export async function startServer({workspace,port=8765}={}){
           let error='';child.stdout.resume();child.stderr.on('data',chunk=>{error=(error+chunk).slice(-2000);});
           jobPromise=new Promise(resolveJob=>{let done=false;const finish=async code=>{if(done)return;done=true;try{
             if(code===0){const qa=JSON.parse(await readLocalJson(join(jobDir,'render','technical_qa.json')));
-              downloads.set(id,output);job={id,status:'PASS',download:'/exports/'+id};await atomicJson(jobFile,{...job,sha256:qa.sha256});}
+              reports.set(id,portableQA(qa));downloads.set(id,output);job={id,status:'PASS',download:'/exports/'+id,qualityStatus:qa.inspection?.status??'NOT_INSPECTED'};await atomicJson(jobFile,{...job,sha256:qa.sha256});}
             else{job={id,status:'FAIL',error:error||'書き出しに失敗しました。実行環境を確認してください'};await atomicJson(jobFile,job);}
           }catch(e){job={id,status:'FAIL',error:'出力記録を保存できません: '+e.message};}finally{resolveJob();}};
             child.once('error',e=>{error=e.message;finish(1);});child.once('close',finish);});

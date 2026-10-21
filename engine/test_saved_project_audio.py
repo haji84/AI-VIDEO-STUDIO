@@ -57,6 +57,11 @@ await writeFile(join(folder,'bindings.json'),JSON.stringify(refs.map((s,i)=>({as
             output=folder/'mix.mp4'
             report=render_saved_project(folder/'project.json',folder/'bindings.json',folder/'job',output)
             self.assertTrue(report['technical_ok'],report);self.assertTrue(report['whole_file_decode_checked'])
+            self.assertEqual(report['inspection']['schema'],'aivs-output-inspection-v1')
+            self.assertEqual(report['inspection']['status'],'CHECKED_LIMITED')
+            stored=json.loads((folder/'job'/'technical_qa.json').read_text())
+            self.assertEqual(stored['inspection'],report['inspection'])
+            self.assertEqual(stored['sha256'],hashlib.sha256(output.read_bytes()).hexdigest())
             pcm=np.frombuffer(run(['ffmpeg','-v','error','-i',str(output),'-vn','-ac','1','-ar','48000','-f','f32le','pipe:1']).stdout,dtype='<f4')
             for hz,start,end in [(440,.4,.8),(660,3,3.4),(880,1.2,1.8),(990,2.45,2.65)]:
                 self.assertGreater(self._amplitude(pcm,hz,start,end),.025,(hz,start,end))
