@@ -72,3 +72,11 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Prototype a bounded 96 MiB `decodeAudioData` + `AudioBufferSource` iOS compatibility path and no-success-on-silence guard. Verify on desktop Chromium using synthetic audible and deliberately silent-start MP4s.
 - [ ] **Real iPhone Safari**: compatibility page source-only output contains original sound, visible source video/caption, Files-app saved playback, and nonzero source/output meters. Preserve failure if unsuccessful.
 - [ ] Only then re-test local BGM/SE within memory/duration budgets; high-resolution and native mobile editing remain separate goals.
+
+
+## Latest iPhone audio-buffer result (2026-10-21)
+
+- [x] Physical iPhone iOS `DECODED_BUFFER` Web Audio source and output signal are nonzero. Owner checked original sound audible in output and saved Files replay; source/caption visible.
+- [ ] Page's explicit **output MP4 replay diagnostic** still `NOT_RUN`. Retest, save JSON, verify `REPLAY_ADVANCED` and all owner flags before **user-reported browser acceptance**.
+- [ ] Independent MP4 codec/PCM inspection from a non-sensitive exported file and A/V sync measurement.
+- [ ] Separate iPhone BGM/SE mixing; SE over the prototype's 90-second guard currently rejected. Native/full-duration/multi-camera remain future requirements.

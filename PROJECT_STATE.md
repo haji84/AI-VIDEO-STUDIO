@@ -85,3 +85,10 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 - **LATEST PHYSICAL iPhone REPORT = FAIL/INCOMPLETE for original soundtrack.** Owner-supplied 2026-10-21T08:37:53Z JSON shows a playable 613669-byte `SOURCE_ONLY` MP4 Blob and visible original footage/caption, but `originalSoundAudible=false`, `originalSignalPeakRms=0`, `outputSignalPeakRms=0` across 241 samples. This overrides the earlier provisional owner screenshot's checked sound item for the same milestone. The original source audio did not pass.
 - BGM was rejected by the local prototype file size guard and SE by its 90-second decode-duration guard; neither was included in the source-only MP4.
 - Added a **separate local compatibility diagnostic** `prototypes/device-lab/AUDIO_COMPAT_LAB.html`: iOS defaults to MP4 `decodeAudioData` + `AudioBufferSource` path (96 MiB cap) and fails closed on silent source/output WebAudio measurements. Desktop Chromium synthetic audio trial passed; negative (opening silence) failed safely, static 10/10 tests passed. **Physical iPhone compatibility fix still UNVERIFIED.** See `docs/validation/IOS_ORIGINAL_AUDIO_ZERO_2026-10-21.md`.
+
+
+## Newer iPhone decoded-buffer trial (2026-10-21, latest evidence)
+
+- Owner-submitted JSON (`2026-10-21T09:04:32Z`) confirms the iOS `DECODED_BUFFER` route produced **nonzero** input/output browser Web Audio signals: buffer RMS 0.00454; original 0.048032; output 0.060492, versus zero in the earlier trial. 394937-byte 3.88s source-only MP4 was created. The user checked source visible, caption visible, original sound audible, Files replay.
+- **Acceptance remains INCOMPLETE:** `replay.status=NOT_RUN` and `browserReplayConfirmed=false` in the newest JSON. There is no independent inspection of exported MP4 audio bytes, actual codec or A/V sync. The latest evidence supersedes earlier *zero-signal* findings for this test but does not establish full native mobile export.
+- Optional SE source rejected by the prototype's `AUDIO_DURATION_INVALID_OR_TOO_LONG` guard; source-only export contained no SE/BGM/narration. See `docs/validation/IOS_BUFFER_AUDIO_OWNER_RETEST_2026-10-21.md`.
