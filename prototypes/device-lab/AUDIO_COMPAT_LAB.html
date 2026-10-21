@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob: data:; img-src blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>AI VIDEO STUDIO | 音声ミックス実機テスト</title>
+<style>
+:root {color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN',sans-serif;background:#0e1925;color:#eff9ff}
+*{box-sizing:border-box}
+body{max-width:730px;margin:auto;padding:14px 14px 64px}
+h1{font-size:1.35rem}h2{font-size:1.02rem;margin:0 0 10px}
+p{color:#b8cbd9;line-height:1.55;font-size:.89rem}
+section{border:1px solid #36536a;background:#172a3b;border-radius:14px;margin:12px 0;padding:14px}
+label{display:block;margin:10px 0 4px;font-size:.88rem}
+input[type=file]{width:100%;border:1px dashed #647c96;border-radius:10px;padding:12px;color:#dceef7;background:#102233}
+input[type=range]{width:100%}
+button,a.download{font:inherit;border:1px solid #438bb5;background:#185c7d;color:white;border-radius:11px;padding:12px 14px;min-height:46px;cursor:pointer;text-align:center;text-decoration:none;display:inline-block;margin:5px 4px 5px 0}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:#157b87;border-color:#47d1d5;font-weight:750}
+button.subtle{background:#243b4e}
+video,canvas{width:100%;aspect-ratio:16 / 9;object-fit:contain;background:black;border-radius:9px;display:block}
+small,.hint{color:#a8c4d3;font-size:.8rem}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1722;border-radius:9px;padding:12px;font-size:.77rem;line-height:1.5}
+.status{color:#8ce5c7;font-weight:650}
+.warn{color:#ffd08b}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+label.toggle{display:flex;align-items:center;gap:8px}
+.row button,.row a{flex:1;min-width:120px}
+#outputBox[hidden]{display:none}
+</style>
+</head>
+<body>
+<h1>🎬 AI VIDEO STUDIO <small>音声＋字幕の実機テスト</small></h1>
+<p>iPhone・Android・PCの端末内だけで、選んだ動画の短い部分に字幕と音声を合成する検証版。<strong>クラウドには元動画・音声を送信しません。</strong> 動画4秒、640×360、MP4対応ブラウザ限定。商用完成アプリではありません。</p>
+<section>
+<h2>① 元動画を選択</h2>
+<label>自分の短いMP4（個人情報のない動画を推奨）</label>
+<input id="sourceFile" type="file" accept="video/*,.mp4,.mov">
+<div id="sourcePlayer"></div>
+<p id="sourceStatus" class="hint">動画未選択</p>
+<label class="toggle"><input id="originalTrack" type="checkbox" checked> 元動画の音声を含める（可能な場合）</label>
+</section>
+<section>
+<h2>② 好きな音を追加（任意）</h2>
+<p>音声はすべて端末内でデコードする。未選択ならそのトラックは無音。自分で利用権を持つ音源を使ってね。</p>
+<label>🎵 BGM（4秒間ループ、初期音量25%）</label>
+<input id="bgmFile" type="file" accept="audio/*,.wav,.mp3,.m4a">
+<label>BGM音量 <output id="bgmValue">25%</output></label><input id="bgmGain" type="range" min="0" max="100" value="25">
+<label>✨ SE（開始1秒後に再生、初期音量50%）</label>
+<input id="seFile" type="file" accept="audio/*,.wav,.mp3,.m4a">
+<label>SE音量 <output id="seValue">50%</output></label><input id="seGain" type="range" min="0" max="100" value="50">
+<label>🎙 ナレーション（ファイルから読み込み、開始0.3秒後）</label>
+<input id="narrationFile" type="file" accept="audio/*,.wav,.mp3,.m4a">
+<label>ナレーション音量 <output id="narrationValue">80%</output></label><input id="narrationGain" type="range" min="0" max="100" value="80">
+<p id="audioStatus" class="hint">音声ファイル未選択。元動画の音声のみでも試せます。</p>
+</section>
+<section>
+<h2>③ 元動画＋元音声＋字幕のMP4を作成（Safari音声互換試験）</h2>
+<p class="hint">v0.3.1 音声互換診断：Web Audioの元音声が0だった場合に、端末内の別デコード経路で再検証します。機種によっては未対応です。</p>
+<p><strong>まずここから：</strong>実際に音が入った自分のMP4を選び、元動画の映像・元音声・字幕だけを最大4秒間書き出します。上でBGM・SE・ナレーションを選択済みでも<strong>この試験では混ぜません</strong>。動画の冒頭4秒で検査します。処理中は画面を閉じないでください。</p>
+<label class="toggle"><input type="checkbox" id="compatAudio"> 端末内で元音声を別にデコード（iPhoneでは初期ON）</label>
+<p class="hint">今回のように元音声が無音になる場合の検証用。動画は端末内だけで処理しますが、MP4全体を端末メモリで音声解析するため、まず96MiB以下・音の入った動画で試してください。ファイル容量が大きい場合は停止します。</p>
+<button id="sourceOnlyExport" class="primary">① 元動画＋元音声＋字幕だけでMP4作成</button>
+<p class="hint">元音声が無音の動画だと音声が入ったか確認できません。音のある動画を使用してください。現在のブラウザがMP4音声書き出しに対応しない場合は失敗理由を記録します。</p>
+<details><summary>追加音声も混ぜる（別の試験）</summary><p>ナレーション・BGM・SEまで混ぜる場合はこちら。元音声の検証と混同しないため別モードで記録します。</p>
+<button id="mixExport" class="subtle">元動画＋追加音声＋字幕をMP4作成</button></details>
+<p id="renderStatus" class="hint">まだ実行していません。</p>
+<canvas id="mixCanvas" width="640" height="360"></canvas>
+</section>
+<section id="outputBox" hidden>
+<h2>④ 出力動画を確認</h2>
+<video id="outputPlayer" playsinline controls preload="metadata"></video>
+<div class="row"><button id="replay">出力MP4を再生して検査</button><a id="saveOutput" class="download" download="aivs-audio-mix-test.mp4">MP4を保存</a></div>
+<p class="hint">再生・ダウンロード後に下の4項目を確認してください。チェックは利用者の目視・聴取結果であり、技術検証の自動合格を意味しません。</p>
+<fieldset id="manualReview"><legend>iPhoneで見て・聴いて確認</legend>
+<label class="toggle"><input type="checkbox" id="checkSource"> 出力に自分が選んだ実動画の映像が映っている</label>
+<label class="toggle"><input type="checkbox" id="checkCaption"> 動画に「AI VIDEO STUDIO 音声テスト」の字幕が見える</label>
+<label class="toggle"><input type="checkbox" id="checkAudio"> 元動画にあった音が出力動画からも聞こえる（追加音声ではない）</label>
+<label class="toggle"><input type="checkbox" id="checkFiles"> MP4を保存し、iPhoneの「ファイル」から開いて再生できた</label>
+</fieldset><p id="acceptanceStatus" class="hint">確認待ち。元動画だけの試験で生成してから判定します。</p>
+</section>
+<section>
+<h2>⑤ 匿名の検証結果だけ保存</h2>
+<p class="hint">動画ファイル名・映像・音声・位置情報・識別番号は記録しません。保存されるのは再生結果、容量、時間、機能の成否のみ。</p>
+<button id="saveJSON" class="subtle">検査結果JSONを保存</button>
+<pre id="results">未検査</pre>
+</section>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const MAX_FILE_AUDIO_BYTES=12*1024*1024;
+const MAX_CLIP_SEC=4;
+const MAX_SOURCE_AUDIO_DECODE_BYTES=96*1024*1024;
+const SOURCE_SIGNAL_RMS_FLOOR=0.00004;
+const AudioEngine=window.AudioContext||window.webkitAudioContext;
+const outputs={bgm:'bgmFile',se:'seFile',narration:'narrationFile'};
+const buffers={};
+let decoder=null,videoURL=null,outputURL=null,player=null,busy=false,pending=0;
+const result={schema:'aivs-audio-mix-lab-v1',scope:'BROWSER_ONLY_4SEC_NOT_NATIVE',browser:{family:/iP(hone|ad|od)/.test(navigator.userAgent)?'iOS':/Android/.test(navigator.userAgent)?'Android':'desktop_or_other'},
+ input:{status:'NOT_SELECTED'},audio:{status:'NO_EXTRA_FILES',tracks:{}},export:{status:'NOT_RUN'},replay:{status:'NOT_RUN'},acceptance:{status:'NOT_RUN'},
+ limitations:['No remote upload','No full-duration render','No multi-camera mix','No generated Japanese TTS audio','MediaElementSource audio route is not validated by presence alone','Audio quality requires waveform inspection']};
+window.__aivsLabResult=result;
+$('compatAudio').checked=result.browser.family==='iOS';
+function update(){result.generatedUTC=new Date().toISOString();$('results').textContent=JSON.stringify(result,null,2)}
+function show(id,msg,warning=false){$(id).className=warning?'warn':'status';$(id).textContent=msg;update()}
+function clearResult(){
+ $('outputBox').hidden=true;const v=$('outputPlayer');v.pause();v.removeAttribute('src');v.load();$('saveOutput').removeAttribute('href');
+ if(outputURL){URL.revokeObjectURL(outputURL);outputURL=null;}
+ result.export={status:'NOT_RUN'};result.replay={status:'NOT_RUN'};
+ for(const id of ['checkSource','checkCaption','checkAudio','checkFiles'])$(id).checked=false;
+ result.acceptance={status:'NOT_RUN'};
+ $('acceptanceStatus').textContent='確認待ち。元動画だけの試験で生成してから判定します。';update();
+}
+function buildPlayer(){
+ if(player){player.pause();player.removeAttribute('src');player.load();player.remove();}
+ player=document.createElement('video');player.controls=true;player.preload='metadata';player.playsInline=true;player.setAttribute('playsinline','');player.setAttribute('webkit-playsinline','');
+ player.src=videoURL||'';$('sourcePlayer').append(player);
+ player.addEventListener('loadedmetadata',()=>{result.input={status:'METADATA_READY',durationSeconds:Math.round(player.duration*100)/100,sizeMiB:result.input.sizeMiB,videoWidth:player.videoWidth,videoHeight:player.videoHeight};show('sourceStatus',`読み込み完了 ${Math.round(player.duration*10)/10}秒 / ${player.videoWidth}×${player.videoHeight}`);});
+ player.addEventListener('error',()=>{result.input={...result.input,status:'DECODE_ERROR',code:player.error?.code||null};show('sourceStatus','元動画を再生できません。動画形式・コーデックを確認してください。',true)});
+}
+$('sourceFile').onchange=()=>{
+ const f=$('sourceFile').files?.[0];if(videoURL){URL.revokeObjectURL(videoURL);videoURL=null;}
+ clearResult();if(!f)return;
+ if(!f.type.startsWith('video/')&&!/\.(mp4|mov)$/i.test(f.name)){show('sourceStatus','動画ファイルを指定してください',true);return;}
+ videoURL=URL.createObjectURL(f);result.input={status:'SELECTED',sizeMiB:Math.round(f.size/1048576*100)/100};buildPlayer();show('sourceStatus','動画選択済み。再生可能かを確認しています。');
+};
+for(const [bus,inputId] of Object.entries(outputs)){
+ $(inputId).onchange=async()=>{
+   clearResult();const f=$(inputId).files?.[0];delete buffers[bus];
+   result.audio.tracks[bus]=f?{status:'LOADING',sizeMiB:Math.round(f.size/1048576*100)/100}:{status:'NOT_SELECTED'};update();
+   if(!f){show('audioStatus','音声ファイルの選択を解除しました。');return;}
+   if(f.size>MAX_FILE_AUDIO_BYTES){result.audio.tracks[bus]={status:'REJECTED_TOO_LARGE'};show('audioStatus','追加音声は1ファイル12MiB以下にしてください。',true);return;}
+   if(!AudioEngine){result.audio.tracks[bus]={status:'WEB_AUDIO_UNSUPPORTED'};show('audioStatus','端末がWeb Audioに対応していません。',true);return;}
+   ++pending;$('mixExport').disabled=true;$('sourceOnlyExport').disabled=true;
+   try{
+     decoder??=new AudioEngine();
+     const decoded=await decoder.decodeAudioData(await f.arrayBuffer());
+     if(!decoded.duration||decoded.duration>90)throw Error('AUDIO_DURATION_INVALID_OR_TOO_LONG');
+     // User may select a different file while the old file decodes; do not adopt stale data.
+     if($(inputId).files?.[0]!==f)return;
+     buffers[bus]=decoded;
+     result.audio.tracks[bus]={status:'DECODED',durationSec:Math.round(decoded.duration*100)/100,channels:decoded.numberOfChannels};
+     show('audioStatus',`${bus} を端末内で読み込みました。`);
+   }catch(e){result.audio.tracks[bus]={status:'AUDIO_DECODE_FAILED',reason:String(e.message).slice(0,80)};show('audioStatus',`${bus} のデコードに失敗しました: ${String(e.message).slice(0,80)}`,true)}
+   finally{--pending;$('mixExport').disabled=busy||pending>0;$('sourceOnlyExport').disabled=busy||pending>0;update();}
+ };
+}
+for(const bus of ['bgm','se','narration']) $(bus+'Gain').oninput=()=>{$(bus+'Value').textContent=$(bus+'Gain').value+'%'};
+const canvas=$('mixCanvas'),g=canvas.getContext('2d');
+function paint(v,t){
+ const W=canvas.width,H=canvas.height;
+ g.fillStyle='#081827';g.fillRect(0,0,W,H);
+ if(v.readyState>=2&&v.videoWidth>0){const k=Math.min(W/v.videoWidth,H/v.videoHeight),w=v.videoWidth*k,h=v.videoHeight*k;g.drawImage(v,(W-w)/2,(H-h)/2,w,h);}
+ g.fillStyle='rgba(4,12,24,.68)';g.fillRect(0,275,W,72);
+ g.save();g.globalAlpha=Math.min(1,t/.4);g.textAlign='center';g.lineWidth=7;g.strokeStyle='#0e1930';g.fillStyle='white';g.font='bold 34px sans-serif';
+ g.strokeText('AI VIDEO STUDIO 音声テスト',320,324);g.fillText('AI VIDEO STUDIO 音声テスト',320,324);g.restore();
+ g.fillStyle='#34c9b4';g.fillRect(0,355,W*Math.min(1,t/MAX_CLIP_SEC),5);
+ g.font='14px sans-serif';g.fillStyle='#fff';g.fillText('LOCAL AUDIO MIX • TEST',15,28);
+}
+paint({readyState:0,videoWidth:0},0);
+function mimeForAudioVideo(){
+ const types=['video/mp4;codecs="avc1.42E01E,mp4a.40.2"','video/mp4;codecs="avc1.42E01E"','video/mp4'];
+ return typeof MediaRecorder==='function'?types.find(type=>MediaRecorder.isTypeSupported(type))||null:null;
+}
+function scheduleBuffer(ctx,buffer,bus,master,startAt){
+ if(!buffer)return null;const node=ctx.createBufferSource(),gain=ctx.createGain();node.buffer=buffer;
+ gain.gain.value=Number($(bus+'Gain').value)/100;
+ node.loop=bus==='bgm';node.connect(gain);gain.connect(master);
+ const delay=bus==='se'?1.0:bus==='narration'?.3:0;
+ node.start(startAt+delay);return node;
+}
+function waitPlayable(v){return new Promise((ok,fail)=>{
+ if(v.readyState>=2){ok();return;}let done=false;let timer;
+ const finish=e=>{if(done)return;done=true;clearTimeout(timer);v.removeEventListener('loadeddata',good);v.removeEventListener('error',bad);e?fail(e):ok();};
+ const good=()=>finish(),bad=()=>finish(Error('VIDEO_DECODE_ERROR'));
+ v.addEventListener('loadeddata',good,{once:true});v.addEventListener('error',bad,{once:true});
+ timer=setTimeout(()=>finish(Error('VIDEO_DATA_TIMEOUT')),7000);
+});}
+$('sourceOnlyExport').onclick=()=>exportMix(true);
+$('mixExport').onclick=()=>exportMix(false);
+async function exportMix(sourceOnly){
+ if(busy||pending)return;
+ if(!videoURL){show('renderStatus','先に元動画を選んでください。',true);return;}
+ if(!AudioEngine||!canvas.captureStream||!window.MediaStream){result.export={status:'WEB_AUDIO_OR_CANVAS_UNSUPPORTED'};show('renderStatus','このブラウザでは音声付きの録画に対応していません。',true);return;}
+ const mime=mimeForAudioVideo();if(!mime){result.export={status:'MP4_RECORDING_UNSUPPORTED'};show('renderStatus','端末のブラウザで音声付きMP4記録に未対応です。',true);return;}
+ for(const [bus,inputId] of Object.entries(outputs))if(!sourceOnly&&$(inputId).files?.length&&!buffers[bus]){
+   result.export={status:'AUDIO_NOT_READY',bus};show('renderStatus',`${bus} が準備できません。音声を解除するか別ファイルを選んでください。`,true);return;
+ }
+ busy=true;$('mixExport').disabled=true;$('sourceOnlyExport').disabled=true;
+ const guardedInputs=['sourceFile','bgmFile','seFile','narrationFile','originalTrack','compatAudio','bgmGain','seGain','narrationGain'];
+ guardedInputs.forEach(id=>$(id).disabled=true);
+ clearResult();result.export={status:'RUNNING',mode:sourceOnly?'SOURCE_ONLY':'EXTRA_MIX',audio:'RECORDING_ATTEMPTED_NOT_VERIFIED',mime};
+ show('renderStatus',sourceOnly?'元動画＋元音声＋字幕のみを記録中です。画面は閉じないでください。':'追加音声も含めて記録中です。画面は閉じないでください。');
+ let ctx=null,v=null,rec=null,stream=null,canvasStream=null,timer=0,frame=0,stopTimeout=0,ended=false,recordedFrames=0;
+ const started=performance.now(),nodes=[];let sourceStart=0,sourceEnd=0;
+ let originalPeakRms=0,outputPeakRms=0,audioMeterCount=0;
+ let originalBufferPeakRms=null, audioSourceMode='MEDIA_ELEMENT', sourceDecoded=null;
+ const bufferedOriginal=sourceOnly&&$('compatAudio').checked;
+ async function decodeSourceAudio(ctx,file){
+   if(!file)throw Error('NO_SELECTED_SOURCE');
+   if(file.size>MAX_SOURCE_AUDIO_DECODE_BYTES)throw Error('SOURCE_AUDIO_DECODE_LIMIT_96MIB');
+   let decoded;
+   try {decoded=await ctx.decodeAudioData(await file.arrayBuffer());}
+   catch(_){throw Error('SOURCE_AUDIO_DECODE_FAILED_USE_NATIVE_BACKEND');}
+   if(!decoded||!decoded.numberOfChannels||decoded.duration<.5)throw Error('SOURCE_AUDIO_TRACK_NOT_DECODABLE');
+   const end=Math.min(MAX_CLIP_SEC,decoded.duration)*decoded.sampleRate;
+   let sum=0,n=0;
+   for(let ch=0;ch<decoded.numberOfChannels;ch++){
+     const pcm=decoded.getChannelData(ch);
+     for(let i=0;i<Math.min(pcm.length,end);i+=64){sum+=pcm[i]*pcm[i];n++;}
+   }
+   const peak=Math.sqrt(sum/Math.max(1,n));
+   if(peak<SOURCE_SIGNAL_RMS_FLOOR)throw Error('FIRST_FOUR_SECONDS_SOURCE_AUDIO_SILENT');
+   return {decoded,peak};
+ }
+ async function resetToStart(v){
+   if(v.currentTime<.04)return;
+   v.pause();
+   await new Promise((resolve,reject)=>{
+     let timer;
+     const cleanup=()=>{clearTimeout(timer);v.removeEventListener('seeked',ready);v.removeEventListener('error',bad)};
+     const ready=()=>{cleanup();resolve()},bad=()=>{cleanup();reject(Error('SOURCE_RESET_FAILED'))};
+     timer=setTimeout(()=>{cleanup();reject(Error('SOURCE_RESET_TIMEOUT'))},5000);
+     v.addEventListener('seeked',ready,{once:true});v.addEventListener('error',bad,{once:true});v.currentTime=0;
+   });
+   await v.play();
+ }
+ try{
+   // Fresh video element: every render gets its own WebAudio source and never modifies the original file.
+   v=document.createElement('video');v.src=videoURL;v.preload='auto';v.playsInline=true;v.setAttribute('playsinline','');v.muted=bufferedOriginal;v.volume=1;
+   v.style.width='1px';v.style.height='1px';v.style.opacity='0';v.style.position='fixed';v.style.left='0';v.style.bottom='0';
+   document.body.appendChild(v);
+   ctx=new AudioEngine();const dest=ctx.createMediaStreamDestination(),master=ctx.createDynamicsCompressor();
+   master.threshold.value=-15;master.knee.value=16;master.ratio.value=4;master.attack.value=.004;master.release.value=.14;
+   const sourceMeter=ctx.createAnalyser(),outputMeter=ctx.createAnalyser();
+   sourceMeter.fftSize=1024;outputMeter.fftSize=1024;
+   master.connect(outputMeter);outputMeter.connect(dest);
+   const original=ctx.createGain();
+   original.gain.value=sourceOnly||$('originalTrack').checked?1:0;
+   if(!bufferedOriginal){const media=ctx.createMediaElementSource(v);media.connect(original);}
+   else audioSourceMode='DECODED_BUFFER';
+   original.connect(sourceMeter);sourceMeter.connect(master);
+   const meterData=new Float32Array(1024);
+   function rms(meter){meter.getFloatTimeDomainData(meterData);let sum=0;for(const x of meterData)sum+=x*x;return Math.sqrt(sum/meterData.length);}
+   canvasStream=canvas.captureStream(24);
+   const videoTrack=canvasStream.getVideoTracks()[0],audioTrack=dest.stream.getAudioTracks()[0];
+   if(!videoTrack||!audioTrack)throw Error('MISSING_CAPTURE_TRACK');
+   stream=new MediaStream([videoTrack,audioTrack]);
+   rec=new MediaRecorder(stream,{mimeType:mime});const blobs=[];
+   const recorded=new Promise((ok,fail)=>{rec.ondataavailable=e=>{if(e.data?.size)blobs.push(e.data)};rec.onerror=e=>fail(Error(e?.error?.name||'RECORDING_ERROR'));rec.onstop=ok;});
+   // AudioContext resume and HTMLMediaElement.play must both be initiated inside the user gesture.
+   const contextReady=ctx.resume(),playing=v.play();
+   // Start playback/resume under the user tap. The local MP4 decoder may take longer.
+   const audioPrepare=bufferedOriginal?decodeSourceAudio(ctx,$('sourceFile').files?.[0]):Promise.resolve(null);
+   const [, , , sourceAudio]=await Promise.all([contextReady,playing,waitPlayable(v),audioPrepare]);
+   if(v.error)throw Error('SOURCE_DECODING_FAILED');
+   if(sourceAudio){
+     sourceDecoded=sourceAudio.decoded;originalBufferPeakRms=sourceAudio.peak;
+     await resetToStart(v);
+   }
+   sourceStart=v.currentTime;paint(v,0);
+   const startAt=ctx.currentTime+.04;
+   if(sourceDecoded){
+     const sourceNode=ctx.createBufferSource();sourceNode.buffer=sourceDecoded;
+     sourceNode.connect(original);sourceNode.start(startAt,Math.min(sourceStart,Math.max(0,sourceDecoded.duration-.1)));
+     nodes.push(sourceNode);
+   }
+   if(!sourceOnly)for(const bus of Object.keys(outputs)){const node=scheduleBuffer(ctx,buffers[bus],bus,master,startAt);if(node)nodes.push(node)}
+   rec.start(250);
+   const startedRecording=performance.now();let stopping=false;
+   function stop(){if(stopping)return;stopping=true;try{if(rec?.state==='recording')rec.requestData();if(rec?.state!=='inactive')rec.stop()}catch(e){/* handled by stop callback/timeout */}}
+   function draw(){
+     if(stopping)return;
+     const elapsed=(performance.now()-startedRecording)/1000;
+     if(document.visibilityState==='hidden'){ended=true;stop();return;}
+     if(v.readyState>=2&&!v.paused){
+       paint(v,elapsed);recordedFrames++;sourceEnd=v.currentTime;
+       try{originalPeakRms=Math.max(originalPeakRms,rms(sourceMeter));outputPeakRms=Math.max(outputPeakRms,rms(outputMeter));audioMeterCount++;}
+       catch(_){/* telemetry is optional; never turn unmeasured audio into a false PASS */}
+     }
+     if(elapsed>=MAX_CLIP_SEC||v.ended||v.paused){stop();return;}
+     frame=requestAnimationFrame(draw);
+   }
+   frame=requestAnimationFrame(draw);stopTimeout=setTimeout(stop,6500);
+   await Promise.race([recorded,new Promise((_,fail)=>setTimeout(()=>fail(Error('RECORDER_TIMEOUT')),8500))]);
+   if(ended)throw Error('BACKGROUND_INTERRUPTED');
+   if(recordedFrames<4||sourceEnd-sourceStart<.35)throw Error('VIDEO_FRAMES_NOT_ADVANCING');
+   // A MediaStream audio track may exist but contain zero samples on iOS Safari.
+   // Never report SOURCE_ONLY recording success when the captured Web Audio signal was zero.
+   if(sourceOnly&&originalPeakRms<SOURCE_SIGNAL_RMS_FLOOR)throw Error('SOURCE_ORIGINAL_AUDIO_SIGNAL_ZERO');
+   if(sourceOnly&&outputPeakRms<SOURCE_SIGNAL_RMS_FLOOR)throw Error('SOURCE_OUTPUT_AUDIO_SIGNAL_ZERO');
+   const blob=new Blob(blobs,{type:rec.mimeType||mime});
+   if(blob.size<2000)throw Error('EMPTY_MP4');
+   outputURL=URL.createObjectURL(blob);$('outputPlayer').src=outputURL;$('saveOutput').href=outputURL;$('outputBox').hidden=false;
+   result.export={status:'SOURCE_AUDIO_MIX_MP4_CREATED',mode:sourceOnly?'SOURCE_ONLY':'EXTRA_MIX',bytes:blob.size,mime:rec.mimeType||mime,
+     durationAttemptSec:Math.min(MAX_CLIP_SEC,Math.round((sourceEnd-sourceStart)*100)/100),elapsedMs:Math.round(performance.now()-started),
+     originalTrackRequested:sourceOnly||$('originalTrack').checked,
+     extraTracks:sourceOnly?[]:Object.keys(outputs).filter(b=>!!buffers[b]),audioTrackAttached:true,
+     audioMeterSamples:audioMeterCount,originalSignalPeakRms:Math.round(originalPeakRms*1000000)/1000000,
+     outputSignalPeakRms:Math.round(outputPeakRms*1000000)/1000000,
+     audioSourceMode,sourceBufferPeakRms:originalBufferPeakRms===null?null:Math.round(originalBufferPeakRms*1000000)/1000000,
+     audio:'RECORDED_AUDIO_CONTENT_REQUIRES_LISTENING',replay:'NOT_RUN',containerCodecCompatibility:'NOT_VERIFIED_ON_IOS',
+     limitations:'RMS is a signal observation, not proof of the exported MP4 containing audible original audio.'};
+   show('renderStatus',sourceOnly?'元動画＋元音声＋字幕でMP4を作成しました。再生、保存後の音の確認へ進んでください。':'追加音声入りMP4を生成しました。再生して音を確認してください。');
+ }catch(e){
+   result.export={status:'AUDIO_MIX_EXPORT_FAILED',reason:String(e.message||e).slice(0,110),audioSourceMode,
+     originalSignalPeakRms:Math.round(originalPeakRms*1000000)/1000000,
+     outputSignalPeakRms:Math.round(outputPeakRms*1000000)/1000000,
+     sourceBufferPeakRms:originalBufferPeakRms===null?null:Math.round(originalBufferPeakRms*1000000)/1000000};
+   show('renderStatus',`元音声の記録が確認できません: ${String(e.message||e).slice(0,110)}。この結果は成功ではありません。別の短い音声入りMP4で再試験するか、ネイティブ版の開発が必要です。`,true)
+ }
+ finally{
+   cancelAnimationFrame(frame);clearTimeout(stopTimeout);
+   if(rec?.state!=='inactive')try{rec.stop()}catch(e){}
+   for(const n of nodes)try{n.stop()}catch(e){}
+   if(stream)stream.getTracks().forEach(t=>t.stop());
+   if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());
+   if(v){v.pause();v.removeAttribute('src');v.load();v.remove();}
+   if(ctx)try{await ctx.close()}catch(e){}
+   guardedInputs.forEach(id=>$(id).disabled=false);
+   busy=false;$('mixExport').disabled=pending>0;$('sourceOnlyExport').disabled=pending>0;update();
+ }
+}
+$('replay').onclick=async()=>{
+ if(!outputURL)return;
+ const v=$('outputPlayer');v.pause();v.currentTime=0;result.replay={status:'STARTING'};update();
+ try{await v.play();const start=v.currentTime;
+   const success=await new Promise(resolve=>{
+     let finished=false,timer;const done=val=>{if(finished)return;finished=true;clearTimeout(timer);v.removeEventListener('timeupdate',tick);v.removeEventListener('error',fail);resolve(val)};
+     const tick=()=>{if(v.readyState>=2&&v.currentTime-start>.15)done(true)};
+     const fail=()=>done(false);v.addEventListener('timeupdate',tick);v.addEventListener('error',fail,{once:true});timer=setTimeout(()=>done(false),6000);tick();
+   });
+   result.replay={status:success?'REPLAY_ADVANCED':'REPLAY_NOT_CONFIRMED',audioSubjective:'NOT_RATED'};
+   show('renderStatus',success?'出力MP4の映像再生が進みました。元音声が聞こえるか確認してください。':'出力MP4の映像再生を確認できません。',!success);
+   assess();
+ }catch(e){result.replay={status:'REPLAY_FAILED',reason:String(e.message||e).slice(0,70)};show('renderStatus','再生に失敗: '+String(e.message||e),true)}finally{assess();update()}
+};
+function assess(){
+ const checks={sourceVisible:$('checkSource').checked,captionVisible:$('checkCaption').checked,
+   originalSoundAudible:$('checkAudio').checked,savedFileReplay:$('checkFiles').checked};
+ const valid=result.export.status==='SOURCE_AUDIO_MIX_MP4_CREATED'&&result.export.mode==='SOURCE_ONLY'&&result.replay.status==='REPLAY_ADVANCED'&&result.export.originalSignalPeakRms>=SOURCE_SIGNAL_RMS_FLOOR&&result.export.outputSignalPeakRms>=SOURCE_SIGNAL_RMS_FLOOR;
+ const all=Object.values(checks).every(Boolean);
+ const status=valid&&all?'USER_REPORTED_BROWSER_SOURCE_AUDIO_CAPTION_PASS':'INCOMPLETE';
+ result.acceptance={status,checks,browserReplayConfirmed:result.replay.status==='REPLAY_ADVANCED',
+  note:'User-reported visual/audio checks, not independent PCM/mux/native correctness proof'};
+ $('acceptanceStatus').textContent=status.startsWith('USER_REPORTED')?'端末内の簡易検査項目はすべて回答済み。結果JSONを送信してください。':'未確認の項目があります。再生・保存を確認してチェックしてください。';
+ update();
+}
+for(const id of ['checkSource','checkCaption','checkAudio','checkFiles'])$(id).onchange=assess;
+$('saveJSON').onclick=()=>{update();const data=new Blob([JSON.stringify(result,null,2)],{type:'application/json'}),url=URL.createObjectURL(data),a=document.createElement('a');a.download='aivs-audio-mix-results.json';a.href=url;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)};
+update();
+})();
+</script>
+</body></html>

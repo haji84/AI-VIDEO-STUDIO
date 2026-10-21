@@ -30,3 +30,8 @@ Evidence is one owner-provided iPhone Safari screenshot, viewed during this conv
 3. Implement/verify actual reusable project saving, output codec checks and direct AI narration file creation before claiming general video editing ability.
 
 No Cloudflare R2, commercial publishing, payments, GORIQ modification or raw source-media upload is authorized by this report.
+
+
+## Correction from later machine-readable evidence
+
+A subsequent owner-submitted Device Lab JSON from iPhone Safari (generated UTC 2026-10-21T08:37:53Z) reports **originalSoundAudible=false**, **originalSignalPeakRms=0** and **outputSignalPeakRms=0** for the source-only recording. Therefore the earlier screenshot's checked original-sound item is only a **provisional historical user report** and should **not** be treated as the latest audio acceptance. The current original-sound milestone is **FAIL/INCOMPLETE** pending retest. See `docs/validation/IOS_ORIGINAL_AUDIO_ZERO_2026-10-21.md`.

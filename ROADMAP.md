@@ -64,3 +64,11 @@ No item becomes checked merely because a design document or test stub exists.
 - [ ] Capture anonymized JSON/codec observations for the same iPhone result, without uploading sensitive video.
 - [ ] Real iPhone BGM+SE mix export and playback; verify original sound intelligibility, audio sync and saved MP4 support.
 - [ ] Complete reusable timeline, long video/4K export, high-quality Japanese TTS audio file creation and native mobile backends.
+
+
+## iPhone original-audio repair, latest evidence 2026-10-21
+
+- [x] Analyze owner-provided JSON: source-only MP4/replay and visible caption pass, but original audio absent; zero source/output WebAudio meters. Earlier owner screenshot marked provisional, this detailed failed audio check takes precedence.
+- [x] Prototype a bounded 96 MiB `decodeAudioData` + `AudioBufferSource` iOS compatibility path and no-success-on-silence guard. Verify on desktop Chromium using synthetic audible and deliberately silent-start MP4s.
+- [ ] **Real iPhone Safari**: compatibility page source-only output contains original sound, visible source video/caption, Files-app saved playback, and nonzero source/output meters. Preserve failure if unsuccessful.
+- [ ] Only then re-test local BGM/SE within memory/duration budgets; high-resolution and native mobile editing remain separate goals.
