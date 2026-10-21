@@ -47,7 +47,7 @@ test('source and supplemental audio local only',()=>{
 test('result does not claim native editing, AI TTS, or audio verified',()=>{
  assert.match(script,/BROWSER_ONLY_4SEC_NOT_NATIVE/);
  assert.match(script,/No generated Japanese TTS audio/);
- assert.match(script,/AUDIO_MIX_ROUTE_ATTEMPTED_NEEDS_DECODE_QA/);
+ assert.match(script,/RECORDED_AUDIO_CONTENT_REQUIRES_LISTENING/);
  assert.match(script,/NOT_VERIFIED_ON_IOS/);
  assert.match(script,/REPLAY_NOT_CONFIRMED/);
 });
@@ -59,4 +59,24 @@ test('output replay separate from created Blob',()=>{
 test('inputs locked for duration of export',()=>{
  assert.match(script,/guardedInputs\.forEach\(id=>\$\(id\)\.disabled=true\)/);
  assert.match(script,/guardedInputs\.forEach\(id=>\$\(id\)\.disabled=false\)/);
+});
+test('source-only mode ignores selected BGM and narration files',()=>{
+ assert.match(html,/id="sourceOnlyExport"/);
+ assert.match(script,/exportMix\(true\)/);
+ assert.match(script,/!sourceOnly&&\$\(inputId\)\.files/);
+ assert.match(script,/if\(!sourceOnly\)for\(const bus of Object\.keys\(outputs\)\)/);
+ assert.match(script,/original\.gain\.value=sourceOnly\|\|\$\('originalTrack'\)\.checked\?1:0/);
+ assert.match(script,/extraTracks:sourceOnly\?\[\]/);
+});
+test('device reports source and output RMS without promising mux content',()=>{
+ assert.match(script,/createAnalyser\(\)/);
+ assert.match(script,/getFloatTimeDomainData/);
+ assert.match(script,/originalSignalPeakRms/);
+ assert.match(script,/RMS is a signal observation, not proof/);
+});
+test('acceptance requires independent replay and four explicit user checks',()=>{
+ for(const id of ['checkSource','checkCaption','checkAudio','checkFiles','acceptanceStatus'])assert.match(html,new RegExp('id="'+id+'"'));
+ assert.match(script,/USER_REPORTED_BROWSER_SOURCE_AUDIO_CAPTION_PASS/);
+ assert.match(script,/result\.export\.mode==='SOURCE_ONLY'&&result\.replay\.status==='REPLAY_ADVANCED'/);
+ assert.match(script,/Object\.values\(checks\)\.every\(Boolean\)/);
 });

@@ -48,3 +48,11 @@ No item becomes checked merely because a design document or test stub exists.
 - [ ] Physical iPhone Safari export with real selected source + optional owned BGM/SE; verify audio codec, output playback and audible track correctness.
 - [ ] Android Chrome and desktop manual browser runs; record anonymous JSON and independent output QA.
 - [ ] General full-duration / high-resolution audio exporter with frame timestamps, ducking, voice file synthesis and durable project timeline; device-native backends where needed.
+
+
+## iPhone original audio export check
+
+- [x] Implement source-only short selected-video captioned MP4 diagnostic, with no mix of extra tracks, analyzer readings and explicit user verification; desktop Chromium & FFT pass.
+- [ ] Physical iPhone Safari: save a selected-source MP4 with visible caption and original audio, replay the saved file in Files, submit anonymous JSON.
+- [ ] For iPhone failure, choose the smallest native iOS AVFoundation export slice instead of retrying identical browser recording without evidence.
+- [ ] Expand only after success: BGM+SE mix, actual Japanese AI-voice file, full-duration and high-resolution export.

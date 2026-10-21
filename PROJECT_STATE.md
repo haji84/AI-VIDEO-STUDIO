@@ -63,3 +63,11 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 - Linux development **Chromium** test with synthetic 8-second H.264/AAC video and synthetic 440/660/880/990 Hz audio: original-only, music-only and four-bus scenarios passed. Generated MP4 H.264/Opus decoded and audio FFT verified four distinct sources and SE timing. Static tests 11/11 PASS. See `docs/validation/BROWSER_AUDIO_MIX_2026-10-21.md`.
 - **Physical iPhone Safari mixed-audio MP4 export: NOT_RUN.** Browser output used Opus in MP4 on Chromium, and variable frame timestamp warnings were observed. Exact cross-device audio compatibility and A/V timing remain unverified.
 - Japanese AI voice generation, BGM ducking, full-length non-destructive editing and Android/native iOS editor still **NOT COMPLETE**. Commercial/public product and R2 remain off.
+
+
+## iPhone original-sound acceptance gate, 2026-10-21
+
+- Narration sound was reported by owner, but not specifically verified as the original selected-video audio in a saved MP4; original soundtrack preservation remains **NOT VERIFIED** on iPhone.
+- Diagnostic audio page now isolates original video audio from loaded BGM/SE/narration by a dedicated source-only button and records separate browser replay + explicit human audio/caption/files checks. Browser-side waveform RMS telemetry is advisory only.
+- Local dev tests: 14/14 static Node PASS, two desktop Chromium exported short H.264+Opus MP4s passed FFmpeg decode and browser replay. FFT of source-only output proved 440Hz original audio present and selected 660/990Hz extra audio absent. See `docs/validation/IPHONE_ORIGINAL_AUDIO_ACCEPTANCE_2026-10-21.md`.
+- Physical iPhone source-audio/caption saved-MP4 replay: **NOT_RUN**, and Opus in MP4 may be incompatible with Safari. No native/full-duration functionality claimed.
