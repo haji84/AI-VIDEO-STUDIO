@@ -40,7 +40,9 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Streamed source hash/relink, fail-closed manifest bridge, real saved 3-camera caption/source-audio MP4 and full decode on Linux.
 - [x] Fix renderer protected-file/temp/report aliases, verify source hash/capabilities at render boundary, migrate actual legacy IDs/profile.
 - [x] Bind persisted four-bus timeline to FFmpeg mix; actual synthetic PCM checks timing, mute, loop, fade, ducking and delayed source audio (M2, Linux only).
-- [ ] Actual beginner editor autosave/reopen, preview/export parity, native platforms and real-user tests.
+- [x] Local desktop server import/edit/history/restart/reopen and real MP4 download API; preserve explicit audio/effects and reject stale edits (M3, synthetic).
+- [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED: missing browser executable in current runtime; script prepared).
+- [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.
 
 These M1 items are TESTED_SYNTHETIC. Broader P0/platform boxes stay open.
 

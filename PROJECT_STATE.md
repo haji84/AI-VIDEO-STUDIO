@@ -7,7 +7,23 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Latest Work implementation (M2, 2026-10-21)
+## Latest Work implementation (M3, 2026-10-21)
+
+Local desktop editor source/server added; launch: `apps/local-editor/README.md`.
+Actual loopback API covers source import -> trim/caption edit -> history ->
+save/restart/reopen -> M2 render -> MP4 download/full decode. Seven new HTTP/pure
+edit cases pass, including workspace locking, stale-tab refusal, explicit audio
+selection and unsupported-caption preservation. **128 tests PASS** total.
+
+F4 UI is IMPLEMENTING, not complete: actual browser acceptance is BLOCKED because
+this runtime has Playwright but no browser executable, and CDN probe timed out.
+`node apps/local-editor/browser-acceptance.mjs` returned BLOCKED, code2.
+Evidence/resumption: `docs/validation/LOCAL_EDITOR_M3_2026-10-21.md`.
+No physical browser/device/novice success claimed. No deployment or paid service.
+M2 PR #12 integrated as `8ae096242752b46ce652505fd9ddc43c7b01ebd2`, verified
+tree37d5fe12128f04ef1f0c42482785c8bb57513b7d; post-merge 8 output tests passed.
+
+## Prior Work implementation (M2, 2026-10-21)
 
 Saved common audio timeline is now connected to local FFmpeg output:
 `python -m engine.render_saved_project --help`. Source/narration/BGM/SFX timing,
