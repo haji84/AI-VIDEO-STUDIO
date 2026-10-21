@@ -4,7 +4,7 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 
 | Target | Device/browser decode short MP4 | Local frame analysis | Japanese TTS speech | Caption/effect preview | Output MP4 creation and replay | N-camera/audio/export QA |
 | --- | --- | --- | --- | --- | --- | --- |
-| iPhone / Safari | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
+| iPhone / Safari | PASS, short playback advancement (111.09s source; not full-duration playback) | PASS, 3 sampled frames | PASS browser playback only; audio file NOT_RUN | PASS synthetic caption preview | PARTIAL, 178386-byte synthetic MP4 generated; independent replay NOT_RUN | NOT_RUN |
 | Android / Chrome | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
 | Windows / Chrome or Edge | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
 | Mac / Safari or Chrome | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN |
@@ -32,3 +32,12 @@ Status is `NOT_RUN` until an **actual physical device** produced an attributable
 - Browser TTS playback output and recording/export of synthesized Japanese voice: **NOT_RUN**.
 - Physical Safari / physical Android Chrome / physical desktop browsers: **NOT_RUN**.
 - The device lab does not upload source files, but the OS browser's speech voice implementation may use external services. Offline guarantees require airplane-mode test.
+
+## 2026-10-21 owner-supplied iPhone Safari run
+
+- Source: one uploaded anonymous Device Lab v1 result JSON, timestamp 2026-10-21T04:15:38.681Z. Results are owner-provided app observations, not independently authenticated platform telemetry.
+- Selected MP4: 214.31 MiB, 111.09 seconds; browser element advanced playback and three frames were sampled (not continuous whole-video playback).
+- Japanese browser speech synthesis: two voices detected and `PLAYBACK_FINISHED`; no file was generated and subjective quality score was not recorded.
+- Synthetic caption preview finished, and a 178386-byte synthetic MP4 was reported as created. Independent replay/decode of that MP4 is **NOT VERIFIED**.
+- No selected-video caption export, BGM/SE mixing, native iOS renderer, or semantic AI analysis has been accepted.
+- Details: `docs/validation/IOS_SAFARI_BROWSER_RESULT_2026-10-21.md`. The public repository stores no source video or filename.

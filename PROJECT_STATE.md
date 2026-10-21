@@ -4,7 +4,7 @@ Updated: 2026-10-21
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
-Public deployment: **NO**.
+Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
 ## Verified in prepared source package
@@ -17,7 +17,7 @@ Subscription / billing: deferred.
 - `engine/` supports basic manifest-based FFmpeg composition on synthetic media; NOT verified on real 11 GB multi-camera footage.
 - `cloud/` includes upload/session/job simulation and render pipeline tests using mocked R2/D1; real Cloudflare/Cloud Run deployment **not completed**.
 - `prototypes/audio/` contains a genuine FFmpeg audio mix prototype for original audio, narration, BGM, and SE on short synthetic clips; iPhone/Android export unverified.
-- Browser capability check and audio preview prototypes exist; iPhone device run not recorded.
+- iPhone Safari browser capability check **received as owner-provided physical-device JSON** (2026-10-21 UTC); short playback progression, 3-frame sampling, Japanese browser TTS completion, synthetic caption preview and synthetic MP4 creation are reported. Source footage was not uploaded. See `docs/validation/IOS_SAFARI_BROWSER_RESULT_2026-10-21.md`. This is NOT native iOS editing or original-footage export.
 
 ## Required next acceptance
 
@@ -42,7 +42,7 @@ If a test has not run on a physical phone with an actual MP4 export, its state i
 
 - Scope: signal-assisted first-cut proposal, **not** trained AI semantic editing.
 - Added offline FFmpeg numerical signal extractor and deterministic browser/Node edit planner with verified clock-source gating and decision evidence. Portable 3-camera synthetic media → FFmpeg analysis → edit proposal → FFmpeg MP4 → whole-file decode tested. See `docs/validation/LOCAL_FIRST_CUT_2026-10-21.md` for commands and test scope.
-- Added standalone smartphone/desktop capability/preview test page; an actual device run has **not** been observed. iPhone, Android, Windows, Mac acceptance is still `NOT_RUN`.
+- Added standalone smartphone/desktop capability/preview test page. Owner-provided iPhone Safari JSON now supports **partial physical browser acceptance only**; no native app E2E or full original-video export has been observed. Android, Windows, Mac physical device acceptance remains `NOT_RUN`. See `docs/validation/IOS_SAFARI_BROWSER_RESULT_2026-10-21.md`.
 - These additions are distinct from the prior v0.3.1 synthetic 41/41 baseline. Do not add test counts from repeated runs as unique completed product requirements.
 - Public repository means source is readable. It does not mean a public video-processing service has been deployed or user media sent anywhere.
 - No R2, payment, cloud GPU, GORIQ, real training footage, or app distribution is authorized by this change.
