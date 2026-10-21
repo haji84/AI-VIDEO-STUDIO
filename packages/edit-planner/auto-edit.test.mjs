@@ -70,3 +70,11 @@ test('deterministic re-runs preserve exact output',()=>{
   const input={sources:[src(1),src(2,{signal:.85}),src(3,{offset:3,duration:7,signal:.72})]};
   assert.deepEqual(proposeEdit(input),proposeEdit(input));
 });
+
+test('small camera boundaries merge into continuous trusted coverage; true gaps remain',()=>{
+ const source=(id,duration,offset,status)=>({assetId:'asset_'+id.repeat(32),durationSeconds:duration,offsetSeconds:offset,sync:{status},windows:[{startSeconds:0,endSeconds:duration,contrast:id==='2'?1:0,motion:0,audioEnergy:0}]});
+ const proposal=proposeEdit({sources:[source('1',6,0,'master'),source('2',4,.1,'verified')]});
+ assert.deepEqual(proposal.evidence.gaps,[]);assert.equal(proposal.durationSeconds,6);
+ for(const c of proposal.timeline){const s=c.sourceId.endsWith('2'.repeat(32))?{start:.1,end:4.1}:{start:0,end:6};assert.ok(c.start>=s.start-.0001&&c.start+c.duration<=s.end+.0001);}
+ const gap=proposeEdit({sources:[source('1',2,0,'master'),source('2',2,2.1,'verified')]});assert.ok(gap.evidence.gaps.length>0);
+});

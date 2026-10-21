@@ -44,6 +44,7 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Whole-output decode/frame-count check, black/silence/sample-peak evidence, output-hash/revision-bound report persistence and explicit manual re-edit -> fresh inspected MP4 (M4-A, synthetic Linux).
 - [x] Per-audio timing/trim/speed/gain/loop/fade and explicit removal connected to common save/history/actual export; protect independent audio from later video auto-follow (A1, synthetic HTTP/PCM, GUI acceptance blocked).
 - [x] Local sync candidates, bound evidence, explicit review/save/reopen, shared-clock camera choice and nonzero-offset camera export (S1, synthetic). Drift/real-device confirmation remains open.
+- [x] Saved editor first-cut proposal from existing low-level signals; explicit source/revision-bound preview/apply, protected manual effects/four-bus audio, history/restart/re-edit/actual MP4 (P1, synthetic). Learned semantics and physical devices remain open.
 - [ ] Complete F8 freeze/cadence, caption safe bounds, intelligibility/true peak, bounded automatic repair and real-device evidence. Limited technical checks are not full output quality acceptance.
 - [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED: missing browser executable in current runtime; script prepared).
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.

@@ -7,7 +7,30 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Latest Work implementation (sync candidates S1, 2026-10-21)
+## Latest Work implementation (first-cut P1, 2026-10-21)
+
+Existing signal extractor/planner connected to private revision/source-bound
+candidates, persistent reports and explicit video-only replacement in the local
+editor. Master at shared zero; <=8 verified zero-drift cameras and <=20min per
+input/event span. Unverified cameras excluded visibly. Incomplete/gapped/stale
+reports, changed source bytes, effects/split replacement and audio truncation
+refused. Four-bus audio selections/settings stay exact. Individual cut previews
+and normal manual caption/history/save/restart are wired; browser remains blocked.
+
+Actual generated HTTP -> analysis -> restart -> explicit apply -> Undo/Redo ->
+restart -> manual caption -> selected-camera MP4/full decode passed. Preserved
+440Hz master +880Hz extra buses; unintended660Hz camera sound absent. Full suite
+171 PASS (120 Node +38 engine/cloud +3 audio +10 legacy). Shared analysis manager
+keeps busy until durable journal, exposes missing/changed reports as failure.
+Delayed audio clock and disguised reference-container regressions fixed.
+F3/F4 partial TESTED_SYNTHETIC, not learned semantic AI or complete device support.
+Evidence: `docs/validation/FIRST_CUT_P1_2026-10-21.md`.
+
+S1 PR #16 integrated at fbad7612905a3b4b3a3d0fdde21bccbed571f264,
+source tree8e482a686f8f12ccb246f3ca750fe75e8d3d3fa6 matched; postmerge23 editor
+and13 sync/saved-output PASS. S1 checkpoint mainb6b755ff41914ac908cddc7eedad34597738b394.
+
+## Prior Work implementation (sync candidates S1, 2026-10-21)
 
 Existing local audio-correlation engine is connected to read-only candidates,
 private SHA/revision-bound reports, restart recovery and explicit confirmation.

@@ -22,6 +22,7 @@ FRAME_BYTES = WIDTH * HEIGHT
 SAMPLE_FPS = 1
 AUDIO_RATE = 2000
 WINDOW_SEC = 2
+INPUT_OPTIONS = ['-protocol_whitelist','file,pipe','-format_whitelist','mov,matroska,webm,avi']
 MAX_SECONDS = 1200  # explicit cap to control CPU/RAM and device heat
 
 class SignalsError(Exception):
@@ -57,9 +58,9 @@ def analyze_file(path, asset_id, *, offset_seconds=0.0, sync_status='master',
     if not isinstance(max_seconds,int) or not 1<=max_seconds<=MAX_SECONDS:
         raise SignalsError('ANALYSIS_BUDGET_OUT_OF_RANGE')
     file=Path(path).expanduser().resolve(strict=True)
-    if not file.is_file() or file.suffix.lower() not in {'.mp4','.mov','.mkv','.m4v','.avi'}:
+    if not file.is_file() or file.suffix.lower() not in {'.mp4','.mov','.mkv','.webm','.m4v','.avi'}:
         raise SignalsError('UNSUPPORTED_VIDEO')
-    info=json.loads(_run([_program('ffprobe'),'-v','error','-show_entries',
+    info=json.loads(_run([_program('ffprobe'),'-v','error',*INPUT_OPTIONS,'-show_entries',
         'format=duration:stream=codec_type','-of','json',str(file)],timeout))
     try:
         duration=float(info['format']['duration'])
@@ -70,9 +71,11 @@ def analyze_file(path, asset_id, *, offset_seconds=0.0, sync_status='master',
     if not any(s.get('codec_type')=='video' for s in info.get('streams',[])):
         raise SignalsError('VIDEO_STREAM_MISSING')
     seconds=min(duration,max_seconds)
+    # Input-time cap + EOF passthrough retains a real fractional tail sample.
+    # Output -t at 1fps rounds that sample away; never pad a missing video tail.
     decoded=_run([_program('ffmpeg'),'-hide_banner','-nostdin','-v','error',
-        '-i',str(file),'-t',str(seconds),'-an',
-        '-vf',f'fps={SAMPLE_FPS},scale={WIDTH}:{HEIGHT},format=gray',
+        *INPUT_OPTIONS,'-t',str(seconds),'-i',str(file),'-frames:v',str(math.ceil(seconds)),'-an',
+        '-vf',f'fps={SAMPLE_FPS}:start_time=0:eof_action=pass,scale={WIDTH}:{HEIGHT},format=gray',
         '-f','rawvideo','-pix_fmt','gray','pipe:1'],timeout)
     frames=[decoded[i:i+FRAME_BYTES] for i in range(0,len(decoded)-FRAME_BYTES+1,FRAME_BYTES)]
     if not frames:
@@ -81,7 +84,7 @@ def analyze_file(path, asset_id, *, offset_seconds=0.0, sync_status='master',
     samples=None
     if has_audio:
         audio=_run([_program('ffmpeg'),'-hide_banner','-nostdin','-v','error',
-            '-i',str(file),'-t',str(seconds),'-vn','-ac','1','-ar',str(AUDIO_RATE),
+            *INPUT_OPTIONS,'-i',str(file),'-t',str(seconds),'-vn','-ac','1','-af',f'aresample={AUDIO_RATE}:async=1:first_pts=0','-ar',str(AUDIO_RATE),
             '-f','s16le','pipe:1'],timeout)
         samples=array('h')
         samples.frombytes(audio[:len(audio)//2*2])
@@ -111,7 +114,7 @@ def analyze_file(path, asset_id, *, offset_seconds=0.0, sync_status='master',
            'offsetSeconds':round(float(offset_seconds),3),'sync':{'status':sync_status},
            'windows':windows},
         'coverageSeconds':round(min(seconds,len(frames)),3),
-        'partial':seconds<duration-.1,
+        'partial':seconds<duration-.1 or len(frames)<math.ceil(seconds),
         'limitations':['NOT_SPEECH_RECOGNITION','NOT_SCENE_SEMANTICS','NOT_ROLE_DETECTION',
                        'NOT_VALIDATED_ON_IPHONE_ANDROID_HARDWARE']
     }

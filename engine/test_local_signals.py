@@ -39,3 +39,21 @@ class SignalExtractionTests(unittest.TestCase):
         self.assertLess(r['coverageSeconds'],r['source']['durationSeconds'])
     def test_refuses_untrusted_asset(self):
         with self.assertRaises(SignalsError):analyze_file(self.video,'bad',max_seconds=1)
+
+    def test_reference_container_disguised_as_mp4_is_refused(self):
+        wrapped=self.folder/'reference.mp4'
+        wrapped.write_text("ffconcat version 1.0\nfile '"+self.video.name+"'\nduration 3\n")
+        with self.assertRaises(SignalsError):analyze_file(wrapped,ID,max_seconds=3)
+
+    def test_late_audio_remains_on_original_media_clock(self):
+        video=self.folder/'late.mp4'
+        subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','color=s=96x54:r=10:d=4','-itsoffset','2','-f','lavfi','-i','sine=frequency=440:sample_rate=16000:duration=2','-c:v','libx264','-preset','ultrafast','-c:a','aac',str(video)],check=True)
+        r=analyze_file(video,ID,max_seconds=4)
+        a,b=r['source']['windows']
+        self.assertLess(a['audioEnergy'],.03);self.assertGreater(b['audioEnergy'],.1)
+
+    def test_missing_video_tail_is_incomplete_even_if_audio_reaches_end(self):
+        video=self.folder/'short-video-long-audio.mp4'
+        subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','testsrc2=s=96x54:r=10:d=2','-f','lavfi','-i','sine=frequency=440:sample_rate=16000:duration=4','-c:v','libx264','-preset','ultrafast','-c:a','aac',str(video)],check=True)
+        r=analyze_file(video,ID,max_seconds=4)
+        self.assertTrue(r['partial']);self.assertLess(r['coverageSeconds'],3)

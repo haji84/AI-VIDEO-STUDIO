@@ -18,7 +18,7 @@ export function mountSyncPanel({container,current,request,act,refresh,mediaUrl,n
     }
     const start=make('button',job.status==='RUNNING'?'音声を解析中…':'この組み合わせの同期候補を調べる');start.id='sync-analyse';
     const master=videos.find(s=>s.assetId===masterId),target=videos.find(s=>s.assetId===targetId);
-    start.disabled=job.status==='RUNNING'||state.job.status==='RUNNING'||!['master','verified'].includes(master.syncStatus)||!['unverified','candidate'].includes(target.syncStatus);
+    start.disabled=job.status==='RUNNING'||state.job.status==='RUNNING'||state.firstCut?.status==='RUNNING'||!['master','verified'].includes(master.syncStatus)||!['unverified','candidate'].includes(target.syncStatus);
     start.onclick=()=>act(async()=>{await request('/api/sync',{method:'POST',body:JSON.stringify({masterId,targetId})});await refresh();watch();});row.append(start);container.append(row);
     const scope=make('p','先頭の最大300秒の音声から位置を推定します。ドリフトは未検査です。確認済みの位置は自動変更しません。');scope.className='muted';container.append(scope);
     if(job.status==='RUNNING'){container.append(make('p','このPCで解析中です。終了まで編集・書き出しをお待ちください。'));watch();return;}

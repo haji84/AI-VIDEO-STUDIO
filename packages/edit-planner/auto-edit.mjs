@@ -3,7 +3,7 @@
  * No network, models, media I/O or automatic claims about scene meaning.
  * Works in Node and standards-based JavaScript runtimes.
  */
-export const PLANNER_VERSION = '0.4.0-signal-preview';
+export const PLANNER_VERSION = '0.4.1-signal-preview';
 const MAX_CAMERAS = 100;
 const MAX_WINDOWS = 18000;
 const MAX_DURATION = 14400;
@@ -87,7 +87,17 @@ function timeBounds(sources, step){
       if(t>0 && t<end)pts.add(round(t));
     }
   }
-  return [...pts].sort((a,b)=>a-b).filter((x,i,arr)=>i===0||x-arr[i-1]>.0005);
+  const bounds=[...pts].sort((a,b)=>a-b).filter((x,i,arr)=>i===0||x-arr[i-1]>.0005);
+  // A camera boundary must not manufacture a gap in another camera's continuous
+  // coverage. Merge tiny intervals only when one trusted camera covers the whole
+  // combined interval; genuine missing footage remains a gap for review.
+  for(let i=0;i<bounds.length-1;){
+    if(bounds[i+1]-bounds[i]>=.2){i++;continue;}
+    if(i+2<bounds.length&&sources.some(s=>available(s,bounds[i],bounds[i+2]))){bounds.splice(i+1,1);continue;}
+    if(i>0&&sources.some(s=>available(s,bounds[i-1],bounds[i+1]))){bounds.splice(i,1);i--;continue;}
+    i++;
+  }
+  return bounds;
 }
 
 /**
