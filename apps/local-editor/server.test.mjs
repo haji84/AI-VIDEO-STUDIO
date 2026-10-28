@@ -95,8 +95,9 @@ test('local import/edit/history/restart/render is usable and protected',async()=
     const oldReport={...report};delete oldReport.inspection;
     await writeFile(join(dir,'data','jobs',job.id,'render','technical_qa.json'),JSON.stringify(oldReport));
     server=await app.startServer({workspace:join(dir,'data'),port:0});
-    const legacyJob=await(await fetch(server.url+'/api/job',{headers:{'X-AIVS-Token':server.token}})).json();
-    assert.equal(legacyJob.qualityStatus,'NOT_INSPECTED');
+    const changedJob=await(await fetch(server.url+'/api/job',{headers:{'X-AIVS-Token':server.token}})).json();
+    assert.equal(changedJob.status,'FAIL','editing a report already bound to a completion receipt is not a legacy migration');
+    assert.equal((await fetch(server.url+job.download,{headers:{'X-AIVS-Token':server.token}})).status,409);
   }finally{if(server)await server.close();await rm(dir,{recursive:true,force:true});}
 });
 

@@ -13,7 +13,8 @@ import {reviewTarget,inspectionMessage,inspectionScope,isWholeOutputFinding} fro
 import {mountAudioPanel} from '/audio-panel.mjs';
 import {mountSyncPanel} from '/sync-panel.mjs';
 import {mountFirstCutPanel} from '/first-cut-panel.mjs';
-const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll;
+import {mountOutputHistory} from '/output-history-panel.mjs';
+const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll,outputView=0;
 const names={source:'元音声',narration:'ナレーション',bgm:'BGM',sfx:'効果音'};
 function notice(message){$('notice').textContent=message;}
 async function api(path,{method='GET',body,headers={}}={}){const r=await fetch(path,{method,body,headers:{'X-AIVS-Token':token,'X-AIVS-Revision':String(state?.session?.project?.revision??0),...headers}});const data=await r.json();if(!r.ok){const e=new Error(data.error||'処理に失敗しました');e.status=r.status;throw e;}return data;}
@@ -60,6 +61,12 @@ for(const id of ['undo','redo'])$(id).onclick=()=>act(async()=>{state=await api(
 $('save-project').onclick=()=>{const blob=new Blob([JSON.stringify(state.session,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ai-video-project.aivs.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('open-project').onchange=()=>act(async()=>{const file=$('open-project').files[0];if(!file)return;state=await api('/api/open',{method:'POST',body:await file.text()});$('open-project').value='';});
 const quality=document.createElement('div');quality.id='quality-review';$('download').after(quality);
+const historyContainer=document.createElement('div');historyContainer.id='output-history';quality.after(historyContainer);
+const outputLabel=document.createElement('p');outputLabel.className='muted';$('output').before(outputLabel);
+const historyPanel=mountOutputHistory({container:historyContainer,request:api,notice,onSelect:view=>{
+ outputView++;const url=view.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;
+ outputLabel.textContent='表示中：以前の完成動画（編集版'+view.report.projectRevision+'）';showQA(view.report);
+}});
 const findingNames={BLACK_INTERVAL:'黒い映像の可能性',SILENCE_WHILE_AUDIO_SELECTED:'選択した音声が無音',SILENCE_REQUIRES_CONTEXT:'無音区間',NEAR_SAMPLE_CLIPPING:'音量ピークが大きい',TRUE_PEAK_AT_OR_ABOVE_REFERENCE:'音量ピーク（サンプル間を含む）が確認目安以上（全編最大値・時刻未特定）',TRUE_PEAK_UNAVAILABLE:'サンプル間の音量ピークを測定できませんでした',STATIC_OR_FREEZE_INTERVAL:'静止画・フリーズの候補（意図した静止画の場合あり）',VARIABLE_FRAME_CADENCE:'フレーム間隔の変化（意図した可変間隔の場合あり）'};
 function showQA(report){
  quality.replaceChildren();const heading=document.createElement('h3');heading.textContent='完成動画の技術検査';
@@ -79,9 +86,9 @@ function showQA(report){
  }
  if(report.inspection?.omittedFindings){const p=document.createElement('p');p.textContent='検出箇所が多いため記録は256件までです。全編を再生して確認してください。';quality.append(p);}
 }
-function finished(job){if(job.status!=='PASS')return;const url=job.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;$('render-state').textContent='完成動画を確認できます';
- quality.replaceChildren();api('/api/qa').then(report=>{if(state.job.id===job.id)showQA(report);}).catch(()=>{quality.textContent='この出力の詳細な検査記録はありません。再作成して検査できます。';});}
+function finished(job){if(job.status!=='PASS')return;const view=++outputView;historyPanel.invalidate();const url=job.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;$('render-state').textContent=job.historyWarning||'完成動画を確認できます';outputLabel.textContent='表示中：最新の完成動画';
+ quality.replaceChildren();api('/api/qa').then(report=>{if(outputView===view)showQA(report);}).catch(()=>{if(outputView===view)quality.textContent='この出力の詳細な検査記録を確認できません。編集内容から再作成できます。';});historyPanel.refresh();}
 function watch(){clearInterval(poll);poll=setInterval(async()=>{try{const latest=await api('/api/job');state.job=latest;if(latest.status==='RUNNING')return;clearInterval(poll);$('render').disabled=false;if(latest.status!=='PASS'){notice(latest.error);$('render-state').textContent='作成できませんでした';return;}finished(latest);}catch(e){clearInterval(poll);notice(e.message);}},500);}
-$('render').onclick=()=>act(async()=>{state.job=await api('/api/render',{method:'POST'});quality.replaceChildren();$('output').hidden=true;$('download').hidden=true;$('render-state').textContent='作成中。このPCのアプリを終了しないでください。';watch();});
-api('/api/state').then(data=>{state=data;show();if(state.job.status==='RUNNING')watch();else finished(state.job);notice('端末内に保存済み');}).catch(e=>notice(e.message));
+$('render').onclick=()=>act(async()=>{state.job=await api('/api/render',{method:'POST'});outputView++;historyPanel.invalidate();quality.replaceChildren();$('output').hidden=true;$('download').hidden=true;$('render-state').textContent='作成中。このPCのアプリを終了しないでください。';watch();});
+api('/api/state').then(data=>{state=data;show();if(state.job.status==='RUNNING')watch();else finished(state.job);if(state.job.status!=='PASS')historyPanel.refresh();notice('端末内に保存済み');}).catch(e=>notice(e.message));
 </script></html>

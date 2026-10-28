@@ -1,12 +1,31 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-29 JST (2026-10-28 UTC)
-Status: IN_PROGRESS. Current slice: manual gain edit to fresh QA, TESTED_SYNTHETIC.
+Status: IN_PROGRESS. Current slice: retained output history, TESTED_SYNTHETIC.
 Product DoD NOT MET. Actual GUI/native/physical acceptance NOT_RUN/BLOCKED.
-previousIntegratedMainSHA (true-peak PR #20): `80259d2f43c53254ac3b4ab7da87cef69e19a558`
-previousIntegratedSourceTree: `d334434741245181ce251384f9ba08fd21156967`
+previousIntegratedMainSHA (manual-gain PR #21): `c0bdfaef9a91c8783c2f7bee1d3c78218c8e4c4a`
+previousIntegratedSourceTree: `11c156f4b3f1ba5e388aba018dd09e4b90a0b78a`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
-## Current manual gain acceptance — 2026-10-29 JST
+## Current retained-output history slice — 2026-10-29 JST
+
+Completed-output journal, 50 recent entries, metadata-only listing and explicit
+output/report verification on selection. No workspace scan or deletion of older
+files. Saved project/history and live-job identity are not changed by viewing.
+A separate history-write failure preserves the completed latest-job receipt;
+legacy migration covers only that last old completed output, with unknown old
+time and report integrity beginning at migration.
+
+Two actual generated MP4/report pairs were restored after restart, selected,
+downloaded (including byte ranges) and fully decoded. Tamper/missing/link/orphan
+cases fail closed. Complete local-editor suite: 52/52 PASS, no skips; inline
+module syntax and DOM-double selection tests pass. Independent review found a
+latest-job size-check/read gap, now fixed by bounded handle reads and independently
+retested. Actual GUI/native/device acceptance remains unverified.
+Evidence: `docs/validation/OUTPUT_HISTORY_F8_2026-10-29.md`.
+The carrying PR is the record for frozen-file review and exact integration /
+postmerge checks. Do not repeat this implementation after it is integrated.
+
+## Integrated manual gain acceptance — 2026-10-29 JST
 
 Existing HTTP import/render -> explicit audio gain -6 dB -> Undo/Redo -> save/
 restart -> saved JSON reopen -> new MP4/report -> restart passed on generated
@@ -16,8 +35,9 @@ both outputs fully decode. Existing history/revision/global-findings safeguards
 passed. No product-code fix was required. New self-generated HTTP/media test +
 8 inspection/display cases: 9/9 PASS, no skips. Details, hashes and limitations:
 `docs/validation/TRUE_PEAK_MANUAL_EDIT_2026-10-29.md`.
-The carrying PR is the exact integration and postmerge record for this acceptance
-change. Current source was integrated in PR #20 at the main/tree above.
+PR #21 is its exact integration/postmerge record at the main/tree above.
+The prior implementation came from PR #20 at main
+`80259d2f43c53254ac3b4ab7da87cef69e19a558`.
 
 ## Integrated true-peak slice — 2026-10-29 JST
 
@@ -74,7 +94,8 @@ PR #11 project/history/relink; #12 saved four-bus renderer; #13 local editor/API
 #14 output inspector/re-edit; #15 per-audio controls; #16 sync candidates/shared
 clock; #17 first-cut proposals; #18 output freeze/cadence warnings; #19 measured
 static captions and verified font coverage; #20 whole-output true-peak estimates
-and correctly global review results. Evidence in docs/validation/.
+and correctly global review results; #21 manual-gain-to-fresh-QA acceptance.
+Evidence in docs/validation/.
 Do not repeat finished work.
 Current source is tested synthetic Linux, not accepted on all product devices.
 
@@ -111,23 +132,19 @@ Audio-only absent video tails are not labelled frozen. Old reports retain their
 original detector coverage. Clean merge/protectionfalse/check-runs0/statuses[]
 observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
 
-## Exact next bounded task: retained output history after restart
+## Continuation after this bounded slice
 
-The preceding manual gain acceptance is done at TESTED_SYNTHETIC. It exposed an
-existing usability limit, not evidence loss: prior MP4/report files stay on disk,
-but only the latest output is indexed again by the UI/API on restart.
-
-1. Refresh main/active PRs and the integration records; use the real remote parent.
-2. Define a bounded read-only history index from existing output/job evidence;
-   never scan outside the dedicated workspace or treat orphaned/tampered files
-   as successful exports. Preserve current source/report identity checks.
-3. Restore at least two actual generated MP4/report pairs after restart and allow
-   explicit selection without editing the project or overwriting any output.
-4. Verify output/report hash binding, missing/corrupt evidence and stale-project
-   navigation refusal. Add actual GUI acceptance only when a browser is available.
-5. This next slice is NOT_STARTED. It is not automatic audio correction, a new
-   renderer or complete F8. Speech intelligibility, limiter guarantees and all
-   physical platforms remain open.
+1. Refresh main and the carrying PR's integration record; use the real remote
+   parent and do not reimplement the completed history slice.
+2. Run actual browser acceptance only when a compatible browser is available.
+   Do not repeat the unchanged blocked download or label DOM/API tests as GUI PASS.
+3. The next independent product gap is explicit source relinking into a new
+   workspace: saved JSON plus user-selected files whose SHA256 matches the saved
+   source identity, followed by reopen/edit/export. Design against the existing
+   project/local-store identity checks before coding; reject wrong identities and
+   retain originals. This is NOT_STARTED and outside this history change.
+4. No further feature unit was started in this change. Speech intelligibility,
+   limiter guarantees, native adapters and the full physical-device flows remain open.
 
 ## Browser/device blocker and replay
 
@@ -153,7 +170,7 @@ Physical iPhone/Android/Windows/Mac full flow, GUI/novice tasks, native adapters
 drift/video-event sync, Japanese persisted natural TTS, semantic AI/model metrics,
 effects/audio preview parity, device caption acceptance, intelligibility/true peak, source
 frame analysis, authorized real11GB performance and bounded automatic repair.
-Not all independent tasks are blocked; resume the retained-output history slice above.
+Not all independent tasks are blocked; the next independent gap is recorded above.
 Unfinished requirements must not be reported COMPLETE. No paid/R2/GPU/billing,
 credential change, public production deployment, recurring task, private footage
 upload or GORIQ operation. This checkpoint does not create background execution.
