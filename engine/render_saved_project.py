@@ -146,7 +146,7 @@ def render_saved_project(project_file:Path,bindings_file:Path,workspace:Path,out
                'projectId':plan['projectId'],'projectRevision':plan['revision'],
                'audioClipCount':len(plan['audio']),'audioBuses':list(plan['audioBuses']),
                'intermediateAudio':'IGNORED_BY_FINAL_MIX','semanticAudioQA':'NOT_EVALUATED',
-               'truePeakGuarantee':'NOT_MEASURED','physicalDeviceAcceptance':'NOT_RUN',
+               'truePeakGuarantee':'NOT_GUARANTEED','physicalDeviceAcceptance':'NOT_RUN',
                'captionRasters':video_report.get('captionRasters',[])})
     with (workspace/'technical_qa.json').open('x',encoding='utf-8') as handle:
         json.dump(qa,handle,ensure_ascii=False,indent=2)

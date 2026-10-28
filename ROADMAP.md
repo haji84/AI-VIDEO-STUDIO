@@ -2,6 +2,15 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
+Current checkpoint: 2026-10-29 JST. Previous integrated caption PR #19 is at
+`e79e5163759c31dd10e7adbe6af9bb55953f945e` (tree
+`f8fa30b1f68b5426e738b52027118b2fca0d480a`). Static caption bounds/glyph evidence
+is TESTED_SYNTHETIC on Linux, including postmerge Pillow 13.0.0 11/11 checks.
+This change also implements the true-peak measurement/report/display slice:
+24 targeted Python + 8 Node PASS, actual MP4/source/report evidence retained.
+The carrying PR records its integration tree and postmerge checks. Neither slice
+completes F8, any platform Goal or the product. Hosted CI NOT_RUN.
+
 ## P0 Local-first mobile foundation
 
 - [ ] iPhone: capability and performance test with owned footage, Japanese speech and effects.
@@ -34,7 +43,7 @@ Evaluation is based on verified, usable product requirements, not number of comm
 
 No item becomes checked merely because a design document or test stub exists.
 
-## Current verified M1 slice (Work, 2026-10-21)
+## Current verified M1 slice (Work, updated 2026-10-29 JST)
 
 - [x] Portable v1 project/time/source/audio/effect contract, strict reload and undo/redo; actual local disk roundtrip tested.
 - [x] Streamed source hash/relink, fail-closed manifest bridge, real saved 3-camera caption/source-audio MP4 and full decode on Linux.
@@ -46,8 +55,11 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Local sync candidates, bound evidence, explicit review/save/reopen, shared-clock camera choice and nonzero-offset camera export (S1, synthetic). Drift/real-device confirmation remains open.
 - [x] Saved editor first-cut proposal from existing low-level signals; explicit source/revision-bound preview/apply, protected manual effects/four-bus audio, history/restart/re-edit/actual MP4 (P1, synthetic). Learned semantics and physical devices remain open.
 - [x] Whole-output still/freeze candidates and aggregate PTS cadence evidence, warning-only explicit review/re-edit; old report coverage honest (F8-B, synthetic only).
-- [ ] Complete F8 caption safe bounds, intelligibility/true peak, bounded automatic repair and real-device evidence. Limited technical checks are not full output quality acceptance.
-- [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED: missing browser executable in current runtime; script prepared).
+- [x] Measured long/multiline static captions, Japanese glyph coverage or explicit failure, saved evidence/history and actual MP4 audio preservation (PR #19, synthetic Linux/Pillow 13 only).
+- [x] Reference-checked true-peak measurement in the existing output QA report, with intersample-overshoot, safe/silent/unavailable/partial fixtures and honest legacy display. Global results cannot identify an edit clip. TESTED_SYNTHETIC; not a limiter or playback guarantee.
+- [ ] Complete F8 device caption acceptance, intelligibility/true-peak guarantees, bounded automatic repair and real-device evidence. Limited technical checks are not full output quality acceptance.
+- [ ] Next existing acceptance: explicit audio-gain edit -> Undo/Redo/save/restart -> fresh MP4/true-peak report, preserving prior evidence and original input. NOT_RUN; exact steps in docs/work/WORK_CHECKPOINT.md.
+- [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE; the 2026-10-29 JST official Chromium download returned a 195-byte HTML error, not a browser). Resume the existing temporary-local-media script only when a compatible browser is available; do not repeat the same failed download.
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.
 
 These M1 items are TESTED_SYNTHETIC. Broader P0/platform boxes stay open.

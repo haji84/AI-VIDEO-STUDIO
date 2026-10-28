@@ -33,3 +33,44 @@ test('reopening old reports never claims new freeze/cadence detector coverage',a
  assert.match(inspectionScope(current),/フレーム間隔の変化を集計/);assert.match(inspectionScope(current),/意図した静止画/);
  current.inspection.cadence.status='INCOMPLETE';assert.match(inspectionScope(current),/フレーム間隔の検査は未完了/);
 });
+
+test('true-peak display uses measured values and a rounded review reference without promising repair',async()=>{
+ const {inspectionScope}=await import('./qa.mjs');
+ const report={inspection:{schema:'aivs-output-inspection-v1',status:'NEEDS_REVIEW',
+   detectors:['true-peak-ebur128-v1'],truePeak:'MEASURED',thresholds:{truePeakReviewDbTP:-1},
+   truePeakMeasurement:{maximumDbTP:-1,unit:'dBTP',method:'ffmpeg-ebur128-peak-true',reportedPrecisionDb:.1}}};
+ const before=JSON.stringify(report),text=inspectionScope(report);
+ assert.match(text,/-1\.0 dBTP/);assert.match(text,/0\.1 dB/);assert.match(text,/以上/);
+ assert.match(text,/自動修復は行いません/);assert.equal(JSON.stringify(report),before);
+});
+
+test('old, incomplete and absent true-peak evidence never acquires measured coverage on reload',async()=>{
+ const {inspectionScope}=await import('./qa.mjs');
+ const legacy=JSON.parse(JSON.stringify({inspection:{schema:'aivs-output-inspection-v1',status:'CHECKED_LIMITED',truePeak:'NOT_MEASURED'}}));
+ assert.match(inspectionScope(legacy),/サンプル間の音量ピークは未検査/);
+ for(const status of ['UNAVAILABLE','INCOMPLETE']){
+  const report={inspection:{schema:'aivs-output-inspection-v1',status:'NEEDS_REVIEW',truePeak:status,
+   detectors:['true-peak-ebur128-v1'],truePeakMeasurement:{maximumDbTP:null,unit:'dBTP',method:'ffmpeg-ebur128-peak-true'}}};
+  assert.match(inspectionScope(report),/サンプル間の音量ピークは未検査/);
+ }
+});
+
+test('measured digital silence is distinct from an unavailable meter or missing audio track',async()=>{
+ const {inspectionScope}=await import('./qa.mjs');
+ const report={inspection:{schema:'aivs-output-inspection-v1',status:'CHECKED_LIMITED',detectors:['true-peak-ebur128-v1'],
+  truePeak:'SILENT',truePeakMeasurement:{maximumDbTP:null,unit:'dBTP',method:'ffmpeg-ebur128-peak-true'}}};
+ assert.match(inspectionScope(report),/デジタル無音/);
+ report.inspection.truePeak='NOT_APPLICABLE';report.inspection.detectors=[];
+ assert.match(inspectionScope(report),/音声トラックがない/);
+});
+
+test('whole-output true-peak results cannot identify an arbitrary clip for editing',()=>{
+ for(const code of ['TRUE_PEAK_AT_OR_ABOVE_REFERENCE','TRUE_PEAK_UNAVAILABLE']){
+  const report={projectId:project.projectId,projectRevision:project.revision,inspection:{findings:[{
+   code,...(code==='TRUE_PEAK_AT_OR_ABOVE_REFERENCE'?{scope:'GLOBAL_MAXIMUM_NO_PEAK_TIMESTAMP'}:{}),
+   startSec:0,endSec:8,clipIds:['clip_one','clip_two']}]}};
+  const before=JSON.stringify(report);
+  assert.throws(()=>reviewTarget(report,project,0),/FINDING_NOT_LOCALIZED/);
+  assert.equal(JSON.stringify(report),before);
+ }
+});

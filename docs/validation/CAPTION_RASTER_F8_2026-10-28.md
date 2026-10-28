@@ -1,6 +1,10 @@
-# Static caption raster candidate — 2026-10-28 UTC
+# Static caption raster validation — 2026-10-28 UTC
 
-Status: local reviewed candidate; not pushed, merged or deployed. Base main
+Status updated 2026-10-29 JST: [PR #19](https://github.com/haji84/AI-VIDEO-STUDIO/pull/19)
+is squash-merged into main `e79e5163759c31dd10e7adbe6af9bb55953f945e`, tree
+`f8fa30b1f68b5426e738b52027118b2fca0d480a`. The static-caption slice is
+TESTED_SYNTHETIC on Linux. F8 and Product DoD remain unmet; no deployment occurred.
+The premerge implementation and historical tests below used base main
 `d849ab93daaa99ec5b7f4824bb810bbbaef6d7b5`, tree
 `5e85e07d80216cbc4e429e429629754da78a61a7`. Product DoD remains unmet.
 
@@ -186,10 +190,39 @@ and result records are `verification/pillow13-runtime.log`,
 `verification/japanese-media-pillow13/evidence.json`. The targeted reruns do not
 assert a fresh 187-case full-suite run or overall dependency-audit acceptance.
 
+## Postmerge verification and GUI blocker — 2026-10-29 JST
+
+The integration agent compared all 172 source blobs in the merged tree with the
+tested source, including the 14 reviewed changed files. After merge, that agent
+reran `python -B -m unittest engine.test_caption_raster
+engine.test_manifest.ManifestTests.test_one_camera_real_mp4
+engine.test_manifest.ManifestTests.test_three_cam_split_real_mp4 -v` under
+Pillow 13.0.0: 11/11 PASS. This is postmerge synthetic verification, not a hosted
+CI result, a new full-suite run or full F8 acceptance. Docker build is NOT_RUN.
+
+The existing `node apps/local-editor/browser-acceptance.mjs` returned
+`BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE`, exit 2, before starting the browser or
+local server. Playwright 1.62.1 is installed; its Chromium 151.0.7922.34 /
+revision 1234 is absent. The installed CLI's dry run identified
+`https://cdn.playwright.dev/builds/cft/151.0.7922.34/linux64/chrome-linux64.zip`.
+One permitted download to a dedicated scratch cache returned 195 bytes of
+"Site Unavailable / Unable to access this site." HTML (curl exit 0, ZIP false),
+SHA256 `5b131ca14aa96311d3432b0062c7443d3b0e6346ec279bd376a75f0a76bcd5d7`.
+Approval was granted; the distribution response prevented browser acquisition.
+The download was not repeated. No system install or persistent service occurred.
+Scratch records: `verification/browser-download-result.json` and
+`verification/browser-acceptance-current.log`. GUI operations and browser MP4
+replay remain unverified; FFmpeg/API results are not substituted for them.
+
 ## Remaining acceptance
 
+Subsequent F8 true-peak measurement/report work is recorded separately in
+`TRUE_PEAK_F8_2026-10-29.md`; it adds no browser or physical-device acceptance
+to the caption evidence above.
+
 The local Japanese font blocker is resolved by the additional evidence above.
-Perform the existing formal PR/CI/main integration gates. Native iPhone/Android,
+PR #19 review/main integration and targeted postmerge checks are complete.
+Hosted CI remains NOT_RUN. Native iPhone/Android,
 Windows/macOS, GUI preview parity, real long video, large footage, novice tasks,
 semantic editing, natural TTS and full product acceptance remain unverified.
 This change does not reduce any product Goal or enable cloud/billing/public release.

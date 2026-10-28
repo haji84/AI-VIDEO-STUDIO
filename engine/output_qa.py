@@ -20,6 +20,7 @@ from . import core_v01 as core
 INPUT_OPTIONS=['-protocol_whitelist','file,pipe','-format_whitelist','mov,matroska,webm']
 MAX_FINDINGS=256
 NUMBER=r'[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?'
+TRUE_PEAK_REVIEW_DBTP=-1.0  # Audio-spec review reference, not a limiter guarantee.
 
 
 def _fingerprint(path):
@@ -55,6 +56,7 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
     timing_match=video_end is None or (abs(video_start)<=max(.1,2*frame_sec) and abs(video_end-duration)<=max(.1,2*frame_sec))
     if not timing_match:issues.append('映像トラックの開始・終了が出力全体の時間に一致しません')
     findings=[];omitted=0;peak=None;silence_start=None;decoded_frames=None;ended=False;peak_stats=False
+    true_peak_raw=None;true_peak_summary=False;true_peak_next=False
     freeze_start=None;cadence_counts=None
     frame_text=video.get('nb_frames','')
     container_frames=int(frame_text) if str(frame_text).isdigit() else None
@@ -84,7 +86,10 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
         # the output media clock. Otherwise a short stream supplies no samples
         # for silencedetect to inspect after its last packet.
         args+=['-map','0:a:0','-af',f'aresample=async=1:first_pts=0,apad=whole_dur={duration:.9f},atrim=duration={duration:.9f},'
-               'silencedetect=noise=-50dB:d=0.5,astats=metadata=0:reset=0']
+               'silencedetect=noise=-50dB:d=0.5,astats=metadata=0:reset=0,'
+               # Analysis only: flush the meter's oversampling tail without
+               # padding the rendered file or the silence/sample-peak scan.
+               'apad=pad_dur=0.1,ebur128=peak=true:framelog=verbose']
     args+=['-fps_mode','passthrough','-progress','pipe:2','-f','null',os.devnull]
     # File-backed diagnostics keep long renders out of process memory. Reports
     # cap findings without stopping the actual all-frame/all-sample scan.
@@ -94,6 +99,16 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
         log.seek(0)
         for raw in log:
             line=raw.decode('utf-8',errors='replace')
+            if re.fullmatch(r'\[Parsed_ebur128_\d+ @ [^\]]+\] Summary:\s*',line):
+                true_peak_summary=True;true_peak_next=False;true_peak_raw=None
+            elif line.startswith('['):
+                true_peak_summary=False;true_peak_next=False
+            if true_peak_summary:
+                if line.strip()=='True peak:':true_peak_next=True
+                elif true_peak_next and line.strip():
+                    match=re.fullmatch(r'\s*Peak:\s*('+NUMBER+r'|-inf|inf|nan)\s+dBFS\s*',line)
+                    true_peak_raw=float(match[1]) if match else None
+                    true_peak_next=False
             if re.fullmatch(r'frame=\d+\s*',line):decoded_frames=int(line.strip().split('=')[1])
             if line.strip()=='progress=end':ended=True
             match=re.search(r'black_start:('+NUMBER+r')\s+black_end:('+NUMBER+r')',line)
@@ -137,10 +152,22 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
     if not frame_match:issues.append('コンテナのフレーム数と実際にデコードしたフレーム数が一致しません')
     if audio and not peak_stats:issues.append('音声全編の音量検査を確認できません')
     if peak is not None and peak>=-.1:add('NEAR_SAMPLE_CLIPPING',0,duration)
+    completed=process.returncode==0 and ended and decoded_frames is not None and decoded_frames>0 and frame_match
+    true_peak_status='NOT_APPLICABLE' if not audio else 'INCOMPLETE' if not completed or not peak_stats else 'UNAVAILABLE'
+    true_peak=None
+    if audio and completed and peak_stats:
+        if true_peak_raw is not None and math.isfinite(true_peak_raw):
+            true_peak=true_peak_raw;true_peak_status='MEASURED'
+        elif true_peak_raw==float('-inf'):true_peak_status='SILENT'
+        if true_peak is not None and true_peak>=TRUE_PEAK_REVIEW_DBTP:
+            add('TRUE_PEAK_AT_OR_ABOVE_REFERENCE',0,duration,maximumDbTP=true_peak,
+                referenceDbTP=TRUE_PEAK_REVIEW_DBTP,scope='GLOBAL_MAXIMUM_NO_PEAK_TIMESTAMP')
+        elif true_peak_status=='UNAVAILABLE':add('TRUE_PEAK_UNAVAILABLE',0,duration)
+    detectors=['blackdetect-v1','silencedetect-v1','sample-peak-v1','freezedetect-v1','vfrdet-v1']
+    if true_peak_status in ('MEASURED','SILENT'):detectors.append('true-peak-ebur128-v1')
     after=path.stat()
     if (before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns)!=(after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns) or _fingerprint(path)!=digest:
         raise core.StudioError('OUTPUT_CHANGED_DURING_INSPECTION')
-    completed=process.returncode==0 and ended and decoded_frames is not None and decoded_frames>0 and frame_match
     return {'technical_ok':not issues,'issues':issues,'duration_seconds':duration,'width':width,'height':height,
             'has_audio':audio,'whole_file_decode_checked':completed,'sha256':digest,
             'projectId':(plan or {}).get('projectId'),'projectRevision':(plan or {}).get('revision'),
@@ -152,11 +179,14 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
               'videoStreamTimingCheck':'UNAVAILABLE' if video_end is None else 'MATCH' if timing_match else 'MISMATCH',
               'audioClockInspection':'PTS_GAPS_AND_ABSENT_TAIL_INSPECTED_AS_SILENCE',
               'containerFrameCountCheck':'MATCH' if container_frames is not None and frame_match else 'MISMATCH' if not frame_match else 'UNAVAILABLE',
-              'detectors':['blackdetect-v1','silencedetect-v1','sample-peak-v1','freezedetect-v1','vfrdet-v1'],
-              'cadence':cadence,'findings':findings,'omittedFindings':omitted,'audioSamplePeakDbfs':peak,'truePeak':'NOT_MEASURED',
-              'thresholds':{'minimumBlackSec':.5,'blackPixelLuma':.1,'blackPictureRatio':.98,'minimumSilenceSec':.5,'silenceDbfs':-50,'nearClippingDbfs':-.1,'minimumFreezeSec':1,'freezeNoiseRatio':.001},
+              'detectors':detectors,
+              'cadence':cadence,'findings':findings,'omittedFindings':omitted,'audioSamplePeakDbfs':peak,'truePeak':true_peak_status,
+              'truePeakMeasurement':{'maximumDbTP':true_peak,'unit':'dBTP','method':'ffmpeg-ebur128-peak-true',
+                'scope':'ALL_CHANNELS_FIRST_OUTPUT_AUDIO_STREAM','reportedPrecisionDb':.1,'analysisTailPaddingSec':.1},
+              'thresholds':{'minimumBlackSec':.5,'blackPixelLuma':.1,'blackPictureRatio':.98,'minimumSilenceSec':.5,'silenceDbfs':-50,'nearClippingDbfs':-.1,'truePeakReviewDbTP':TRUE_PEAK_REVIEW_DBTP,'minimumFreezeSec':1,'freezeNoiseRatio':.001},
               'limitations':['Black, silence, still images and variable cadence may be intentional; replay and re-edit manually.',
                 'Cadence is aggregate output PTS evidence, not source-frame loss detection; freeze does not identify cause.',
                 'Open freeze tails use video stream end, or only minimum observed duration if it is unavailable.',
-                'No caption raster, speech intelligibility, true peak, semantic or physical-device acceptance; no automatic repair.']},
+                'True peak is a rounded FFmpeg estimate; its global maximum has no peak timestamp. The review reference is not a limiter or device guarantee.',
+                'No caption raster, speech intelligibility, semantic or physical-device acceptance; no automatic repair.']},
             'semantic_review':'NOT_EVALUATED'}
