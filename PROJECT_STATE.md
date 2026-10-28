@@ -7,10 +7,24 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current implementation: F8 true-peak measurement (2026-10-29 JST)
+## Current acceptance: manual gain edit and fresh true-peak report (2026-10-29 JST)
 
-The true-peak slice is implemented and TESTED_SYNTHETIC on the PR #19 source
-basis below. Existing FFmpeg output inspection now records the whole selected
+The existing audio edit path now has actual HTTP/MP4 follow-through evidence:
+explicit -6 dB gain -> Undo/Redo -> automatic save/restart -> saved JSON reopen ->
+new MP4/report -> restart. The synthetic output peak changed from +2.6 to
+-4.2 dBTP; source/imported media and earlier output/report bytes stayed unchanged.
+New output/report identity, saved history, global-result scope and rejection of
+stale project navigation passed. A repeatable generated-media integration test
+and the eight existing inspection tests pass (9/9); no product-code change was
+needed. Evidence: `docs/validation/TRUE_PEAK_MANUAL_EDIT_2026-10-29.md`.
+This is TESTED_SYNTHETIC on Linux, not actual browser/device acceptance or full F8.
+The carrying PR records integration and postmerge verification.
+
+## Integrated implementation: F8 true-peak measurement (2026-10-29 JST)
+
+[PR #20](https://github.com/haji84/AI-VIDEO-STUDIO/pull/20) integrated the true-peak
+slice at main `80259d2f43c53254ac3b4ab7da87cef69e19a558`, tree
+`d334434741245181ce251384f9ba08fd21156967`. It is TESTED_SYNTHETIC. Existing FFmpeg output inspection now records the whole selected
 audio stream's maximum intersample peak, method, dBTP unit and 0.1 dB precision.
 The -1.0 dBTP reference creates a REVIEW warning; it does not change audio or
 guarantee a limiter, speech intelligibility or actual device playback quality.
@@ -19,9 +33,8 @@ Unavailable/incomplete/old evidence is explicit; digital silence is separate.
 24 targeted Python + 8 Node tests passed. Independent review has no unresolved
 blocker after the global-navigation fix. The actual saved AAC MP4 is byte-identical
 before/after; its formerly missed +2.6 dBTP peak now appears in the saved report.
-Evidence: `docs/validation/TRUE_PEAK_F8_2026-10-29.md`. Integration head/merge/tree
-and postmerge checks belong to the PR carrying this change; no unknown SHA is
-invented here. Full F8/Product DoD, hosted CI, GUI and physical acceptance remain open.
+Evidence: `docs/validation/TRUE_PEAK_F8_2026-10-29.md`; PR #20 records its exact
+integration and postmerge checks. Full F8/Product DoD, hosted CI, GUI and physical acceptance remain open.
 
 ## Previous integrated checkpoint: static captions (2026-10-29 JST)
 
@@ -48,15 +61,17 @@ gates: `docs/validation/CAPTION_RASTER_F8_2026-10-28.md`.
 Current GUI acceptance remains BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE (exit 2).
 Playwright 1.62.1 is present, but the matching Chromium is absent. One permitted
 official download on 2026-10-29 JST returned 195 bytes of "Site Unavailable"
-HTML, not a browser ZIP. No browser or local test server started, and the failed
+HTML, not a browser ZIP. That browser acceptance attempt stopped before
+browser/server startup; the HTTP acceptance above is separate. The failed
 download was not repeated. Native iPhone/Android/Windows/macOS, GUI/novice and
 preview/export parity acceptance remain unverified for this editor.
 
-Next independently executable existing acceptance: explicit audio-gain edit ->
-Undo/Redo/save/restart -> fresh MP4 and true-peak report, preserving the prior
-output/report and original input. This follow-through is NOT_RUN; intelligibility,
-automatic repair, limiter guarantees and all platform goals remain open.
-Exact steps: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
+The manual audio-gain follow-through above is now TESTED_SYNTHETIC. Earlier
+output/report files remain intact on disk, but the app restores only the latest
+output into its UI/API index after restart. Next bounded work is verified output
+history restoration/selection, with missing or changed evidence rejected; it is
+NOT_STARTED. Intelligibility, automatic repair, limiter guarantees and all
+platform goals remain open. Exact steps: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
 including their old "current" test totals and implementation limits.
 
 ## Prior Work implementation (output freeze/cadence F8-B, 2026-10-21)

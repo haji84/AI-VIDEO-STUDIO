@@ -1,14 +1,27 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-29 JST (2026-10-28 UTC)
-Status: IN_PROGRESS. Current slice: F8 true-peak measurement, TESTED_SYNTHETIC.
+Status: IN_PROGRESS. Current slice: manual gain edit to fresh QA, TESTED_SYNTHETIC.
 Product DoD NOT MET. Actual GUI/native/physical acceptance NOT_RUN/BLOCKED.
-previousIntegratedMainSHA (caption PR #19): `e79e5163759c31dd10e7adbe6af9bb55953f945e`
-previousIntegratedSourceTree: `f8fa30b1f68b5426e738b52027118b2fca0d480a`
+previousIntegratedMainSHA (true-peak PR #20): `80259d2f43c53254ac3b4ab7da87cef69e19a558`
+previousIntegratedSourceTree: `d334434741245181ce251384f9ba08fd21156967`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
-## Current true-peak slice — 2026-10-29 JST
+## Current manual gain acceptance — 2026-10-29 JST
 
-Implemented on the previous integrated source above: existing FFmpeg full-output
+Existing HTTP import/render -> explicit audio gain -6 dB -> Undo/Redo -> save/
+restart -> saved JSON reopen -> new MP4/report -> restart passed on generated
+media. Peak +2.6 -> -4.2 dBTP; source/imported copy/prior output/report unchanged.
+PCM RMS ratios in the documented 0.15–0.35 s window are 0.501545 / 0.495705;
+both outputs fully decode. Existing history/revision/global-findings safeguards
+passed. No product-code fix was required. New self-generated HTTP/media test +
+8 inspection/display cases: 9/9 PASS, no skips. Details, hashes and limitations:
+`docs/validation/TRUE_PEAK_MANUAL_EDIT_2026-10-29.md`.
+The carrying PR is the exact integration and postmerge record for this acceptance
+change. Current source was integrated in PR #20 at the main/tree above.
+
+## Integrated true-peak slice — 2026-10-29 JST
+
+Implemented in PR #20 on the prior caption checkpoint: existing FFmpeg full-output
 scan now measures intersample true peak and persists value/method/unit/coverage.
 The -1.0 dBTP reference is a REVIEW threshold on 0.1 dB rounded measurements,
 not a limiter or quality guarantee. Global findings offer whole-output playback;
@@ -17,14 +30,14 @@ Tests: 24 targeted Python and 8 Node PASS; separate review found no unresolved
 blocker after the global-navigation regression fix. Actual before/after AAC MP4
 bytes match, while missed overshoot now produces a +2.6 dBTP review warning.
 Details and exact scope: `docs/validation/TRUE_PEAK_F8_2026-10-29.md`.
-The PR carrying this change is the integration record for its head/merge/tree
-and postmerge checks; no future merge SHA is assumed here. Refresh those records
+PR #20 records its head/merge/tree and postmerge checks. Refresh those records
 on resume. Hosted CI, GUI and physical-device acceptance are not asserted.
 
 ## Previous integrated static caption slice — 2026-10-29 JST
 
 [PR #19](https://github.com/haji84/AI-VIDEO-STUDIO/pull/19) was squash-merged into
-the main/tree above. All 172 source blobs were compared with the tested source,
+main `e79e5163759c31dd10e7adbe6af9bb55953f945e`, tree
+`f8fa30b1f68b5426e738b52027118b2fca0d480a`. All 172 source blobs matched the tested source,
 including the 14 reviewed changed files. The planned static-caption safe-bounds
 and glyph slice is TESTED_SYNTHETIC on Linux; F8 and Product DoD remain incomplete.
 Postmerge, the integration agent reran the 9 caption and 2 Japanese manifest
@@ -60,7 +73,8 @@ task below. Older dated checkpoints and their test totals remain historical.
 PR #11 project/history/relink; #12 saved four-bus renderer; #13 local editor/API;
 #14 output inspector/re-edit; #15 per-audio controls; #16 sync candidates/shared
 clock; #17 first-cut proposals; #18 output freeze/cadence warnings; #19 measured
-static captions and verified font coverage. Evidence in docs/validation/.
+static captions and verified font coverage; #20 whole-output true-peak estimates
+and correctly global review results. Evidence in docs/validation/.
 Do not repeat finished work.
 Current source is tested synthetic Linux, not accepted on all product devices.
 
@@ -97,20 +111,23 @@ Audio-only absent video tails are not labelled frozen. Old reports retain their
 original detector coverage. Clean merge/protectionfalse/check-runs0/statuses[]
 observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
 
-## Exact next bounded task: existing manual audio edit to fresh QA acceptance
+## Exact next bounded task: retained output history after restart
 
-1. Refresh main/active PRs and the true-peak integration record. Use the
-   real remote parent; never push fabricated local snapshot history.
-2. Use the retained synthetic overshoot fixture with the existing local editor
-   audio-gain edit/API. Explicitly reduce the selected gain, then exercise
-   Undo/Redo, save and restart without changing the original source.
-3. Render a fresh MP4 and verify its measured peak, output hash and persisted
-   report. Keep the prior output/report intact and reject stale project-based
-   navigation. This connects the existing A1 manual edit to the F8 warning;
-   it does not add automatic correction or infer a peak's location.
-4. Record the actual output/PCM and any observed defect before further code.
-   This specific follow-through is NOT_RUN. Speech intelligibility, limiter
-   guarantees, automatic repair and complete F8 remain open.
+The preceding manual gain acceptance is done at TESTED_SYNTHETIC. It exposed an
+existing usability limit, not evidence loss: prior MP4/report files stay on disk,
+but only the latest output is indexed again by the UI/API on restart.
+
+1. Refresh main/active PRs and the integration records; use the real remote parent.
+2. Define a bounded read-only history index from existing output/job evidence;
+   never scan outside the dedicated workspace or treat orphaned/tampered files
+   as successful exports. Preserve current source/report identity checks.
+3. Restore at least two actual generated MP4/report pairs after restart and allow
+   explicit selection without editing the project or overwriting any output.
+4. Verify output/report hash binding, missing/corrupt evidence and stale-project
+   navigation refusal. Add actual GUI acceptance only when a browser is available.
+5. This next slice is NOT_STARTED. It is not automatic audio correction, a new
+   renderer or complete F8. Speech intelligibility, limiter guarantees and all
+   physical platforms remain open.
 
 ## Browser/device blocker and replay
 
@@ -136,7 +153,7 @@ Physical iPhone/Android/Windows/Mac full flow, GUI/novice tasks, native adapters
 drift/video-event sync, Japanese persisted natural TTS, semantic AI/model metrics,
 effects/audio preview parity, device caption acceptance, intelligibility/true peak, source
 frame analysis, authorized real11GB performance and bounded automatic repair.
-Not all independent tasks are blocked; resume the manual re-edit acceptance above.
+Not all independent tasks are blocked; resume the retained-output history slice above.
 Unfinished requirements must not be reported COMPLETE. No paid/R2/GPU/billing,
 credential change, public production deployment, recurring task, private footage
 upload or GORIQ operation. This checkpoint does not create background execution.
