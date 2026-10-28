@@ -2,14 +2,15 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-Current checkpoint: 2026-10-29 JST. Previous integrated caption PR #19 is at
-`e79e5163759c31dd10e7adbe6af9bb55953f945e` (tree
-`f8fa30b1f68b5426e738b52027118b2fca0d480a`). Static caption bounds/glyph evidence
-is TESTED_SYNTHETIC on Linux, including postmerge Pillow 13.0.0 11/11 checks.
-This change also implements the true-peak measurement/report/display slice:
-24 targeted Python + 8 Node PASS, actual MP4/source/report evidence retained.
-The carrying PR records its integration tree and postmerge checks. Neither slice
-completes F8, any platform Goal or the product. Hosted CI NOT_RUN.
+Current checkpoint: 2026-10-29 JST. Caption PR #19 and true-peak PR #20 are
+integrated; latest implementation basis is main
+`80259d2f43c53254ac3b4ab7da87cef69e19a558`, tree
+`d334434741245181ce251384f9ba08fd21156967`. PR #20 records its postmerge checks.
+The existing manual gain path is now TESTED_SYNTHETIC: -6 dB edit, Undo/Redo,
+save/restart/reopen and fresh MP4/report; +2.6 -> -4.2 dBTP, previous evidence
+and source bytes retained. New generated-media HTTP acceptance + inspection
+suite: 9/9 PASS. The carrying PR records this acceptance change's integration.
+These slices do not complete F8, any platform Goal or the product. Hosted CI NOT_RUN.
 
 ## P0 Local-first mobile foundation
 
@@ -58,7 +59,8 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Measured long/multiline static captions, Japanese glyph coverage or explicit failure, saved evidence/history and actual MP4 audio preservation (PR #19, synthetic Linux/Pillow 13 only).
 - [x] Reference-checked true-peak measurement in the existing output QA report, with intersample-overshoot, safe/silent/unavailable/partial fixtures and honest legacy display. Global results cannot identify an edit clip. TESTED_SYNTHETIC; not a limiter or playback guarantee.
 - [ ] Complete F8 device caption acceptance, intelligibility/true-peak guarantees, bounded automatic repair and real-device evidence. Limited technical checks are not full output quality acceptance.
-- [ ] Next existing acceptance: explicit audio-gain edit -> Undo/Redo/save/restart -> fresh MP4/true-peak report, preserving prior evidence and original input. NOT_RUN; exact steps in docs/work/WORK_CHECKPOINT.md.
+- [x] Explicit audio-gain edit -> Undo/Redo/save/restart/reopen -> fresh MP4/true-peak report, preserving previous output/report and original input (synthetic HTTP/PCM; +2.6 -> -4.2 dBTP after -6 dB edit). Not a GUI, limiter or intelligibility guarantee.
+- [ ] Restore/select earlier verified outputs/reports after restart. Existing files remain on disk, but only the latest is re-indexed. Bind both hashes, reject missing/changed evidence and retain stale-project checks. NOT_STARTED; exact scope in docs/work/WORK_CHECKPOINT.md.
 - [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE; the 2026-10-29 JST official Chromium download returned a 195-byte HTML error, not a browser). Resume the existing temporary-local-media script only when a compatible browser is available; do not repeat the same failed download.
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.
 
