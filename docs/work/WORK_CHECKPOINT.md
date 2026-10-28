@@ -1,12 +1,43 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-29 JST (2026-10-28 UTC)
-Status: IN_PROGRESS. Current slice: retained output history, TESTED_SYNTHETIC.
+Status: IN_PROGRESS. Current slice: explicit source relinking candidate, TESTED_SYNTHETIC; final frozen audit/integration tracked by the carrying PR.
 Product DoD NOT MET. Actual GUI/native/physical acceptance NOT_RUN/BLOCKED.
-previousIntegratedMainSHA (manual-gain PR #21): `c0bdfaef9a91c8783c2f7bee1d3c78218c8e4c4a`
-previousIntegratedSourceTree: `11c156f4b3f1ba5e388aba018dd09e4b90a0b78a`
+previousIntegratedMainSHA (retained-output PR #22): `8f335b12ac0624e870b7187eaf24b04325c750bf`
+previousIntegratedSourceTree: `2547d991dc338d771d415241ec2615858260ea2d`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
-## Current retained-output history slice — 2026-10-29 JST
+## Current source-relinking candidate — 2026-10-29 JST
+
+Bounded saved JSON prepare -> selected raw media bodies -> verified durable
+registry copies -> explicit Open. The plan binds random ID and current projectId /
+revision; current+Undo+Redo identities must all agree and exist. Ordinary import
+still uses new IDs and edits the current project, so recovery uses a separate
+copy/probe/registry path with no edit until Open. SHA/probe validation retains
+original IDs, including separate video/BGM roles for one audiovisual file.
+
+Actual generated two-workspace recovery retained one good upload through a wrong
+same-name audio failure and restart; historical-only BGM returned through Redo
+and was audible in the exported, fully decoded MP4. First workspace/session and
+original media/copies stayed unchanged. Final gate: 108/108 affected Node cases
+PASS, no skips, after all code review fixes. Root review's cross-role compatibility
+finding is fixed and tested against actual existing import. Independent review's
+committed-Open/delayed-response cancellation race is fixed with a committing guard
+and verified through real HTTP regression plus independent replay. No additional
+code blocker remained before the final gate; frozen-file audit/integration is
+recorded by the carrying PR.
+The seven code/test and seven documentation files are the complete unit.
+No schema/core/history/engine/dependency/workflow or remote change by this worker.
+
+Registry write failure can leave a renamed unregistered copy, which is not
+acknowledged or admitted by folder scanning; it is not claimed automatically
+reusable. Registered verified copies remain usable after cancellation/restart
+and still require explicit Open. No crash-atomic multi-file promise.
+Evidence: `docs/validation/SOURCE_RELINK_F1_2026-10-29.md`.
+Plan/design: `docs/work/SOURCE_RELINK_F1_PLAN.md` and `SOURCE_RELINK_F1_DESIGN.md`.
+The carrying PR will record review, final manifest/tree and integration; do not
+claim an uncreated PR or merge. Root owns publication; this worker has no remote writes.
+
+## Integrated retained-output history slice — 2026-10-29 JST
 
 Completed-output journal, 50 recent entries, metadata-only listing and explicit
 output/report verification on selection. No workspace scan or deletion of older
@@ -94,7 +125,8 @@ PR #11 project/history/relink; #12 saved four-bus renderer; #13 local editor/API
 #14 output inspector/re-edit; #15 per-audio controls; #16 sync candidates/shared
 clock; #17 first-cut proposals; #18 output freeze/cadence warnings; #19 measured
 static captions and verified font coverage; #20 whole-output true-peak estimates
-and correctly global review results; #21 manual-gain-to-fresh-QA acceptance.
+and correctly global review results; #21 manual-gain-to-fresh-QA acceptance;
+#22 retained completed-output history and checked explicit selection after restart.
 Evidence in docs/validation/.
 Do not repeat finished work.
 Current source is tested synthetic Linux, not accepted on all product devices.
@@ -134,16 +166,15 @@ observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
 
 ## Continuation after this bounded slice
 
-1. Refresh main and the carrying PR's integration record; use the real remote
-   parent and do not reimplement the completed history slice.
+1. Verify the final 14-file source-relink manifest and independent frozen-file
+   review record. Refresh main and use the
+   actual remote parent before root publishes; do not repeat integrated history.
 2. Run actual browser acceptance only when a compatible browser is available.
    Do not repeat the unchanged blocked download or label DOM/API tests as GUI PASS.
-3. The next independent product gap is explicit source relinking into a new
-   workspace: saved JSON plus user-selected files whose SHA256 matches the saved
-   source identity, followed by reopen/edit/export. Design against the existing
-   project/local-store identity checks before coding; reject wrong identities and
-   retain originals. This is NOT_STARTED and outside this history change.
-4. No further feature unit was started in this change. Speech intelligibility,
+3. Replay the new saved-JSON / missing-media / retry / explicit-Open flow in an
+   actual browser and on target devices when available. Retain the same source
+   IDs, Undo/Redo and originals; do not replace this acceptance with DOM doubles.
+4. No additional feature unit is included in this candidate. Speech intelligibility,
    limiter guarantees, native adapters and the full physical-device flows remain open.
 
 ## Browser/device blocker and replay

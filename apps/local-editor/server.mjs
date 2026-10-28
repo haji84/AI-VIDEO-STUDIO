@@ -12,6 +12,7 @@ import {hashFile,saveSession,loadSession,verifyBindings,readLocalJson} from '../
 import {createSyncManager} from './sync-job.mjs';
 import {createFirstCutManager} from './first-cut-job.mjs';
 import {createOutputHistory,captureOutputReceipt,readLastOutputJob} from './output-history.mjs';
+import {createSourceRelinkManager} from './source-relink.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
 const mediaExtensions=new Set(['.mp4','.mov','.mkv','.webm','.wav','.mp3','.m4a','.aac','.flac','.ogg']);
 const fail=(message,status=400)=>{const e=new Error(message);e.status=status;throw e;};
@@ -90,6 +91,12 @@ export async function startServer({workspace,port=8765}={}){
   const html=(await readFile(join(HERE,'index.html'),'utf8')).replaceAll('__TOKEN__',token).replaceAll('__NONCE__',nonce);
   function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),job,sync:syncManager.state(),firstCut:firstCutManager.state()};}
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
+  const relink=await createSourceRelinkManager({folder,getSession:()=>session,getRegistry:()=>registry,probe,
+    commitRegistry:async next=>{await atomicJson(registryFile,[...next.values()].map(({path,...rest})=>rest));registry=next;},
+    commitSession:async candidate=>{
+      const document=JSON.parse(candidate.serialize());document.project.revision=session.current.revision+1;
+      const opened=EditSession.open(JSON.stringify(document));await transaction(()=>{session=opened;});return state();
+    }});
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   const authorized=value=>{if(typeof value!=='string'||value.length!==token.length)return false;return timingSafeEqual(Buffer.from(value),Buffer.from(token));};
   async function stream(res,req,path,type,checked){
@@ -114,6 +121,7 @@ export async function startServer({workspace,port=8765}={}){
       if(req.method==='GET'&&path==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
       const modules={'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
         '/output-history-panel.mjs':join(HERE,'output-history-panel.mjs'),
+        '/source-relink-panel.mjs':join(HERE,'source-relink-panel.mjs'),
         '/audio-panel.mjs':join(HERE,'audio-panel.mjs'),'/audio-edits.mjs':join(HERE,'audio-edits.mjs'),
         '/first-cut-panel.mjs':join(HERE,'first-cut-panel.mjs'),
         '/packages/project/first-cut.mjs':join(ROOT,'packages/project/first-cut.mjs'),
@@ -140,11 +148,20 @@ export async function startServer({workspace,port=8765}={}){
       }
       if(req.method==='GET'&&path.startsWith('/media/')){const source=registry.get(path.slice(7));if(!source)fail('素材がありません',404);await stream(res,req,source.path,source.source.mediaKind==='video'?'video/mp4':'audio/wav');return;}
       if(req.method==='GET'&&path.startsWith('/exports/')){const checked=await checkedOutput(path.slice(9));await stream(res,req,null,'video/mp4',checked);return;}
-      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply'].includes(path))fail('見つかりません',404);
+      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
       if(mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
       try{
         if(req.headers['x-aivs-revision']!==String(session.current.revision))fail('REVISION_CONFLICT: 別の画面で更新されています',409);
-        if(path==='/api/import'){
+        if(path==='/api/relink/prepare'){
+          send(res,200,await relink.prepare(await jsonBody(req)));return;
+        }else if(path==='/api/relink/media'){
+          const label=decodeURIComponent(String(req.headers['x-file-name']??'')),length=Number(req.headers['content-length']);
+          send(res,200,await relink.receive(url.searchParams.get('id'),req,{label,length}));return;
+        }else if(path==='/api/relink/open'||path==='/api/relink/cancel'){
+          const body=await jsonBody(req);
+          if(!body||Array.isArray(body)||typeof body.planId!=='string'||Object.keys(body).some(k=>k!=='planId'))fail('再接続するプロジェクトの確認形式が不正です');
+          send(res,200,await (path.endsWith('/open')?relink.open(body.planId):relink.cancel(body.planId)));return;
+        }else if(path==='/api/import'){
           const kind=url.searchParams.get('kind');if(!['video','bgm','narration','sfx'].includes(kind))fail('素材の種類が不正です');
           if(kind!=='video'&&!session.current.timeline.length)fail('先に動画を追加してください');
           if(registry.size>=100)fail('素材数の上限は100本です');
@@ -214,7 +231,7 @@ export async function startServer({workspace,port=8765}={}){
         }
         send(res,200,state());
       }finally{mutation=false;}
-    }catch(error){if(!res.headersSent)send(res,error.status??400,{error:error.message});else res.destroy();}
+    }catch(error){if(!res.headersSent)send(res,error.status??(error.message==='RELINK_STALE'?409:400),{error:error.message});else res.destroy();}
   });
   await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});
   return {url:`http://127.0.0.1:${server.address().port}`,token,
