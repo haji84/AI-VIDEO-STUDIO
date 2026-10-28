@@ -49,7 +49,15 @@ AI VIDEO STUDIO is a standalone, local-first, non-destructive AI-assisted video 
 
 ## Run existing smoke tests locally
 
-Requires Python 3, Node.js, FFmpeg/ffprobe; some audio tests require NumPy. Dependencies must be obtained according to your environment security policy.
+Requires Python 3.11 or later, Node.js, FFmpeg/ffprobe; some audio tests require NumPy. Dependencies must be obtained according to your environment security policy.
+
+Static caption export also requires `python -m pip install -r requirements-media.txt`
+and an installed font containing every requested character. Fonts are not bundled or
+downloaded by the editor. `AIVS_CAPTION_FONT` can select a local TrueType/OpenType
+font (face 0 for collections); Japanese text requires Japanese glyph coverage.
+Long text wraps using measured glyph bounds, and explicit line breaks are retained.
+An unavailable glyph or a caption too tall for the safe area stops export with a
+clear error. Caption-free rendering does not import these optional dependencies.
 
 ```sh
 cd cloud && node --test tests/*.test.mjs

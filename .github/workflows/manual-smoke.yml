@@ -20,13 +20,17 @@ jobs:
           node --version
           python --version
           ffmpeg -version | head -1
+      - name: Local caption dependencies and Japanese font
+        run: |
+          python -m pip install numpy -r requirements-media.txt
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
       - name: Cloud mock tests
         run: cd cloud && node --test tests/*.test.mjs
       - name: FFmpeg engine tests
-        run: python -m unittest engine.test_manifest cloud.processor.test_r2_run -v
+        run: python -m unittest engine.test_manifest engine.test_caption_raster cloud.processor.test_r2_run -v
       - name: Audio smoke (requires NumPy)
         run: |
-          python -m pip install numpy
           cd prototypes/audio && python -m unittest test_mix -v
       - name: Offline multi-camera proposal tests
         run: node --test packages/edit-planner/auto-edit.test.mjs

@@ -1,0 +1,5 @@
+# Static caption raster layout and installed-font glyph verification only.
+# Imports remain optional for renders without captions; no font is bundled.
+# Pillow 13 contains the October 2026 security fixes and requires Python >=3.11.
+Pillow>=13.0,<14
+fonttools>=4.53,<5

@@ -96,7 +96,7 @@ def render_saved_project(project_file:Path,bindings_file:Path,workspace:Path,out
     if shutil.disk_usage(workspace).free<required:raise core.StudioError('INSUFFICIENT_LOCAL_DISK_FOR_RENDER')
     with tempfile.TemporaryDirectory(prefix='compose_',dir=workspace) as temp:
         temp=Path(temp);base=temp/'video.mp4'
-        process_manifest(manifest,temp/'video-job',base)
+        video_report=process_manifest(manifest,temp/'video-job',base)
         command=['ffmpeg','-hide_banner','-nostdin','-v','error','-i',str(base)]
         duration=plan['durationSec'];filters=[f'anullsrc=r=48000:cl=stereo,atrim=duration={duration:.9f}[bed]']
         labels=['bed']
@@ -146,7 +146,8 @@ def render_saved_project(project_file:Path,bindings_file:Path,workspace:Path,out
                'projectId':plan['projectId'],'projectRevision':plan['revision'],
                'audioClipCount':len(plan['audio']),'audioBuses':list(plan['audioBuses']),
                'intermediateAudio':'IGNORED_BY_FINAL_MIX','semanticAudioQA':'NOT_EVALUATED',
-               'truePeakGuarantee':'NOT_MEASURED','physicalDeviceAcceptance':'NOT_RUN'})
+               'truePeakGuarantee':'NOT_MEASURED','physicalDeviceAcceptance':'NOT_RUN',
+               'captionRasters':video_report.get('captionRasters',[])})
     with (workspace/'technical_qa.json').open('x',encoding='utf-8') as handle:
         json.dump(qa,handle,ensure_ascii=False,indent=2)
     return qa

@@ -445,7 +445,7 @@ def _video_filter(index:int, source:dict, width:int, height:int, fps:int,
 
 
 def _segment_render(project:dict, segment:dict, output:Path, profile:dict,
-                    encoder:str, workdir:Path) -> None:
+                    encoder:str, workdir:Path) -> dict | None:
     by_id={s["id"]:s for s in project["sources"]}
     source=by_id[segment["camera"]]
     second=by_id[segment["secondary"]] if segment["layout"]=="split" else None
@@ -464,17 +464,19 @@ def _segment_render(project:dict, segment:dict, output:Path, profile:dict,
     # Output duration depends on speed, but source trim always uses original duration.
     vf=f"[vbase]trim=duration={dur:.3f},setpts=(PTS-STARTPTS)/{speed:.4f}"
     caption=str(segment.get("caption", "")).strip()
+    caption_report=None
     if caption:
-        txt=workdir/(segment["id"]+"_caption.txt")
-        txt.write_text(caption.replace("\r", " ").replace("\n", " "),encoding="utf-8")
-        font_opts=""
-        if os.name=="nt":
-            for fontname in ("meiryo.ttc","YuGothM.ttc","msgothic.ttc"):
-                candidate=Path("C:/Windows/Fonts")/fontname
-                if candidate.is_file():
-                    font_opts=f"fontfile='{_fpath(candidate)}':"
-                    break
-        vf+=f",drawtext={font_opts}textfile='{_fpath(txt)}':fontsize={max(18,w//38)}:fontcolor=white:box=1:boxcolor=black@0.65:boxborderw=14:x=(w-text_w)/2:y=h-text_h-60"
+        # Lazy import keeps caption-free editing/rendering usable without the
+        # optional font/raster dependencies. Text never enters a filter string.
+        from .caption_raster import CaptionError, render_caption
+        raster=workdir/(segment["id"]+"_caption.png")
+        try:
+            caption_report=render_caption(caption,w,h,raster)
+        except CaptionError as error:
+            raise StudioError(str(error)) from error
+        cmd.extend(["-i",str(raster)])
+        raster_index=3 if second else 2
+        vf+=f"[captionbase];[captionbase][{raster_index}:v:0]overlay=x={caption_report['x']}:y={caption_report['y']}:eof_action=repeat"
     vf+="[vout]"
     inputs.append(vf)
     # For cameras with no recorded audio, a bounded silence track is still generated.
@@ -501,6 +503,7 @@ def _segment_render(project:dict, segment:dict, output:Path, profile:dict,
     cp=command(cmd,timeout=max(300,int(dur/speed*8)+60))
     if cp.returncode or not output.exists() or output.stat().st_size<2000:
         raise StudioError(f"区間書き出し失敗 ({source['name']}, {start:.1f}s): {cp.stderr[-1100:]}")
+    return caption_report
 
 
 def _encode_availability() -> list[str]:
@@ -537,13 +540,16 @@ def render_project(project:dict, directory:Path, output:Path, quality:str="fullh
         for attempt_encoder in attempt_encoders:
             try:
                 segments=[]
+                caption_reports=[]
                 for i, seg in enumerate(project["timeline"]):
                     if callback:
                         callback(0.05+0.72*i/max(1,len(project["timeline"])),
                                  f"区間 {i+1}/{len(project['timeline'])} を編集中 ({attempt_encoder})")
                     dest=workdir/f"part_{i:04d}.mp4"
                     dest.unlink(missing_ok=True)
-                    _segment_render(project,seg,dest,profile,attempt_encoder,workdir)
+                    caption_report=_segment_render(project,seg,dest,profile,attempt_encoder,workdir)
+                    if caption_report is not None:
+                        caption_reports.append({'clipId':seg['id'],**caption_report})
                     segments.append(dest)
                 playlist=workdir/"clips.txt"
                 playlist.write_text("".join("file '"+str(p).replace("\\","/").replace("'", "'\\''")+"'\n" for p in segments),encoding="utf-8")
@@ -585,6 +591,7 @@ def render_project(project:dict, directory:Path, output:Path, quality:str="fullh
     qa["source_files"]=[s["name"] for s in project["sources"]]
     qa["finished_at"]=utcnow()
     qa["encoder"]=encoder
+    qa["captionRasters"]=caption_reports
     qa["sync_review_required"]=any(s["sync"]["method"] in {"not_aligned","unverified","unverified_audio","manual","audio_candidate"} for s in project["sources"][1:])
     if callback: callback(1.0,"書き出しと技術検査が完了")
     return qa
