@@ -11,6 +11,7 @@ import {createProject,EditSession,buildRenderPlan} from '../../packages/project/
 import {hashFile,saveSession,loadSession,verifyBindings,readLocalJson} from '../../packages/project/local-store.mjs';
 import {createSyncManager} from './sync-job.mjs';
 import {createFirstCutManager} from './first-cut-job.mjs';
+import {createOutputHistory,captureOutputReceipt,readLastOutputJob} from './output-history.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
 const mediaExtensions=new Set(['.mp4','.mov','.mkv','.webm','.wav','.mp3','.m4a','.aac','.flac','.ogg']);
 const fail=(message,status=400)=>{const e=new Error(message);e.status=status;throw e;};
@@ -67,16 +68,22 @@ export async function startServer({workspace,port=8765}={}){
   await persist();
   const token=randomBytes(32).toString('hex'),nonce=randomBytes(24).toString('hex');
   let mutation=false,job={status:'NOT_RUN'},jobPromise=Promise.resolve();
-  const downloads=new Map(),reports=new Map(),jobFile=join(folder,'last-job.json');
-  const portableQA=qa=>{const {path,...portable}=qa;return portable;};
-  if(await exists(jobFile)){try{const previous=JSON.parse(await readLocalJson(jobFile));
+  const jobFile=join(folder,'last-job.json'),history=await createOutputHistory({folder,atomicJson});let latestReceipt;
+  async function rememberOutput(receipt){try{await history.record(receipt);return undefined;}catch{return '完成動画の履歴を保存できませんでした。最新の出力記録は保持しています。';}}
+  async function checkedOutput(id){
+    try{return await history.open(id,{fallbackReceipt:latestReceipt});}
+    catch(error){fail('完成動画と検査記録を確認できません: '+error.message,error.message==='OUTPUT_NOT_FOUND'?404:error.message==='INVALID_OUTPUT_ID'?400:409);}
+  }
+  if(await exists(jobFile)){try{
+    const previous=await readLastOutputJob(folder);
     if(previous.status==='PASS'&&/^[a-f0-9]{32}$/.test(previous.id)){
-      const file=join(folder,'exports',previous.id+'.mp4');
-      if(await hashFile(file)!==previous.sha256)throw new Error('OUTPUT_CHANGED');
-      const qaFile=join(folder,'jobs',previous.id,'render','technical_qa.json');
-      let qa;if(await exists(qaFile)){qa=portableQA(JSON.parse(await readLocalJson(qaFile)));if(qa.sha256!==previous.sha256)throw new Error('REPORT_OUTPUT_MISMATCH');reports.set(previous.id,qa);}
-      downloads.set(previous.id,file);job={id:previous.id,status:'PASS',download:'/exports/'+previous.id,qualityStatus:qa?.inspection?.status??'NOT_INSPECTED'};
+      const receipt=previous.outputReceipt??history.receipt(previous.id)??await captureOutputReceipt({folder,id:previous.id,outputSha256:previous.sha256,createdAt:null,origin:'LEGACY_LATEST'});
+      if(receipt.id!==previous.id||receipt.outputSha256!==previous.sha256)throw new Error('OUTPUT_RECEIPT_MISMATCH');
+      const checked=await history.open(previous.id,{fallbackReceipt:receipt});await checked.handle.close();latestReceipt=receipt;
+      const historyWarning=await rememberOutput(receipt);
+      job={id:previous.id,status:'PASS',download:'/exports/'+previous.id,qualityStatus:checked.qualityStatus,...(historyWarning?{historyWarning}:{})};
     }else if(previous.status==='RUNNING')job={status:'INTERRUPTED',error:'前の書き出しは中断されました。もう一度作成してください'};
+    else if(previous.status==='FAIL')job={status:'FAIL',error:'前の書き出しは失敗しました。編集内容から再作成できます'};
   }catch{job={status:'FAIL',error:'前の出力を確認できません。編集内容から再作成できます'};}}
   const syncManager=await createSyncManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
   const firstCutManager=await createFirstCutManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
@@ -85,15 +92,17 @@ export async function startServer({workspace,port=8765}={}){
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   const authorized=value=>{if(typeof value!=='string'||value.length!==token.length)return false;return timingSafeEqual(Buffer.from(value),Buffer.from(token));};
-  async function stream(res,req,path,type){
-    const size=(await stat(path)).size;let start=0,end=size-1,status=200;
+  async function stream(res,req,path,type,checked){
+    const size=checked?.size??(await stat(path)).size;let start=0,end=size-1,status=200,input;
+    try{
     if(req.headers.range){const match=/^bytes=(\d+)-(\d*)$/.exec(req.headers.range);
       if(!match||Number(match[1])>=size){res.writeHead(416,{'Content-Range':`bytes */${size}`});res.end();return;}
       start=Number(match[1]);end=match[2]?Math.min(size-1,Number(match[2])):size-1;
       if(end<start){res.writeHead(416);res.end();return;}status=206;
     }
     res.writeHead(status,{'Content-Type':type,'Content-Length':end-start+1,'Accept-Ranges':'bytes','Cache-Control':'no-store',...(status===206?{'Content-Range':`bytes ${start}-${end}/${size}`}:{})});
-    const input=createReadStream(path,{start,end});input.on('error',()=>res.destroy());res.on('close',()=>input.destroy());input.pipe(res);
+    input=checked?checked.handle.createReadStream({start,end,autoClose:true}):createReadStream(path,{start,end});input.on('error',()=>res.destroy());res.on('close',()=>input.destroy());input.pipe(res);
+    }finally{if(checked&&!input)await checked.handle.close();}
   }
   const server=http.createServer(async(req,res)=>{
     try{
@@ -104,6 +113,7 @@ export async function startServer({workspace,port=8765}={}){
       const url=new URL(req.url,origin),path=url.pathname;
       if(req.method==='GET'&&path==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
       const modules={'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
+        '/output-history-panel.mjs':join(HERE,'output-history-panel.mjs'),
         '/audio-panel.mjs':join(HERE,'audio-panel.mjs'),'/audio-edits.mjs':join(HERE,'audio-edits.mjs'),
         '/first-cut-panel.mjs':join(HERE,'first-cut-panel.mjs'),
         '/packages/project/first-cut.mjs':join(ROOT,'packages/project/first-cut.mjs'),
@@ -119,9 +129,17 @@ export async function startServer({workspace,port=8765}={}){
       if(req.method==='GET'&&path==='/api/job'){send(res,200,job);return;}
       if(req.method==='GET'&&path==='/api/first-cut'){send(res,200,firstCutManager.state());return;}
       if(req.method==='GET'&&path==='/api/sync'){send(res,200,syncManager.state());return;}
-      if(req.method==='GET'&&path==='/api/qa'){const qa=reports.get(job.id);if(!qa)fail('検査記録がありません。動画を作成してください',404);send(res,200,qa);return;}
+      if(req.method==='GET'&&path==='/api/qa'){
+        if(!latestReceipt||job.id!==latestReceipt.id)fail('検査記録がありません。動画を作成してください',404);
+        const checked=await checkedOutput(job.id);try{send(res,200,checked.report);}finally{await checked.handle.close();}return;
+      }
+      if(req.method==='GET'&&path==='/api/outputs'){send(res,200,history.list());return;}
+      if(req.method==='GET'&&path.startsWith('/api/outputs/')){
+        const checked=await checkedOutput(path.slice('/api/outputs/'.length));
+        try{const {handle,size,...view}=checked;send(res,200,view);}finally{await checked.handle.close();}return;
+      }
       if(req.method==='GET'&&path.startsWith('/media/')){const source=registry.get(path.slice(7));if(!source)fail('素材がありません',404);await stream(res,req,source.path,source.source.mediaKind==='video'?'video/mp4':'audio/wav');return;}
-      if(req.method==='GET'&&path.startsWith('/exports/')){const file=downloads.get(path.slice(9));if(!file)fail('出力がありません',404);await stream(res,req,file,'video/mp4');return;}
+      if(req.method==='GET'&&path.startsWith('/exports/')){const checked=await checkedOutput(path.slice(9));await stream(res,req,null,'video/mp4',checked);return;}
       if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply'].includes(path))fail('見つかりません',404);
       if(mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
       try{
@@ -185,8 +203,10 @@ export async function startServer({workspace,port=8765}={}){
           const child=spawn(python,['-m','engine.render_saved_project','--project',join(jobDir,'project.json'),'--bindings',join(jobDir,'bindings.json'),'--workspace',join(jobDir,'render'),'--output',output],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
           let error='';child.stdout.resume();child.stderr.on('data',chunk=>{error=(error+chunk).slice(-2000);});
           jobPromise=new Promise(resolveJob=>{let done=false;const finish=async code=>{if(done)return;done=true;try{
-            if(code===0){const qa=JSON.parse(await readLocalJson(join(jobDir,'render','technical_qa.json')));
-              reports.set(id,portableQA(qa));downloads.set(id,output);job={id,status:'PASS',download:'/exports/'+id,qualityStatus:qa.inspection?.status??'NOT_INSPECTED'};await atomicJson(jobFile,{...job,sha256:qa.sha256});}
+            if(code===0){
+              const receipt=await captureOutputReceipt({folder,id}),completed={id,status:'PASS',download:'/exports/'+id,qualityStatus:receipt.qualityStatus};
+              await atomicJson(jobFile,{...completed,sha256:receipt.outputSha256,outputReceipt:receipt});latestReceipt=receipt;
+              const historyWarning=await rememberOutput(receipt);job={...completed,...(historyWarning?{historyWarning}:{})};}
             else{job={id,status:'FAIL',error:error||'書き出しに失敗しました。実行環境を確認してください'};await atomicJson(jobFile,job);}
           }catch(e){job={id,status:'FAIL',error:'出力記録を保存できません: '+e.message};}finally{resolveJob();}};
             child.once('error',e=>{error=e.message;finish(1);});child.once('close',finish);});

@@ -7,7 +7,27 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current acceptance: manual gain edit and fresh true-peak report (2026-10-29 JST)
+## Current implementation: retained output history (2026-10-29 JST)
+
+A bounded journal now restores up to 50 recent completed output/report pairs.
+Listing reads metadata; explicit selection checks fixed paths, file identities
+and saved output/report digests. Earlier files are never deleted by the index.
+Selection changes the output view only; project/history/current-job identity and
+stale-report edit guards remain. History-write failure preserves latest-job
+recovery. Genuine old-version migration can recover only the last completed
+output, with report integrity beginning at migration and an unknown old timestamp.
+
+Actual two-output/restart/download/report/decode acceptance and existing editor
+regressions pass: 52/52 local-editor cases, no skips. Independent review's bounded
+latest-job reader finding was fixed and independently retested. UI DOM-double and
+module syntax checks are not actual browser acceptance. This slice is
+TESTED_SYNTHETIC on Linux; F8 and Product DoD are still incomplete.
+Evidence: `docs/validation/OUTPUT_HISTORY_F8_2026-10-29.md`. The carrying PR records
+final advisory review, candidate/tree, merge and postmerge verification.
+Implementation basis: PR #21 main `c0bdfaef9a91c8783c2f7bee1d3c78218c8e4c4a`,
+tree `11c156f4b3f1ba5e388aba018dd09e4b90a0b78a`.
+
+## Integrated acceptance: manual gain edit and fresh true-peak report (2026-10-29 JST)
 
 The existing audio edit path now has actual HTTP/MP4 follow-through evidence:
 explicit -6 dB gain -> Undo/Redo -> automatic save/restart -> saved JSON reopen ->
@@ -18,7 +38,7 @@ stale project navigation passed. A repeatable generated-media integration test
 and the eight existing inspection tests pass (9/9); no product-code change was
 needed. Evidence: `docs/validation/TRUE_PEAK_MANUAL_EDIT_2026-10-29.md`.
 This is TESTED_SYNTHETIC on Linux, not actual browser/device acceptance or full F8.
-The carrying PR records integration and postmerge verification.
+PR #21 records its integration and postmerge verification.
 
 ## Integrated implementation: F8 true-peak measurement (2026-10-29 JST)
 
@@ -66,12 +86,10 @@ browser/server startup; the HTTP acceptance above is separate. The failed
 download was not repeated. Native iPhone/Android/Windows/macOS, GUI/novice and
 preview/export parity acceptance remain unverified for this editor.
 
-The manual audio-gain follow-through above is now TESTED_SYNTHETIC. Earlier
-output/report files remain intact on disk, but the app restores only the latest
-output into its UI/API index after restart. Next bounded work is verified output
-history restoration/selection, with missing or changed evidence rejected; it is
-NOT_STARTED. Intelligibility, automatic repair, limiter guarantees and all
-platform goals remain open. Exact steps: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
+The manual gain follow-through and bounded output history are TESTED_SYNTHETIC.
+Source relinking into a new workspace remains a separate unfinished requirement.
+Intelligibility, automatic repair, limiter guarantees, real large-media performance
+and all platform goals remain open. Exact continuation: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
 including their old "current" test totals and implementation limits.
 
 ## Prior Work implementation (output freeze/cadence F8-B, 2026-10-21)
