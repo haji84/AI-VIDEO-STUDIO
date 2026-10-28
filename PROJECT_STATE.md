@@ -1,29 +1,65 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-10-21
+Updated: 2026-10-29 JST (2026-10-28 UTC)
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Local candidate: measured static caption raster (2026-10-28 UTC)
+## Current implementation: F8 true-peak measurement (2026-10-29 JST)
 
-The long/multiline caption next step has a reviewed local candidate on canonical
-base d849ab93. Real synthetic MP4 checks prove wrapping inside the safe area,
+The true-peak slice is implemented and TESTED_SYNTHETIC on the PR #19 source
+basis below. Existing FFmpeg output inspection now records the whole selected
+audio stream's maximum intersample peak, method, dBTP unit and 0.1 dB precision.
+The -1.0 dBTP reference creates a REVIEW warning; it does not change audio or
+guarantee a limiter, speech intelligibility or actual device playback quality.
+Global measurements use whole-output review, with no fabricated clip location.
+Unavailable/incomplete/old evidence is explicit; digital silence is separate.
+24 targeted Python + 8 Node tests passed. Independent review has no unresolved
+blocker after the global-navigation fix. The actual saved AAC MP4 is byte-identical
+before/after; its formerly missed +2.6 dBTP peak now appears in the saved report.
+Evidence: `docs/validation/TRUE_PEAK_F8_2026-10-29.md`. Integration head/merge/tree
+and postmerge checks belong to the PR carrying this change; no unknown SHA is
+invented here. Full F8/Product DoD, hosted CI, GUI and physical acceptance remain open.
+
+## Previous integrated checkpoint: static captions (2026-10-29 JST)
+
+[PR #19](https://github.com/haji84/AI-VIDEO-STUDIO/pull/19) is squash-merged into
+main `e79e5163759c31dd10e7adbe6af9bb55953f945e`, source tree
+`f8fa30b1f68b5426e738b52027118b2fca0d480a`. All 172 source blobs matched the
+tested source, including the 14 reviewed changed files. This static-caption
+slice is TESTED_SYNTHETIC; F8 and the whole product remain IN_PROGRESS.
+Real synthetic MP4 checks prove wrapping inside the safe area,
 retained explicit lines, original audio and saved edit history; missing glyphs
 and vertical overflow explicitly block export. Nine focused tests pass. Across
 187 disjoint regression cases initially 184 passed and 3 lacked a Japanese font.
 An additional official-font verification reran those unchanged 3 cases: all PASS.
 Actual Japanese 130-character wrapping and 3 explicit lines now have verified
 Linux MP4 raster/glyph/audio evidence. The initial results remain recorded;
-there was no new full-suite run, CI, main merge or device acceptance. No font is
+there was no new full-suite run or hosted CI/device acceptance. No font is
 bundled or installed system-wide. A security follow-up sets Pillow >=13.0,<14
 and Python >=3.11; all 12 caption/Japanese integration cases and both Japanese
-MP4s were verified again under actual Pillow 13.0.0. Detailed evidence and exact remaining
+MP4s were verified again under actual Pillow 13.0.0. After merge, the integration
+agent reran caption 9 + Japanese manifest 2: 11/11 PASS under
+Pillow 13.0.0. Hosted CI and Docker build remain NOT_RUN. Detailed evidence and exact remaining
 gates: `docs/validation/CAPTION_RASTER_F8_2026-10-28.md`.
 
-## Latest Work implementation (output freeze/cadence F8-B, 2026-10-21)
+Current GUI acceptance remains BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE (exit 2).
+Playwright 1.62.1 is present, but the matching Chromium is absent. One permitted
+official download on 2026-10-29 JST returned 195 bytes of "Site Unavailable"
+HTML, not a browser ZIP. No browser or local test server started, and the failed
+download was not repeated. Native iPhone/Android/Windows/macOS, GUI/novice and
+preview/export parity acceptance remain unverified for this editor.
+
+Next independently executable existing acceptance: explicit audio-gain edit ->
+Undo/Redo/save/restart -> fresh MP4 and true-peak report, preserving the prior
+output/report and original input. This follow-through is NOT_RUN; intelligibility,
+automatic repair, limiter guarantees and all platform goals remain open.
+Exact steps: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
+including their old "current" test totals and implementation limits.
+
+## Prior Work implementation (output freeze/cadence F8-B, 2026-10-21)
 
 The existing full-output scan now records still/freeze intervals >=1s and aggregate
 output PTS interval changes in the same disk-backed decode pass. REVIEW only:

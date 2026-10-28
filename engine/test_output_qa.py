@@ -1,9 +1,12 @@
 """Full-output inspection uses generated media, never private footage."""
 import hashlib
 import json
+import math
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from .test_project_pipeline import run
 
@@ -57,6 +60,8 @@ class OutputQATests(unittest.TestCase):
                 self.assertEqual(qa['inspection']['status'],'CHECKED_LIMITED')
                 self.assertEqual(qa['inspection']['findings'],[])
                 self.assertIsNone(qa['inspection']['audioSamplePeakDbfs'])
+                self.assertEqual(qa['inspection']['truePeak'],'SILENT')
+                self.assertIsNone(qa['inspection']['truePeakMeasurement']['maximumDbTP'])
                 json.dumps(qa,allow_nan=False)
             selected=self._plan();selected['durationSec']=1
             qa=inspect_output(file,expected=1,plan=selected)
@@ -72,7 +77,7 @@ class OutputQATests(unittest.TestCase):
             qa=inspect_output(file,expected=1,plan=self._plan())
             self.assertGreater(qa['inspection']['audioSamplePeakDbfs'],-.1)
             self.assertIn('NEAR_SAMPLE_CLIPPING',[x['code'] for x in qa['inspection']['findings']])
-            self.assertEqual(qa['inspection']['truePeak'],'NOT_MEASURED')
+            self.assertEqual(qa['inspection']['truePeak'],'MEASURED')
 
     def test_missing_audio_and_corruption_cannot_become_a_technical_pass(self):
         from .output_qa import inspect_output
@@ -81,6 +86,7 @@ class OutputQATests(unittest.TestCase):
             run(['ffmpeg','-v','error','-f','lavfi','-i','color=c=blue:s=320x180:r=30:d=1','-c:v','libx264',str(file)])
             qa=inspect_output(file,expected=1,plan=self._plan())
             self.assertFalse(qa['technical_ok']);self.assertEqual(qa['inspection']['status'],'FAILED_TECHNICAL')
+            self.assertEqual(qa['inspection']['truePeak'],'NOT_APPLICABLE')
             file.write_bytes(b'not a video')
             with self.assertRaises(Exception):inspect_output(file,expected=1,plan=self._plan())
 
@@ -99,6 +105,8 @@ class OutputQATests(unittest.TestCase):
             self.assertFalse(qa['technical_ok'],qa)
             self.assertEqual(qa['inspection']['status'],'FAILED_TECHNICAL')
             self.assertLess(qa['inspection']['decodedVideoFrames'],qa['inspection']['containerVideoFrames'])
+            self.assertEqual(qa['inspection']['truePeak'],'INCOMPLETE')
+            self.assertIsNone(qa['inspection']['truePeakMeasurement']['maximumDbTP'])
 
     def test_short_audio_stream_does_not_hide_selected_missing_tail(self):
         from .output_qa import inspect_output
@@ -166,6 +174,138 @@ class FreezeCadenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             f=Path(t)/'one-frame.mp4';run(['ffmpeg','-v','error','-f','lavfi','-i','color=c=blue:s=160x90:r=10:d=0.1','-f','lavfi','-i','sine=frequency=440:duration=0.1','-c:v','libx264','-c:a','aac',str(f)])
             qa=inspect_output(f);self.assertTrue(qa['technical_ok'],qa);self.assertEqual(qa['inspection']['cadence']['status'],'INSUFFICIENT_FRAMES');self.assertEqual(qa['inspection']['cadence']['examinedIntervals'],0);self.assertTrue(qa['whole_file_decode_checked'])
+
+
+class TruePeakTests(unittest.TestCase):
+    @staticmethod
+    def media(folder,name='source',end_only=False,amplitude=1.2):
+        # 12 kHz at 48 kHz, phase pi/4: samples reach amplitude/sqrt(2),
+        # while the reconstructed, gently windowed sine reaches amplitude.
+        audio=(f'aevalsrc=0.1*sin(2*PI*440*t)|{amplitude}*sin(2*PI*12000*t+PI/4):s=48000:d=0.5')
+        if end_only:
+            audio='aevalsrc=if(gt(n\\,23983)\\,1.2*sin(2*PI*12000*t+PI/4)\\,0):s=48000:d=0.5'
+        file=folder/(name+'.mp4')
+        args=['ffmpeg','-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=30:d=0.5','-f','lavfi','-i',audio]
+        if not end_only:args+=['-af','afade=t=in:d=0.01,afade=t=out:st=0.49:d=0.01']
+        run([*args,'-c:v','libx264','-c:a','alac','-shortest',str(file)])
+        return file
+
+    @staticmethod
+    def plan():
+        return {'projectId':'project_peak','revision':3,'durationSec':.5,
+                'video':[{'clipId':'clip_peak','startSec':0,'endSec':.5}],
+                'audio':[{'id':'audio_selected','bus':'source','startSec':0,'endSec':.5,'gainDb':0}],
+                'audioBuses':{'source':{'gainDb':0,'muted':False}}}
+
+    def test_intersample_overshoot_is_reported_even_below_sample_peak_warning(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as tmp:
+            file=self.media(Path(tmp));before=file.read_bytes()
+            qa=inspect_output(file,expected=.5,plan=self.plan())
+            codes=[f['code'] for f in qa['inspection']['findings']]
+            self.assertIn('TRUE_PEAK_AT_OR_ABOVE_REFERENCE',codes,
+                          'Actual intersample overshoot was missed by sample-only QA')
+            self.assertNotIn('NEAR_SAMPLE_CLIPPING',codes)
+            self.assertLess(qa['inspection']['audioSamplePeakDbfs'],-1)
+            self.assertTrue(qa['technical_ok'],qa);self.assertTrue(qa['whole_file_decode_checked'])
+            self.assertEqual(qa['inspection']['status'],'NEEDS_REVIEW')
+            self.assertEqual(qa['inspection']['truePeak'],'MEASURED')
+            measurement=qa['inspection']['truePeakMeasurement']
+            self.assertAlmostEqual(measurement['maximumDbTP'],20*math.log10(1.2),delta=.12)
+            self.assertEqual(measurement['unit'],'dBTP')
+            self.assertEqual(measurement['method'],'ffmpeg-ebur128-peak-true')
+            self.assertEqual(measurement['reportedPrecisionDb'],.1)
+            finding=next(f for f in qa['inspection']['findings'] if f['code']=='TRUE_PEAK_AT_OR_ABOVE_REFERENCE')
+            self.assertEqual(finding['severity'],'REVIEW');self.assertEqual(finding['clipIds'],['clip_peak'])
+            self.assertEqual(finding['scope'],'GLOBAL_MAXIMUM_NO_PEAK_TIMESTAMP')
+            self.assertEqual(file.read_bytes(),before)
+            self.assertEqual(qa['sha256'],hashlib.sha256(before).hexdigest())
+            json.dumps(qa,allow_nan=False)
+
+    def test_last_samples_are_not_lost_in_the_true_peak_resampler_tail(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as tmp:
+            file=self.media(Path(tmp),end_only=True);qa=inspect_output(file,plan=self.plan())
+            self.assertIn('TRUE_PEAK_AT_OR_ABOVE_REFERENCE',[f['code'] for f in qa['inspection']['findings']])
+            self.assertGreater(qa['inspection']['truePeakMeasurement']['maximumDbTP'],0)
+            self.assertEqual(qa['inspection']['truePeakMeasurement']['analysisTailPaddingSec'],.1)
+            self.assertAlmostEqual(qa['duration_seconds'],.5,delta=.001)
+
+    def test_safe_audio_has_a_measured_peak_without_a_peak_warning(self):
+        from .output_qa import inspect_output
+        with tempfile.TemporaryDirectory() as tmp:
+            qa=inspect_output(self.media(Path(tmp),amplitude=.1),plan=self.plan())
+            self.assertEqual(qa['inspection']['truePeak'],'MEASURED')
+            self.assertLess(qa['inspection']['truePeakMeasurement']['maximumDbTP'],-10)
+            self.assertEqual(qa['inspection']['status'],'CHECKED_LIMITED')
+            self.assertEqual(qa['inspection']['findings'],[])
+
+    def test_absent_meter_summary_is_explicitly_unavailable_not_a_clean_result(self):
+        from .output_qa import inspect_output
+        real_run=subprocess.run
+        def omit_meter(args,**kwargs):
+            # Exercise actual full decoding with a missing external meter result.
+            args=[s.replace('ebur128=peak=true:framelog=verbose','anull') if isinstance(s,str) else s for s in args]
+            return real_run(args,**kwargs)
+        with tempfile.TemporaryDirectory() as tmp:
+            file=self.media(Path(tmp),amplitude=.1)
+            with patch('engine.output_qa.subprocess.run',side_effect=omit_meter):
+                qa=inspect_output(file,plan=self.plan())
+            self.assertTrue(qa['technical_ok'],qa)
+            self.assertTrue(qa['whole_file_decode_checked'])
+            self.assertEqual(qa['inspection']['truePeak'],'UNAVAILABLE')
+            self.assertIsNone(qa['inspection']['truePeakMeasurement']['maximumDbTP'])
+            self.assertEqual(qa['inspection']['status'],'NEEDS_REVIEW')
+            self.assertIn('TRUE_PEAK_UNAVAILABLE',[f['code'] for f in qa['inspection']['findings']])
+            self.assertNotIn('true-peak-ebur128-v1',qa['inspection']['detectors'])
+
+    def test_incomplete_final_meter_summary_does_not_reuse_an_earlier_measurement(self):
+        from .output_qa import inspect_output
+        real_run=subprocess.run
+        def incomplete_final_summary(args,**kwargs):
+            result=real_run(args,**kwargs)
+            if '-af' in args and 'ebur128=peak=true' in args[args.index('-af')+1]:
+                kwargs['stderr'].write(b'[Parsed_ebur128_99 @ 0x1] Summary:\n\n  Integrated loudness:\n    I: -70.0 LUFS\n')
+            return result
+        with tempfile.TemporaryDirectory() as tmp:
+            file=self.media(Path(tmp))
+            with patch('engine.output_qa.subprocess.run',side_effect=incomplete_final_summary):
+                qa=inspect_output(file,plan=self.plan())
+            self.assertEqual(qa['inspection']['truePeak'],'UNAVAILABLE')
+            self.assertIsNone(qa['inspection']['truePeakMeasurement']['maximumDbTP'])
+            self.assertIn('TRUE_PEAK_UNAVAILABLE',[f['code'] for f in qa['inspection']['findings']])
+
+    def test_saved_real_aac_mp4_persists_measurement_without_changing_source_or_project(self):
+        from .render_saved_project import render_saved_project
+        from .test_project_pipeline import ROOT
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);source=self.media(folder);source_before=source.read_bytes()
+            script=r"""
+import {createProject,EditSession} from './packages/project/project.mjs';
+import {hashFile,saveSession,loadSession} from './packages/project/local-store.mjs';
+import {writeFile} from 'node:fs/promises';import {join} from 'node:path';
+const folder=process.argv[1],path=join(folder,'source.mp4'),id='asset_'+'1'.repeat(32);
+const p=createProject({projectId:'project_peak',sourceRefs:[{assetId:id,sha256:await hashFile(path),
+ mediaKind:'video',durationSec:.5,hasAudio:true,offsetSec:0,driftPpm:0,syncStatus:'master'}]});
+p.exportProfile='review';p.timeline=[{clipId:'clip_peak',sourceId:id,sourceInSec:0,durationSec:.5,startSec:0,speed:1,layout:'single',effects:[]}];
+p.audioClips=[{id:'audio_source',assetId:id,bus:'source',startSec:0,endSec:.5,trimInSec:0,speed:1,gainDb:0,loop:false,fadeInSec:0,fadeOutSec:0}];
+const file=join(folder,'project.json');await saveSession(file,new EditSession(p));
+await loadSession(file);await writeFile(join(folder,'bindings.json'),JSON.stringify([{assetId:id,path}]));
+"""
+            run(['node','--input-type=module','-e',script,str(folder)],cwd=ROOT)
+            project_before=(folder/'project.json').read_bytes();output=folder/'output.mp4'
+            qa=render_saved_project(folder/'project.json',folder/'bindings.json',folder/'job',output)
+            stored=json.loads((folder/'job/technical_qa.json').read_text())
+            self.assertEqual(stored['inspection'],qa['inspection'])
+            self.assertEqual(stored['inspection']['truePeak'],'MEASURED')
+            self.assertIn('TRUE_PEAK_AT_OR_ABOVE_REFERENCE',[f['code'] for f in stored['inspection']['findings']])
+            self.assertEqual(stored['truePeakGuarantee'],'NOT_GUARANTEED')
+            self.assertTrue(stored['whole_file_decode_checked']);self.assertTrue(stored['technical_ok'])
+            self.assertEqual(stored['sha256'],hashlib.sha256(output.read_bytes()).hexdigest())
+            run(['ffmpeg','-v','error','-xerror','-i',str(output),'-f','null','-'])
+            self.assertEqual(source.read_bytes(),source_before)
+            self.assertEqual((folder/'project.json').read_bytes(),project_before)
+            json.dumps(stored,allow_nan=False)
 
 
 if __name__=='__main__':unittest.main()
