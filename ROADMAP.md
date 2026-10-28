@@ -2,13 +2,16 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-Current checkpoint: 2026-10-29 JST. PR #21 integrated the manual-gain acceptance
-at main `c0bdfaef9a91c8783c2f7bee1d3c78218c8e4c4a`, tree
-`11c156f4b3f1ba5e388aba018dd09e4b90a0b78a`. This change adds bounded retained-output
-history and explicit verified selection after restart, tested on two actual
-synthetic MP4s. The complete local-editor suite passes 52/52, no skips; the
-carrying PR records final review/integration/postmerge evidence.
-These slices remain TESTED_SYNTHETIC, not complete F8 or a platform/product Goal.
+Current checkpoint: 2026-10-29 JST. PR #22 integrated retained output history
+at main `8f335b12ac0624e870b7187eaf24b04325c750bf`, tree
+`2547d991dc338d771d415241ec2615858260ea2d`. This candidate adds explicit source
+relinking for saved JSON in a new workspace, including the sources needed by
+Undo/Redo, retained verified uploads, and a separate Open action. Actual generated
+two-workspace restore/restart/edit/export/full decode passes. The affected editor
+and project/local-store final gate passes 108/108, no skips, after independently
+reviewed role-compatibility and final-Open cancellation fixes. The carrying PR records final review, frozen
+candidate and integration/postmerge evidence.
+These slices remain TESTED_SYNTHETIC, not complete F1/F8 or a platform/product Goal.
 Hosted CI and actual browser/device acceptance are not asserted.
 
 ## P0 Local-first mobile foundation
@@ -60,6 +63,7 @@ No item becomes checked merely because a design document or test stub exists.
 - [ ] Complete F8 device caption acceptance, intelligibility/true-peak guarantees, bounded automatic repair and real-device evidence. Limited technical checks are not full output quality acceptance.
 - [x] Explicit audio-gain edit -> Undo/Redo/save/restart/reopen -> fresh MP4/true-peak report, preserving previous output/report and original input (synthetic HTTP/PCM; +2.6 -> -4.2 dBTP after -6 dB edit). Not a GUI, limiter or intelligibility guarantee.
 - [x] Restore/select up to 50 recent completed output/report pairs after restart, with bound hashes, explicit missing/changed evidence refusal and stale-project navigation checks. Two actual MP4s/downloads/full decode tested; no deletion of older files. Legacy migration covers only the last completed output; GUI/device acceptance remains open.
+- [x] Explicit saved-JSON source relinking in a new local workspace: match selected media bodies to saved identities across current/Undo/Redo, retain verified partial copies without editing, then explicitly Open. Same audiovisual MP4 can keep video/BGM roles; missing/wrong/stale sources refuse. Actual two-workspace edit/restart/MP4/full decode tested; DOM doubles only for UI, physical/browser acceptance open.
 - [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE; the 2026-10-29 JST official Chromium download returned a 195-byte HTML error, not a browser). Resume the existing temporary-local-media script only when a compatible browser is available; do not repeat the same failed download.
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.
 

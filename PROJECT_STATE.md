@@ -7,7 +7,37 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current implementation: retained output history (2026-10-29 JST)
+## Current implementation candidate: explicit source relinking (2026-10-29 JST)
+
+Saved JSON can now be prepared in a new local workspace, followed by explicitly
+selected original video/audio and a separate Open action. The entire current /
+Undo / Redo source union is checked before adoption; original asset IDs, edits
+and historical snapshots survive. Selected media is streamed and matched by
+SHA256 plus actual probe information. An audiovisual MP4 used as both video and
+BGM keeps both saved roles after one copy; audio-only bytes cannot supply video.
+Current project/history stay unchanged through failed or partial uploads,
+cancellation and restart. Verified registered copies can be reused after selecting
+the JSON again; no restart automatically opens a pending candidate.
+
+The final affected editor/project/local-store gate is 108/108 PASS, no skips,
+including generated two-workspace restore -> Undo/Redo -> save/restart -> edit ->
+actual MP4 export/full decode with historical-only BGM audibility. DOM-double and
+static-module checks are not actual browser acceptance. Root review's valid
+same-MP4 video/BGM compatibility finding was reproduced through existing import
+and fixed with fresh per-target probe checks. Independent review also reproduced
+a final-Open/delayed-response cancellation race; cancellation is now disabled and
+guarded during final Open, and actual HTTP regression plus independent replay pass.
+No additional code blocker remained before the final gate. The carrying PR records
+the final frozen-candidate audit and integration.
+Registry-write failure is not acknowledged success and can leave an unregistered
+copied file; it is never admitted by scanning or claimed automatically reusable.
+This bounded F1 flow is TESTED_SYNTHETIC on Linux. Full F1/F8/F9 and Product DoD
+remain incomplete. Evidence: `docs/validation/SOURCE_RELINK_F1_2026-10-29.md`.
+Implementation base: retained-output PR #22 main
+`8f335b12ac0624e870b7187eaf24b04325c750bf`, tree
+`2547d991dc338d771d415241ec2615858260ea2d`.
+
+## Integrated implementation: retained output history (2026-10-29 JST)
 
 A bounded journal now restores up to 50 recent completed output/report pairs.
 Listing reads metadata; explicit selection checks fixed paths, file identities
@@ -87,7 +117,8 @@ download was not repeated. Native iPhone/Android/Windows/macOS, GUI/novice and
 preview/export parity acceptance remain unverified for this editor.
 
 The manual gain follow-through and bounded output history are TESTED_SYNTHETIC.
-Source relinking into a new workspace remains a separate unfinished requirement.
+Explicit source relinking into a new workspace has the synthetic candidate above;
+actual GUI/device acceptance and the broader project workflow remain unfinished.
 Intelligibility, automatic repair, limiter guarantees, real large-media performance
 and all platform goals remain open. Exact continuation: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
 including their old "current" test totals and implementation limits.
