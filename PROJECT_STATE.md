@@ -7,6 +7,22 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Local candidate: measured static caption raster (2026-10-28 UTC)
+
+The long/multiline caption next step has a reviewed local candidate on canonical
+base d849ab93. Real synthetic MP4 checks prove wrapping inside the safe area,
+retained explicit lines, original audio and saved edit history; missing glyphs
+and vertical overflow explicitly block export. Nine focused tests pass. Across
+187 disjoint regression cases initially 184 passed and 3 lacked a Japanese font.
+An additional official-font verification reran those unchanged 3 cases: all PASS.
+Actual Japanese 130-character wrapping and 3 explicit lines now have verified
+Linux MP4 raster/glyph/audio evidence. The initial results remain recorded;
+there was no new full-suite run, CI, main merge or device acceptance. No font is
+bundled or installed system-wide. A security follow-up sets Pillow >=13.0,<14
+and Python >=3.11; all 12 caption/Japanese integration cases and both Japanese
+MP4s were verified again under actual Pillow 13.0.0. Detailed evidence and exact remaining
+gates: `docs/validation/CAPTION_RASTER_F8_2026-10-28.md`.
+
 ## Latest Work implementation (output freeze/cadence F8-B, 2026-10-21)
 
 The existing full-output scan now records still/freeze intervals >=1s and aggregate

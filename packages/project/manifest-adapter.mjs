@@ -27,7 +27,7 @@ export async function createManifest(project,bindings){
     if(c.effects.length){const e=c.effects[0];
       if(e.type!=='caption'||e.version!==1||e.keyframes.length||!same(e.startSec,0)||
         !same(e.endSec,c.endSec-c.startSec)||Object.keys(e.parameters).some(k=>k!=='text')||
-        e.parameters.text.length>200||/[\r\n]/.test(e.parameters.text)||e.parameters.text.trim()!==e.parameters.text)unsupported('EFFECT_RENDERING');
+        e.parameters.text.length>200||e.parameters.text.trim()!==e.parameters.text)unsupported('EFFECT_RENDERING');
       caption=e.parameters.text;
     }
     if(s.hasAudio)expectedAudio.push({assetId:c.sourceId,bus:'source',startSec:c.startSec,endSec:c.endSec,

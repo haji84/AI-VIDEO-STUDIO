@@ -6,6 +6,37 @@ mainSHA (last verified implementation): `1348c88bd9b482d0b501da918b3561a909aa16f
 verifiedSourceTree: `4655cea34ebfc5f3ce17e3e8250a5cb00d02816f`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
+## Local continuation candidate — 2026-10-28 UTC
+
+Canonical base refreshed to main `d849ab93daaa99ec5b7f4824bb810bbbaef6d7b5`.
+Static caption raster work below now has a local implementation and nonauthor
+review; no external push/PR/CI/merge/deploy occurred in this continuation.
+Nine focused caption tests pass; initial disjoint regression groups covered 187
+cases with 184 passes and 3 Japanese-font-unavailable failures. Explicit missing
+glyph refusal was verified; actual Japanese rendering was blocked at that point.
+See `docs/validation/CAPTION_RASTER_F8_2026-10-28.md` for exact scope/runtime,
+real synthetic MP4 evidence, observed failures and remaining acceptance.
+
+Additional verification on 2026-10-28: one SHA256-verified official Ubuntu
+fonts-noto-cjk package was extracted into scratch only. With its Noto Sans CJK JP
+font explicitly selected, the three unchanged blocked tests all passed. New
+actual MP4s prove 130 Japanese characters wrap to 5 safe lines and 3 explicit
+Japanese lines remain 3, with all requested glyphs present, full decode and
+440 Hz audio. The original 184/187 result remains recorded; all 187 cases now have
+passing evidence across separate runs, not a new full-suite/CI pass. No system
+font install, font redistribution, production code or test change was needed.
+
+Dependency follow-up: requirements now select Pillow >=13.0,<14 for its upstream
+security fixes; setup requires Python >=3.11 (CI uses 3.13, Docker uses 3.12).
+An isolated Pillow 13.0.0 environment passed the unchanged 9 caption + 2 Japanese
+manifest cases and 1 Node media case. Regenerated Japanese MP4/raster hashes
+match the earlier artifacts exactly. No full-suite, CI or image-build claim.
+
+Next for this candidate: satisfy the existing PR/CI/integration gates.
+Product DoD is unchanged. The older
+checkpoints below remain historical; do not repeat the now-implemented caption
+work or count this local candidate as already merged.
+
 ## Integrated milestones
 
 PR #11 project/history/relink; #12 saved four-bus renderer; #13 local editor/API;
@@ -64,7 +95,8 @@ observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
    Implement bounded layout/font checks using existing compositor, preserve
    project/history, validate actual raster margins and glyphs or fail explicitly.
    Then review/PR/main integration/postmerge actual output before next feature.
-5. No caption-raster implementation has started. Tree is clean at this boundary.
+5. At the 2026-10-21 boundary no caption-raster implementation had started.
+   The local 2026-10-28 continuation above supersedes that implementation status.
 
 ## Browser/device blocker and replay
 

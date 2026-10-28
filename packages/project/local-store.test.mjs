@@ -61,6 +61,17 @@ test('existing manifest bridge preserves clip order, source time, static text an
   assert.equal(manifest.sources[0].sha256,sha);assert.equal(manifest.sources[0].hasAudio,true);
   assert.equal(manifest.sources[0].durationSec,12);
 }));
+test('multiline caption survives disk history and reaches the render bundle unchanged',()=>withFiles(async({dir,media,sha})=>{
+  const original=fixture(sha),session=new EditSession(original),edited=session.current;
+  const text='FIRST LINE\nSECOND LINE\nTHIRD LINE';
+  edited.timeline[0].effects=[{effectId:'effect_lines',type:'caption',version:1,startSec:0,endSec:2,parameters:{text},keyframes:[]}];
+  session.apply(edited);const path=join(dir,'multiline.aivs.json');await store.saveSession(path,session);
+  const reopened=await store.loadSession(path);assert.equal(reopened.undo(),true);assert.equal(reopened.redo(),true);
+  const bundle=await adapter.createRenderBundle(reopened.current,[{assetId,path:media}]);
+  assert.equal(bundle.videoManifest.timeline[0].caption,text);
+  assert.deepEqual(bundle.plan.audio,original.audioClips);
+  assert.equal(await store.hashFile(media),sha);
+}));
 test('bridge refuses unsupported effects, audio processing, drift and gaps',()=>withFiles(async({media,sha})=>{
   for(const edit of [p=>p.timeline[0].startSec=.5,p=>p.sourceRefs[0].driftPpm=2,
     p=>p.audioBuses.source.muted=true,p=>p.audioClips[0].gainDb=-12,
