@@ -15,11 +15,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Install FFmpeg media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Check runtime
         run: |
           node --version
           python --version
+          command -v ffmpeg >/dev/null
+          command -v ffprobe >/dev/null
           ffmpeg -version | head -1
+          ffprobe -version | head -1
       - name: Local caption dependencies and Japanese font
         run: |
           python -m pip install numpy -r requirements-media.txt
@@ -63,3 +70,51 @@ jobs:
 
       - name: Browser iOS audio-buffer compatibility smoke (static only)
         run: node --test prototypes/device-lab/audio-compat.test.mjs
+
+  synthetic-browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+      - name: Install bounded browser test dependencies
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.64.1
+          python -m pip install Pillow==13.0.0 fonttools==4.61.1 numpy==2.3.5
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+      - name: Require installed Chrome, media tools and caption font
+        run: |
+          chrome_path="$(command -v google-chrome)" || { echo 'BLOCKED: installed Google Chrome unavailable'; exit 2; }
+          python_path="$(command -v python)"
+          command -v ffmpeg >/dev/null
+          command -v ffprobe >/dev/null
+          test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+          test_root="$(mktemp -d "$RUNNER_TEMP/aivs-browser-acceptance.XXXXXX")"
+          printf 'AIVS_BROWSER_EXECUTABLE=%s\nAIVS_PYTHON=%s\nAIVS_CAPTION_FONT=%s\nTMPDIR=%s\n' \
+            "$chrome_path" "$python_path" /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc "$test_root" >> "$GITHUB_ENV"
+          printf 'Runner image: %s %s\n' "$ImageOS" "$ImageVersion"
+          "$chrome_path" --version
+          node --version
+          python --version
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+          node -e "console.log('Playwright',require('playwright/package.json').version)"
+          python -c "from importlib.metadata import version; print({name:version(name) for name in ('Pillow','fonttools','numpy')})"
+      - name: Existing editor real-browser acceptance (synthetic media only)
+        run: timeout --signal=TERM --kill-after=10s 300s node apps/local-editor/browser-acceptance.mjs
+      - name: Two-workspace source relink real-browser acceptance (synthetic media only)
+        run: timeout --signal=TERM --kill-after=10s 300s node apps/local-editor/browser-relink-acceptance.mjs
+      - name: Remove browser test temporary files
+        if: always()
+        run: |
+          if [ -n "${TMPDIR:-}" ] && [[ "$TMPDIR" == "$RUNNER_TEMP"/aivs-browser-acceptance.* ]]; then
+            rm -rf -- "$TMPDIR"
+          fi

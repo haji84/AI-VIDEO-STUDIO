@@ -1,12 +1,50 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-29 JST (2026-10-28 UTC)
-Status: IN_PROGRESS. Current slice: explicit source relinking candidate, TESTED_SYNTHETIC; final frozen audit/integration tracked by the carrying PR.
+Status: IN_PROGRESS. Current slice: actual browser acceptance verification candidate; both browser scopes NOT_RUN pending reviewed manual CI execution.
 Product DoD NOT MET. Actual GUI/native/physical acceptance NOT_RUN/BLOCKED.
-previousIntegratedMainSHA (retained-output PR #22): `8f335b12ac0624e870b7187eaf24b04325c750bf`
-previousIntegratedSourceTree: `2547d991dc338d771d415241ec2615858260ea2d`
+previousIntegratedMainSHA (source-relink PR #23): `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`
+previousIntegratedSourceTree: `77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
-## Current source-relinking candidate — 2026-10-29 JST
+## Current browser acceptance candidate — 2026-10-29 JST
+
+The exact nine-file design is approved under the existing development mandate.
+Root has observed the signed-in manual workflow control and owns one candidate
+PR, independent review, exact-branch dispatch and integration. The worker prepares
+local files only. No trigger workaround, new service, secret, permission increase,
+public product deployment or private media is included.
+
+All original workflow test steps, triggers, permissions and timeouts are retained.
+The initial candidate's unchanged prefix is superseded only by the approved
+FFmpeg prerequisite installation and runtime checks described below. A new
+standard Ubuntu job is manual-only, contents-read-only and bounded to 12 minutes.
+It uses installed Google Chrome, Playwright1.64.1, Node24.22.1/Python3.12.14 and
+the documented test-library pins; actual versions are logged. Both scripts have
+a 300-second outer timeout and remove only test-owned temporary synthetic media.
+
+Existing editor assertions remain. New real-UI coverage builds a saved session
+with a dual-role MP4 and historical-only WAV, moves to another workspace, rejects
+wrong same-name bytes, reuses partial verified copies across restart and requires
+explicit Open. History, gain edits, reload/restart, QA/output identity, real Chrome
+playback, full decode and historical BGM frequency are asserted.
+
+Local preliminary checks: Node syntax PASS for both scripts, parsed YAML/prefix
+invariants PASS, controlled missing-browser BLOCKED/exit2 for both, unchanged
+affected editor/project/local-store gate 108/108 PASS, zero failures/skips,
+24.780 seconds. These are not browser PASS. Hosted candidate/browser results and
+all physical-device/novice acceptance are NOT_RUN.
+Evidence: `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`.
+Design/plan: `docs/work/BROWSER_ACCEPTANCE_DESIGN_20261029.md`.
+
+Actual original-main run40788585989/job123167857722 failed: FFmpeg was absent,
+the version pipeline did not stop, and the audio suite ran3 cases with2 missing-
+FFmpeg errors. Root approved explicit FFmpeg installation/checks in both jobs.
+No product/test source or original test commands change. The unchanged audio
+suite passes3/3 locally,0 skips/errors,1.419 seconds with actual FFmpeg/FFprobe.
+The initial candidate and independent review remain preserved; root independently
+reviews the small amendment before publication. Amended hosted CI remains NOT_RUN.
+
+## Integrated source-relinking slice — 2026-10-29 JST
 
 Bounded saved JSON prepare -> selected raw media bodies -> verified durable
 registry copies -> explicit Open. The plan binds random ID and current projectId /
@@ -23,8 +61,8 @@ PASS, no skips, after all code review fixes. Root review's cross-role compatibil
 finding is fixed and tested against actual existing import. Independent review's
 committed-Open/delayed-response cancellation race is fixed with a committing guard
 and verified through real HTTP regression plus independent replay. No additional
-code blocker remained before the final gate; frozen-file audit/integration is
-recorded by the carrying PR.
+code blocker remained before the final gate. PR #23 integrated at the current
+main/tree above; independent subset 29/29 and postmerge actual-HTTP replay 5/5 pass.
 The seven code/test and seven documentation files are the complete unit.
 No schema/core/history/engine/dependency/workflow or remote change by this worker.
 
@@ -34,8 +72,8 @@ reusable. Registered verified copies remain usable after cancellation/restart
 and still require explicit Open. No crash-atomic multi-file promise.
 Evidence: `docs/validation/SOURCE_RELINK_F1_2026-10-29.md`.
 Plan/design: `docs/work/SOURCE_RELINK_F1_PLAN.md` and `SOURCE_RELINK_F1_DESIGN.md`.
-The carrying PR will record review, final manifest/tree and integration; do not
-claim an uncreated PR or merge. Root owns publication; this worker has no remote writes.
+PR #23 records review, final manifest/tree and integration. Do not repeat this
+integrated implementation. Root owns publication; this worker has no remote writes.
 
 ## Integrated retained-output history slice — 2026-10-29 JST
 
@@ -66,7 +104,7 @@ both outputs fully decode. Existing history/revision/global-findings safeguards
 passed. No product-code fix was required. New self-generated HTTP/media test +
 8 inspection/display cases: 9/9 PASS, no skips. Details, hashes and limitations:
 `docs/validation/TRUE_PEAK_MANUAL_EDIT_2026-10-29.md`.
-PR #21 is its exact integration/postmerge record at the main/tree above.
+PR #21 records its exact integration and postmerge checks.
 The prior implementation came from PR #20 at main
 `80259d2f43c53254ac3b4ab7da87cef69e19a558`.
 
@@ -166,15 +204,17 @@ observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
 
 ## Continuation after this bounded slice
 
-1. Verify the final 14-file source-relink manifest and independent frozen-file
-   review record. Refresh main and use the
-   actual remote parent before root publishes; do not repeat integrated history.
-2. Run actual browser acceptance only when a compatible browser is available.
-   Do not repeat the unchanged blocked download or label DOM/API tests as GUI PASS.
-3. Replay the new saved-JSON / missing-media / retry / explicit-Open flow in an
-   actual browser and on target devices when available. Retain the same source
-   IDs, Undo/Redo and originals; do not replace this acceptance with DOM doubles.
-4. No additional feature unit is included in this candidate. Speech intelligibility,
+1. Independently review the nine-file browser candidate against PR #23 main and
+   freeze its exact files/tree. Root publishes one PR and dispatches that branch
+   through the observed existing GitHub manual workflow control.
+2. Read actual terminal logs for both browser scopes. Record source head, runtime,
+   hashes, exit status and any failure. Repair a reproduced failure on the same
+   PR; product-code scope expansion needs root review before editing new files.
+3. Keep NOT_RUN until the corresponding browser script passes. Existing API/DOM
+   results, a baseline workflow without browser steps or the presence of the new
+   test files cannot clear this gate. Do not repeat the blocked local download.
+4. Target-device and novice replay remain separate from Linux Chrome. Retain the
+   same source IDs, Undo/Redo and originals. Speech intelligibility,
    limiter guarantees, native adapters and the full physical-device flows remain open.
 
 ## Browser/device blocker and replay
@@ -188,8 +228,11 @@ system install or persistent service followed. See the caption validation doc.
 Do not repeat this unchanged download. When an actual compatible Chromium is
 available, set AIVS_BROWSER_EXECUTABLE to its path, AIVS_PYTHON to an executable
 using Python >=3.11 and Pillow 13, and AIVS_CAPTION_FONT to a verified Japanese font; run
-`node apps/local-editor/browser-acceptance.mjs`. It tests only temporary local
-synthetic media, first-cut preview/apply, edits/history and MP4 playback/download.
+both `node apps/local-editor/browser-acceptance.mjs` and
+`node apps/local-editor/browser-relink-acceptance.mjs`. The candidate's manual CI
+job uses the runner's installed Chrome instead of downloading another browser.
+Both scripts use temporary synthetic media; their actual hosted execution is
+NOT_RUN until recorded in the browser validation document.
 API/DOM-stub/FFmpeg results are not browser/device PASS.
 PC startup/recovery and exact owned-media checks: apps/local-editor/README.md;
 S1/P1/F8 evidence documents have acceptance steps. Historical phone replay still

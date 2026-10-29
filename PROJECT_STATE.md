@@ -7,7 +7,38 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current implementation candidate: explicit source relinking (2026-10-29 JST)
+## Current verification candidate: actual browser acceptance (2026-10-29 JST)
+
+PR #23 integrated explicit source relinking at main
+`9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`, tree
+`77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`. Its affected gate was 108/108,
+independent subset 29/29 and postmerge actual-HTTP replay 5/5 PASS. These establish
+the integrated synthetic API behavior; actual GUI/device acceptance remains open.
+
+This nine-file verification-only candidate preserves manual-only triggers,
+permissions, timeouts, all original test steps and every existing browser assertion. A separate 12-minute standard Ubuntu job
+uses installed Google Chrome, pinned test tools and two 300-second browser commands.
+The existing editor flow gains runtime/hash evidence. A new real-UI flow selects
+saved JSON in another workspace, recovers three source IDs from two physical files
+(the same MP4 in video/BGM roles and historical-only BGM), rejects wrong same-name
+bytes, restarts with partial copies, explicitly Opens, edits history/gain and checks
+actual MP4 playback/full decode plus the restored BGM frequency. No product source,
+permissions, trigger policy, new service, private footage or deployment change.
+
+Preliminary checks: both scripts parse, workflow invariants retain all original
+test steps plus the approved dependency checks, missing-browser behavior exits
+BLOCKED/2, and the unchanged affected
+editor/project/local-store gate passes 108/108 with no skips. Both actual browser
+scopes are **NOT_RUN** until root's reviewed exact candidate executes through the
+existing manual workflow. Linux synthetic browser evidence, when available, will
+not establish physical-device, novice, 11GB or complete Product DoD acceptance.
+Original-main run40788585989 failed because FFmpeg was absent: the audio suite
+ran3 cases with2 errors. Root approved explicit FFmpeg/FFprobe provisioning and
+command checks in both jobs. The unchanged audio suite then passed3/3 locally
+with actual FFmpeg,0 skips/errors; amended hosted execution remains NOT_RUN.
+Evidence and exact runtime/commands: `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`.
+
+## Integrated implementation: explicit source relinking (2026-10-29 JST)
 
 Saved JSON can now be prepared in a new local workspace, followed by explicitly
 selected original video/audio and a separate Open action. The entire current /
@@ -27,8 +58,8 @@ same-MP4 video/BGM compatibility finding was reproduced through existing import
 and fixed with fresh per-target probe checks. Independent review also reproduced
 a final-Open/delayed-response cancellation race; cancellation is now disabled and
 guarded during final Open, and actual HTTP regression plus independent replay pass.
-No additional code blocker remained before the final gate. The carrying PR records
-the final frozen-candidate audit and integration.
+No additional code blocker remained before the final gate. PR #23 records the
+final frozen-candidate audit and integration at the main/tree above.
 Registry-write failure is not acknowledged success and can leave an unregistered
 copied file; it is never admitted by scanning or claimed automatically reusable.
 This bounded F1 flow is TESTED_SYNTHETIC on Linux. Full F1/F8/F9 and Product DoD
@@ -108,16 +139,17 @@ agent reran caption 9 + Japanese manifest 2: 11/11 PASS under
 Pillow 13.0.0. Hosted CI and Docker build remain NOT_RUN. Detailed evidence and exact remaining
 gates: `docs/validation/CAPTION_RASTER_F8_2026-10-28.md`.
 
-Current GUI acceptance remains BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE (exit 2).
+The local GUI execution environment remains BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE (exit 2).
 Playwright 1.62.1 is present, but the matching Chromium is absent. One permitted
 official download on 2026-10-29 JST returned 195 bytes of "Site Unavailable"
 HTML, not a browser ZIP. That browser acceptance attempt stopped before
 browser/server startup; the HTTP acceptance above is separate. The failed
-download was not repeated. Native iPhone/Android/Windows/macOS, GUI/novice and
+download was not repeated. The candidate above adds an installed-Chrome hosted
+execution route; its actual browser results are still NOT_RUN. Native iPhone/Android/Windows/macOS, GUI/novice and
 preview/export parity acceptance remain unverified for this editor.
 
 The manual gain follow-through and bounded output history are TESTED_SYNTHETIC.
-Explicit source relinking into a new workspace has the synthetic candidate above;
+Explicit source relinking into a new workspace is integrated through PR #23;
 actual GUI/device acceptance and the broader project workflow remain unfinished.
 Intelligibility, automatic repair, limiter guarantees, real large-media performance
 and all platform goals remain open. Exact continuation: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,

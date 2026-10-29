@@ -2,17 +2,22 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-Current checkpoint: 2026-10-29 JST. PR #22 integrated retained output history
-at main `8f335b12ac0624e870b7187eaf24b04325c750bf`, tree
-`2547d991dc338d771d415241ec2615858260ea2d`. This candidate adds explicit source
-relinking for saved JSON in a new workspace, including the sources needed by
+Current checkpoint: 2026-10-29 JST. PR #23 integrated explicit source relinking
+at main `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`, tree
+`77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`. Saved JSON recovery in a new workspace includes the sources needed by
 Undo/Redo, retained verified uploads, and a separate Open action. Actual generated
 two-workspace restore/restart/edit/export/full decode passes. The affected editor
 and project/local-store final gate passes 108/108, no skips, after independently
-reviewed role-compatibility and final-Open cancellation fixes. The carrying PR records final review, frozen
-candidate and integration/postmerge evidence.
+reviewed role-compatibility and final-Open cancellation fixes. Independent subset
+29/29 and postmerge actual-HTTP replay 5/5 also passed.
 These slices remain TESTED_SYNTHETIC, not complete F1/F8 or a platform/product Goal.
-Hosted CI and actual browser/device acceptance are not asserted.
+The current verification candidate adds a bounded, manual-only installed-Chrome
+job for both existing-editor and source-relink UI flows. Local syntax/configuration
+checks and the unchanged 108/108 API gate pass; both browser scopes remain NOT_RUN
+pending execution of the reviewed candidate. The actual original-main run40788585989
+failed because FFmpeg was absent. Its same-PR repair explicitly installs/checks
+FFmpeg/FFprobe in both jobs while preserving original tests; unchanged audio tests
+pass3/3 locally. Amended hosted CI and device acceptance remain open.
 
 ## P0 Local-first mobile foundation
 
@@ -64,7 +69,8 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Explicit audio-gain edit -> Undo/Redo/save/restart/reopen -> fresh MP4/true-peak report, preserving previous output/report and original input (synthetic HTTP/PCM; +2.6 -> -4.2 dBTP after -6 dB edit). Not a GUI, limiter or intelligibility guarantee.
 - [x] Restore/select up to 50 recent completed output/report pairs after restart, with bound hashes, explicit missing/changed evidence refusal and stale-project navigation checks. Two actual MP4s/downloads/full decode tested; no deletion of older files. Legacy migration covers only the last completed output; GUI/device acceptance remains open.
 - [x] Explicit saved-JSON source relinking in a new local workspace: match selected media bodies to saved identities across current/Undo/Redo, retain verified partial copies without editing, then explicitly Open. Same audiovisual MP4 can keep video/BGM roles; missing/wrong/stale sources refuse. Actual two-workspace edit/restart/MP4/full decode tested; DOM doubles only for UI, physical/browser acceptance open.
-- [ ] Actual browser operation/replay acceptance for new GUI (BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE; the 2026-10-29 JST official Chromium download returned a 195-byte HTML error, not a browser). Resume the existing temporary-local-media script only when a compatible browser is available; do not repeat the same failed download.
+- [ ] Actual existing-editor browser acceptance: import/sync/first-cut preview and apply/edit/save/reload/audio/MP4 playback/full decode. An installed-Chrome manual CI job is prepared; actual execution NOT_RUN. The local missing-browser/download blocker is unchanged and the failed download is not repeated.
+- [ ] Actual saved-JSON relink browser acceptance: three source IDs/two physical files, dual MP4 roles, historical-only BGM, wrong same-name rejection, partial-copy restart, explicit Open, history/gain/restart and actual MP4 playback/audio. A separate real-UI script is prepared; actual execution NOT_RUN.
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.
 
 These M1 items are TESTED_SYNTHETIC. Broader P0/platform boxes stay open.

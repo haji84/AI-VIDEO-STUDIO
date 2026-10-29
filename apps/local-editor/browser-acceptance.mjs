@@ -6,14 +6,16 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {startServer} from './server.mjs';
-const exec=promisify(execFile);let folder,server,browser;
+const exec=promisify(execFile),sha=bytes=>createHash('sha256').update(bytes).digest('hex');let folder,server,browser;
 try{
-  let playwright;
-  try{playwright=await import('playwright');}
+  let playwright,playwrightVersion;
+  try{playwright=await import('playwright');playwrightVersion=createRequire(import.meta.url)('playwright/package.json').version;}
   catch{if(!process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES)throw new Error('PLAYWRIGHT_PACKAGE_UNAVAILABLE');
-    playwright=createRequire(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/aivs-browser.js')('playwright');}
+    const require=createRequire(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/aivs-browser.js');
+    try{playwright=require('playwright');playwrightVersion=require('playwright/package.json').version;}catch{throw new Error('PLAYWRIGHT_PACKAGE_UNAVAILABLE');}}
   const executablePath=process.env.AIVS_BROWSER_EXECUTABLE||playwright.chromium.executablePath();
   if(!existsSync(executablePath))throw new Error('BROWSER_EXECUTABLE_UNAVAILABLE');
   folder=await mkdtemp(join(tmpdir(),'aivs-browser-'));
@@ -78,6 +80,13 @@ try{
   const download=page.waitForEvent('download');await page.locator('#download').click();
   const file=await download,path=join(folder,'browser-output.mp4');await file.saveAs(path);
   await exec('ffmpeg',['-v','error','-xerror','-i',path,'-f','null','-']);assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'PASS_SYNTHETIC_BROWSER',playback:result,bytes:(await readFile(path)).length,physicalDevice:'NOT_RUN'}));
-}catch(error){const blocked=/UNAVAILABLE/.test(error.message);console.error(JSON.stringify({status:blocked?'BLOCKED':'FAIL',reason:error.message}));process.exitCode=blocked?2:1;}
+  const output=await readFile(path),qa=await readFile(qaPath);
+  assert.equal(JSON.parse(qa).sha256,sha(output),'downloaded output must match its QA record');
+  console.log(JSON.stringify({status:'PASS_SYNTHETIC_BROWSER',scope:'existing-editor',
+    runtime:{node:process.version,playwright:playwrightVersion,browser:browser.version()},
+    inputs:{videoSha256:sha(await readFile(source)),clearVideoSha256:sha(await readFile(clear)),bgmSha256:sha(await readFile(music))},
+    savedProjectSha256:sha(await readFile(projectPath)),qaSha256:sha(qa),outputSha256:sha(output),
+    playback:result,wholeFileDecode:'PASS',bytes:output.length,physicalDevice:'NOT_RUN'}));
+}catch(error){const blocked=/UNAVAILABLE/.test(error.message),reason=String(error.message).replaceAll(server?.token??'__NO_TOKEN__','[redacted]').slice(0,2000);
+  console.error(JSON.stringify({status:blocked?'BLOCKED':'FAIL',scope:'existing-editor',reason}));process.exitCode=blocked?2:1;}
 finally{if(browser)await browser.close();if(server)await server.close();if(folder)await rm(folder,{recursive:true,force:true});}
