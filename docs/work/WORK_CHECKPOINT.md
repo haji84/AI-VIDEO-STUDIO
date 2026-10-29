@@ -1,12 +1,12 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-10-29 JST / 2026-10-29 UTC
-Status: IN_PROGRESS. Both bounded Ubuntu Chrome browser scopes PASS_SYNTHETIC_BROWSER; PR24 final documentation/integration pending.
+Status: IN_PROGRESS. At candidate freeze, PR24 is integrated and actual main verified; saved-cut visual-preview candidate awaits independent review/hosted browser acceptance. Subsequent exact-head/main acceptance is recorded in the carrying implementation PR and its receipts.
 Product DoD NOT MET. Physical/native/novice acceptance remains NOT_RUN/BLOCKED.
-previousIntegratedMainSHA (source-relink PR #23): `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`
-previousIntegratedSourceTree: `77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`
+mainSHA (PR24): `c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`
+mainTree: `2175c9bde1a35ab6629c9d8cda95a939ee709dd5`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
-## Verified browser slice; same PR24 pending integration — 2026-10-29 UTC/JST
+## Integrated browser slice — 2026-10-29 UTC/JST
 
 Last-tested implementation head `a767cc976a719cf325f0e717a3eab4d32e768b9c`, tree
 `3b0f6429e16277256e48a6a9ee272975538a2d22`. [Run40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070), attempt1, is **SUCCESS**:
@@ -34,12 +34,33 @@ original2-second soundtrack was correctly protected. The fixture now explicitly
 edits it through the UI before the1-second video trim. No product source or original
 assertion/timeout was weakened. Earlier files and diagnostic logs remain evidence.
 
-[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) is still pending integration. Root independently reviews this final
-bounded documentation amendment, checks its exact head, integrates the same PR,
-and verifies actual main. PR24 is the record for the final SHA and main CI; no
-future result or self-referential documentation hash is invented here.
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) is merged at the main SHA/tree above.
+Final-head run40805679780 and [main run40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812) both passed both jobs.
+Main offline job123225852969 repeated167 Node +60 Python cases without skip;
+browser job123225853218 repeated both scopes with actual playback/full decode.
+The new saved-cut-preview browser path below is separate and has no PASS at candidate freeze.
 Evidence: `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`.
 Physical/native devices, novice usability, real11GB media and Product DoD remain open.
+
+## Active saved-cut visual-preview unit
+
+Base is verified main c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13. Scope is exactly
+15 files in `docs/work/PREVIEW_PARITY_DESIGN_20261029.md`; no shared renderer,
+project-schema, audio-contract or dependency change. The existing source player
+and split action remain. The new explicitly requested MP4 is capped at7 output
+seconds and rendered at the saved profile, with read-only revision/source binding.
+
+Local tests cover actual generated video/captions/rates, source/output replacement,
+owned worker/descendant timeout and parent close, verified-descriptor delivery,
+and media-handle limits. Resource bounds describe a180-second lifetime and2-second
+cleanup attempt; ambiguous kernel/filesystem cleanup remains fail-closed, and only
+Linux is enabled. No permanent background execution or universal cleanup guarantee.
+
+Next at candidate freeze: finish independent frozen-candidate review, run the new UI acceptance on
+actual hosted Chrome alongside the unchanged two existing browser flows, and
+integrate only after exact-head checks. Keep the new browser result NOT_RUN until
+actual terminal evidence. Detailed commands, hashes, frame timing and limits:
+`docs/validation/PREVIEW_PARITY_2026-10-29.md`.
 
 ## Integrated source-relinking slice — 2026-10-29 JST
 
@@ -201,17 +222,13 @@ observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
 
 ## Continuation after this bounded slice
 
-1. Finish [PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) with reviewed documentation, actual final-head CI and safe
-   merge; verify the merged main through the existing manual workflow. Record the
-   actual main SHA/tree/run in PR24 rather than inventing it in this earlier file.
-2. After integration, investigate the existing P0/GOAL F5/F8 static-caption and
-   trim preview/export parity gap. Compare actual browser preview and exported
-   frames at matched project times using generated media, then propose the smallest
-   correction supported by a reproduced discrepancy. No next-unit code exists yet.
-3. Preserve these actual synthetic successes and both earlier browser failures.
-   Physical iPhone/Android/Windows/macOS, novice tasks, native adapters and real11GB
-   performance remain separate acceptance. Continue safe portable work while those
-   external observations are unavailable.
+1. PR24 integration and main verification are complete as recorded above.
+2. At candidate freeze, complete the15-file saved-cut visual-preview unit through
+   independent review, actual hosted acceptance, exact-head checks and safe integration.
+   Read the carrying PR and its receipts for subsequent acceptance/integration before
+   repeating any completed gate.
+3. Preserve original media, saved audio/history, earlier failures and both actual
+   PR24 synthetic successes. Keep physical/native/novice/11GB acceptance open.
 
 ## Browser/device blocker and replay
 

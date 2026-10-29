@@ -2,29 +2,29 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-Current checkpoint: 2026-10-29 JST / UTC. Source relinking is integrated through
-PR23 at main `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`. [PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) adds
-verified actual-browser acceptance and remains pending integration.
-Last-tested code head `a767cc976a719cf325f0e717a3eab4d32e768b9c`, tree `3b0f6429e16277256e48a6a9ee272975538a2d22`,
-passed [run40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070), attempt1: both existing-editor and two-workspace
-relink return `PASS_SYNTHETIC_BROWSER` on Ubuntu24.04/Chrome156.0.8078.47.
+Current checkpoint: 2026-10-29 JST / UTC. PR24 is integrated at main
+`c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`, tree `2175c9bde1a35ab6629c9d8cda95a939ee709dd5`.
+[Main run40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)
+passed both jobs: existing-editor and two-workspace source-relink return
+PASS_SYNTHETIC_BROWSER; Node167/Python60 test-case executions passed with no skip.
 The actual112,392-byte and42,074-byte MP4s advanced in Chrome and fully decoded;
-QA hashes matched, saved history/source identities and original media were preserved.
-The independent offline job passed167 Node +60 Python test-case executions,
-0 failures/errors/skips. These counts are separate from overlapping browser flows.
-Failure history and full hashes: `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`.
-PR24 carries the final integration SHA and main-run evidence when they exist.
-Synthetic acceptance does not complete F1/F8/F9 or the product/platform goal.
+QA hashes matched and saved history/source identities/original media were preserved.
+The earlier failed and first-success runs remain in
+`docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`; PR24 carries final-head/main evidence.
+These synthetic results do not complete the product/platform goal.
 
-## Next bounded requirement after PR24 integration
+## Current bounded requirement — saved-cut visual preview
 
-P0 already requires preview and exported MP4 timing/visible effects to match;
-GOAL F5/F8 and the M1 list below retain preview/export parity as unfinished.
-Next, measure the currently implemented static caption and trim preview against
-actual exported frames at matched project times using generated media. Establish
-specific discrepancies, then close only that bounded parity gap with save/reopen
-and original-media preservation checks. This is the next investigation, not an
-implemented feature or a device/novice acceptance result.
+P0 and GOAL F5/F8 already require preview/export timing and visible effects to match.
+The candidate adds an explicit, read-only, maximum7-output-second saved-cut result
+using the existing compositor/export profile. The material player keeps its current
+source-inspection/split role. Local generated-media parity and lifecycle faults are
+verified separately from actual-browser acceptance, which is pending for this new
+path at candidate freeze. The carrying implementation PR and its receipts record
+subsequent review, hosted exact-head acceptance and integration;
+full-timeline audio/effect parity, native platforms and novice testing remain open.
+Design: `docs/work/PREVIEW_PARITY_DESIGN_20261029.md`.
+Evidence: `docs/validation/PREVIEW_PARITY_2026-10-29.md`.
 
 ## P0 Local-first mobile foundation
 
@@ -76,7 +76,7 @@ No item becomes checked merely because a design document or test stub exists.
 - [x] Explicit audio-gain edit -> Undo/Redo/save/restart/reopen -> fresh MP4/true-peak report, preserving previous output/report and original input (synthetic HTTP/PCM; +2.6 -> -4.2 dBTP after -6 dB edit). Not a GUI, limiter or intelligibility guarantee.
 - [x] Restore/select up to 50 recent completed output/report pairs after restart, with bound hashes, explicit missing/changed evidence refusal and stale-project navigation checks. Two actual MP4s/downloads/full decode tested; no deletion of older files. Legacy migration covers only the last completed output; GUI/device acceptance remains open.
 - [x] Explicit saved-JSON source relinking in a new local workspace: match selected media bodies to saved identities across current/Undo/Redo, retain verified partial copies without editing, then explicitly Open. Same audiovisual MP4 can keep video/BGM roles; missing/wrong/stale sources refuse. Actual two-workspace edit/restart/MP4/full decode tested; its real Linux Chrome UI flow also passed run40804733070. Physical acceptance remains open.
-- [x] Actual existing-editor synthetic browser acceptance on exact PR24 code head a767cc976a719cf325f0e717a3eab4d32e768b9c: import/sync/first-cut preview/apply, explicit original-audio edit, caption/trim/Undo/Redo/save/reload/BGM and MP4 playback/full decode. Run40804733070 PASS; PR24 integration pending.
+- [x] Actual existing-editor synthetic browser acceptance on exact PR24 code head a767cc976a719cf325f0e717a3eab4d32e768b9c: import/sync/first-cut preview/apply, explicit original-audio edit, caption/trim/Undo/Redo/save/reload/BGM and MP4 playback/full decode. Run40804733070 PASS, repeated after PR24 integration on main run40806270812.
 - [x] Actual saved-JSON relink synthetic browser acceptance on the same PR24 code head: three source IDs/two files, dual MP4 roles, historical BGM, wrong same-name refusal, partial-copy restart, explicit Open, history/gain/restart and MP4 playback/audio. Run40804733070 PASS; physical-device acceptance remains open.
 - [ ] Novice usability, complete audio/effect controls, preview/export parity, native platforms and real-user tests.
 
