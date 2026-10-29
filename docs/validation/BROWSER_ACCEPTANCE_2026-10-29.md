@@ -2,11 +2,12 @@
 
 ## Status and source basis
 
-**Latest execution: existing-editor FAIL; source-relink NOT_RUN (skipped). Product
-DoD: NOT MET.** PR24 run40802909769 passed the complete offline job and failed the
-existing-editor browser flow at an unidentified wait. The diagnostic amendment
-below is NOT_RUN. Earlier sections retain the initial candidate history; no
-output hash, successful browser result or device PASS is inferred.
+**Latest diagnosis: existing-editor FAIL at video trim; source-relink NOT_RUN
+(skipped). Product DoD: NOT MET.** PR24 run40803673614 identified the preserved
+2-second soundtrack that the old test incorrectly expected to truncate implicitly.
+Both hosted offline jobs passed. The explicit-audio-edit fixture correction below
+is NOT_RUN in a browser. Earlier sections retain the initial candidate history;
+no successful browser result or device PASS is inferred.
 
 Base main is PR #23 `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`, source tree
 `77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`. Source relinking is integrated there;
@@ -198,3 +199,31 @@ Both script syntax and the missing-browser failure path are checked locally.
 The next exact-head hosted run must establish which condition failed before any
 product repair or timeout change is considered. This amendment does not claim
 the original browser flow passed, and its hosted result is **NOT_RUN**.
+
+## Actual diagnosis and explicit-audio fixture correction
+
+Diagnostic [run40803673614](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40803673614)
+used head `809a94e2492a6e6ca99127738e13ec2ad1c54212`. The offline job123217440294
+again passed. Browser job123217440584 failed at `wait-trim-saved` with visible
+`AUDIO_EXCEEDS_VIDEO_TIMELINE`: selected video duration1second, preserved original
+audio0–2seconds,0 page errors. Source-relink was skipped. This is separate from
+the first unlocalized browser failure; both failure records are retained.
+
+First-cut intentionally preserves the original soundtrack while replacing video
+clip IDs. The old test then shortened only the video, and the app correctly
+refused implicit truncation of independent audio. The approved fixture correction
+explicitly changes the original soundtrack end to1second through existing UI
+controls before the unchanged video trim/caption/Undo/Redo/export flow. Actual
+saved audio is compared field-for-field except that end time; source identities,
+buses, gains and video timeline must remain unchanged by the audio edit. No
+product code, assertion, timeout or workflow setting is relaxed.
+
+An actual generated-media HTTP reproduction confirmed client rejection and
+HTTP400 for the invalid video-only edit, with byte-identical saved state. The
+explicit audio edit followed by video trim succeeded; Undo restored2-second
+video and Redo1second while retaining the selected1-second audio. The112,376-byte
+MP4 fully decoded, with original440Hz amplitude0.1248186030; input bytes were
+unchanged. Output SHA256:
+`b789d7f7a88112422f638eb65e234bbfb028b16f327e1c794dd98b658348c6f5`.
+This local HTTP/FFmpeg result is not browser PASS. The corrected exact-head hosted
+run, both browser scopes and physical acceptance remain unverified.

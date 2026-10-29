@@ -72,6 +72,22 @@ try{
   step('wait-first-cut-applied');
   await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み'&&document.getElementById('first-cut-confirm')===null);
   assert.equal(await page.locator('#camera option:checked').textContent(),'synthetic-clear.mp4');
+  // First-cut keeps the original soundtrack independent of its replacement video.
+  // Explicitly fit that soundtrack before shortening the video; never expect a silent truncation.
+  const beforeAudioTrim=JSON.parse(await readFile(join(folder,'project-data','project.aivs.json'),'utf8'));
+  const originalSourceAudio=beforeAudioTrim.project.audioClips.find(audio=>audio.bus==='source');
+  assert.ok(originalSourceAudio);assert.equal(originalSourceAudio.endSec,2);
+  assert.equal(beforeAudioTrim.project.sourceRefs.find(source=>source.assetId===originalSourceAudio.assetId).sha256,sha(await readFile(source)));
+  step('explicitly-trim-preserved-original-audio');await page.getByRole('button',{name:/元音声 · synthetic\.mp4/}).click();
+  await page.locator('#audio-endSec').fill('1');await page.locator('#audio-save').click();
+  step('wait-original-audio-trim-saved');
+  await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み'&&Number(document.getElementById('audio-endSec').value)===1);
+  const afterAudioTrim=JSON.parse(await readFile(join(folder,'project-data','project.aivs.json'),'utf8'));
+  const expectedAudio=beforeAudioTrim.project.audioClips.map(audio=>audio.id===originalSourceAudio.id?{...audio,endSec:1}:audio);
+  assert.deepEqual(afterAudioTrim.project.audioClips,expectedAudio);
+  assert.deepEqual(afterAudioTrim.project.audioBuses,beforeAudioTrim.project.audioBuses);
+  assert.deepEqual(afterAudioTrim.project.sourceRefs,beforeAudioTrim.project.sourceRefs);
+  assert.deepEqual(afterAudioTrim.project.timeline,beforeAudioTrim.project.timeline);
   step('edit-trim-and-caption');await page.locator('#duration').fill('1');await page.locator('#caption').fill('SYNTHETIC CAPTION');
   await page.getByRole('button',{name:'このカットを保存',exact:true}).click();
   step('wait-trim-saved');await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み');
@@ -84,6 +100,7 @@ try{
   step('download-saved-project');const projectDownload=page.waitForEvent('download');await page.getByRole('button',{name:'プロジェクト保存',exact:true}).click();
   const project=await projectDownload,projectPath=join(folder,'downloaded-project.json');await project.saveAs(projectPath);
   assert.equal(JSON.parse(await readFile(projectPath,'utf8')).project.timeline[0].durationSec,1);
+  assert.deepEqual(JSON.parse(await readFile(projectPath,'utf8')).project.audioClips,expectedAudio);
   step('reload-saved-project');await page.reload();await page.waitForFunction(()=>Number(document.getElementById('duration').value)===1);
   const music=join(folder,'synthetic-bgm.wav');
   step('generate-bgm');
