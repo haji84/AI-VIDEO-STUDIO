@@ -13,6 +13,7 @@ import {createSyncManager} from './sync-job.mjs';
 import {createFirstCutManager} from './first-cut-job.mjs';
 import {createOutputHistory,captureOutputReceipt,readLastOutputJob} from './output-history.mjs';
 import {createSourceRelinkManager} from './source-relink.mjs';
+import {createPreviewManager} from './preview-job.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
 const mediaExtensions=new Set(['.mp4','.mov','.mkv','.webm','.wav','.mp3','.m4a','.aac','.flac','.ogg']);
 const fail=(message,status=400)=>{const e=new Error(message);e.status=status;throw e;};
@@ -30,7 +31,7 @@ async function probe(file){
   return {durationSec:duration,hasAudio:m.streams.some(s=>s.codec_type==='audio'),hasVideo:m.streams.some(s=>s.codec_type==='video')};
 }
 
-export async function startServer({workspace,port=8765}={}){
+export async function startServer({workspace,port=8765,previewOptions={}}={}){
   if(!workspace)fail('保存フォルダを --workspace で指定してください');
   const folder=resolve(workspace),marker=join(folder,'.aivs-local-editor');
   let ancestor=folder;while(!await exists(ancestor))ancestor=dirname(ancestor);
@@ -88,8 +89,9 @@ export async function startServer({workspace,port=8765}={}){
   }catch{job={status:'FAIL',error:'前の出力を確認できません。編集内容から再作成できます'};}}
   const syncManager=await createSyncManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
   const firstCutManager=await createFirstCutManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
+  const previewManager=await createPreviewManager({...previewOptions,folder,root:ROOT,getSession:()=>session,getBindings:bindings});
   const html=(await readFile(join(HERE,'index.html'),'utf8')).replaceAll('__TOKEN__',token).replaceAll('__NONCE__',nonce);
-  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),job,sync:syncManager.state(),firstCut:firstCutManager.state()};}
+  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),job,sync:syncManager.state(),firstCut:firstCutManager.state(),preview:previewManager.state()};}
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
   const relink=await createSourceRelinkManager({folder,getSession:()=>session,getRegistry:()=>registry,probe,
     commitRegistry:async next=>{await atomicJson(registryFile,[...next.values()].map(({path,...rest})=>rest));registry=next;},
@@ -122,6 +124,7 @@ export async function startServer({workspace,port=8765}={}){
       const modules={'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
         '/output-history-panel.mjs':join(HERE,'output-history-panel.mjs'),
         '/source-relink-panel.mjs':join(HERE,'source-relink-panel.mjs'),
+        '/preview-panel.mjs':join(HERE,'preview-panel.mjs'),
         '/audio-panel.mjs':join(HERE,'audio-panel.mjs'),'/audio-edits.mjs':join(HERE,'audio-edits.mjs'),
         '/first-cut-panel.mjs':join(HERE,'first-cut-panel.mjs'),
         '/packages/project/first-cut.mjs':join(ROOT,'packages/project/first-cut.mjs'),
@@ -135,6 +138,9 @@ export async function startServer({workspace,port=8765}={}){
       if(!authorized(req.headers['x-aivs-token'])&&!authorized(url.searchParams.get('token')))fail('画面を開き直してください',403);
       if(req.method==='GET'&&path==='/api/state'){send(res,200,state());return;}
       if(req.method==='GET'&&path==='/api/job'){send(res,200,job);return;}
+      if(req.method==='GET'&&path==='/api/preview'){send(res,200,previewManager.state());return;}
+      if(req.method==='GET'&&path.startsWith('/api/preview/')){send(res,200,await previewManager.adopt(path.slice('/api/preview/'.length)));return;}
+      if(req.method==='GET'&&path.startsWith('/previews/')){const checked=await previewManager.open(path.slice('/previews/'.length));await stream(res,req,null,'video/mp4',checked);return;}
       if(req.method==='GET'&&path==='/api/first-cut'){send(res,200,firstCutManager.state());return;}
       if(req.method==='GET'&&path==='/api/sync'){send(res,200,syncManager.state());return;}
       if(req.method==='GET'&&path==='/api/qa'){
@@ -148,11 +154,13 @@ export async function startServer({workspace,port=8765}={}){
       }
       if(req.method==='GET'&&path.startsWith('/media/')){const source=registry.get(path.slice(7));if(!source)fail('素材がありません',404);await stream(res,req,source.path,source.source.mediaKind==='video'?'video/mp4':'audio/wav');return;}
       if(req.method==='GET'&&path.startsWith('/exports/')){const checked=await checkedOutput(path.slice(9));await stream(res,req,null,'video/mp4',checked);return;}
-      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
-      if(mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
+      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/preview','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
+      if(mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy()||previewManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
       try{
         if(req.headers['x-aivs-revision']!==String(session.current.revision))fail('REVISION_CONFLICT: 別の画面で更新されています',409);
-        if(path==='/api/relink/prepare'){
+        if(path==='/api/preview'){
+          send(res,202,await previewManager.start(await jsonBody(req)));return;
+        }else if(path==='/api/relink/prepare'){
           send(res,200,await relink.prepare(await jsonBody(req)));return;
         }else if(path==='/api/relink/media'){
           const label=decodeURIComponent(String(req.headers['x-file-name']??'')),length=Number(req.headers['content-length']);
@@ -235,12 +243,21 @@ export async function startServer({workspace,port=8765}={}){
   });
   await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});
   return {url:`http://127.0.0.1:${server.address().port}`,token,
-    close:async()=>{await Promise.all([jobPromise,syncManager.wait(),firstCutManager.wait()]);server.closeAllConnections();await new Promise((done,reject)=>server.close(error=>error?reject(error):done()));if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);}};
+    close:async()=>{await previewManager.close();await Promise.all([jobPromise,syncManager.wait(),firstCutManager.wait()]);server.closeAllConnections();await new Promise((done,reject)=>server.close(error=>error?reject(error):done()));if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);}};
   }catch(error){if(await readFile(lockFile,'utf8').catch(()=>null)===lockToken)await unlink(lockFile);throw error;}
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   const args=process.argv.slice(2),options={};for(let i=0;i<args.length;i+=2){if(args[i]==='--workspace')options.workspace=args[i+1];else if(args[i]==='--port')options.port=Number(args[i+1]);else throw new Error('Use --workspace <local folder> [--port 8765]');}
   const app=await startServer(options);console.log(app.url);
-  process.once('SIGINT',async()=>{await app.close();process.exit(0);});
+  let shuttingDown=false;
+  const shutdown=()=>{
+    if(shuttingDown)return;shuttingDown=true;
+    app.close().then(()=>process.exit(0)).catch(()=>{
+      // Keep the parent alive if owned-child cleanup could not be confirmed.
+      // Repeated TERM/INT must not bypass the same fail-closed shutdown attempt.
+      console.error('LOCAL_EDITOR_SHUTDOWN_UNCONFIRMED: 終了処理を確認できません。処理が停止したか確認してください。');process.exitCode=1;
+    });
+  };
+  process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);
 }

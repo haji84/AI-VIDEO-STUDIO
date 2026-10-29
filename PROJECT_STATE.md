@@ -7,13 +7,16 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Verified synthetic browser acceptance; PR24 integration pending (2026-10-29)
+## Integrated synthetic browser acceptance — PR24 (2026-10-29)
 
-[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) remains pending integration. Last-tested code head:
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) is merged at main
+`c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`, tree `2175c9bde1a35ab6629c9d8cda95a939ee709dd5`.
+[Main run40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812), attempt1, passed both jobs and repeated both browser scopes.
+The earlier first-success implementation head was:
 `a767cc976a719cf325f0e717a3eab4d32e768b9c`, tree `3b0f6429e16277256e48a6a9ee272975538a2d22`.
 [Manual run40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070), attempt1, completed **SUCCESS** for both jobs.
-PR24 records the final documentation-head checks, actual merge SHA and later
-main-run evidence; this entry does not invent those future results.
+Final documentation-head run40805679780 also passed both jobs before integration.
+PR24 records the exact final-head and actual-main evidence.
 
 On GitHub's standard Ubuntu24.04 runner, actual Chrome156.0.8078.47 with
 Playwright1.64.1/Node24.22.1 passed both `PASS_SYNTHETIC_BROWSER` scopes:
@@ -44,9 +47,33 @@ This is synthetic Linux browser evidence. Windows/macOS/iPhone/Android, native
 adapters, novice usability, authorized real11GB performance, semantic AI accuracy,
 preview/export parity and full Product DoD remain open. Product status: IN_PROGRESS.
 Detailed runtimes, hashes and failure history:
-`docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`. After PR24 integration, the next
-bounded existing gap is static-caption/trim preview-export parity (GOAL F5/F8 and
-ROADMAP P0), using generated media and matched browser/export frames.
+`docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`. Its historical pre-integration
+wording is superseded by the actual-main record above. Static-caption/trim preview
+parity is the next bounded existing requirement, implemented as the candidate below.
+
+## Saved-cut visual preview — candidate-freeze record (2026-10-29)
+
+The raw-source preview does not establish trim/caption export parity. A separate
+explicit saved-cut preview now uses the checked saved-project bundle and existing
+compositor with the exact export profile. It renders a visible window of at most
+7 output seconds, preserves source clock offsets/rate, and keeps the session,
+Undo/Redo, audio records, completed outputs and history unchanged.
+
+The new Linux-only manager has one owned worker group, a 180-second absolute
+lifetime through media validation, a bounded 2-second cleanup attempt, and four
+held-or-opening media descriptors. Changed project/source/output evidence or stale
+UI responses are refused. Source/output verification and streaming share the same
+opened output descriptor. Ambiguous cleanup remains fail-closed; uninterruptible
+OS/filesystem operations and Windows/macOS descendant cleanup are not claimed proven.
+
+Actual local generated-media worker and API evidence is recorded in
+`docs/validation/PREVIEW_PARITY_2026-10-29.md`. Preview/export frame comparisons
+are bounded by measured one-profile-frame timing and compression tolerances,
+not arbitrary subframe pixel identity. At candidate freeze, new actual-browser acceptance
+is NOT_RUN in this workspace (no Chrome executable), with independent review and hosted
+execution pending. The carrying implementation PR and its receipts record subsequent
+exact-head/main acceptance and integration; this dated record does not predict them.
+Physical acceptance and the overall Product DoD remain open.
 
 ## Integrated implementation: explicit source relinking (2026-10-29 JST)
 
