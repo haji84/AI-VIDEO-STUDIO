@@ -2,9 +2,11 @@
 
 ## Status and source basis
 
-**Both actual browser scopes: NOT_RUN. Product DoD: NOT MET.** This document
-records the first reviewable verification candidate and local preliminary checks.
-No hosted browser runtime, output hash, run result or device PASS is invented.
+**Latest execution: existing-editor FAIL; source-relink NOT_RUN (skipped). Product
+DoD: NOT MET.** PR24 run40802909769 passed the complete offline job and failed the
+existing-editor browser flow at an unidentified wait. The diagnostic amendment
+below is NOT_RUN. Earlier sections retain the initial candidate history; no
+output hash, successful browser result or device PASS is inferred.
 
 Base main is PR #23 `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`, source tree
 `77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`. Source relinking is integrated there;
@@ -170,3 +172,29 @@ the replacement manifest and the small amendment before publishing one candidate
 PR. The amended hosted workflow and both browser scopes are still **NOT_RUN**;
 local audio success is not a claim that GitHub prerequisite installation or the
 full workflow has succeeded. Preserve the failed baseline as evidence.
+
+## First actual PR24 browser run and diagnostic amendment
+
+[Run40802909769](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40802909769)
+used exact head `bd730e16a776a91de2b208f73aa21547eb08f16a`.
+`offline-prototype-smoke` job123214955544 completed **SUCCESS**, including every
+original test step. The FFmpeg prerequisite repair therefore passed hosted CI.
+Browser job123214955448 passed dependency installation and preflight with Chrome
+156.0.8078.47,Node24.22.1,Playwright1.64.1,Python3.12.14 and FFmpeg/FFprobe6.1.1.
+The existing-editor step started01:52:02 UTC and failed01:52:36 with
+`page.waitForFunction: Timeout 30000ms exceeded.` Source-relink was **SKIPPED**,
+not attempted or passed. Cleanup succeeded.
+
+The old catch output omitted the source line and operation, so that timeout does
+not identify its cause. Static review found no proven incorrect wait condition.
+The approved diagnostic-only amendment adds named operation markers, bounded
+redacted error stack/source location, the first10 bounded page errors and selected
+UI values/media readiness flags on failure. The failure snapshot has a1-second
+upper wait; it omits requests, URLs, full page HTML and environment data, and
+redacts the local server token. No product code, original assertions, action order,
+existing Playwright timeout or workflow setting changes.
+
+Both script syntax and the missing-browser failure path are checked locally.
+The next exact-head hosted run must establish which condition failed before any
+product repair or timeout change is considered. This amendment does not claim
+the original browser flow passed, and its hosted result is **NOT_RUN**.
