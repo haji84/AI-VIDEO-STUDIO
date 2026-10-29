@@ -1,13 +1,14 @@
-# Actual browser acceptance candidate — 2026-10-29 JST
+# Actual synthetic browser acceptance — 2026-10-29 UTC/JST
 
 ## Status and source basis
 
-**Latest diagnosis: existing-editor FAIL at video trim; source-relink NOT_RUN
-(skipped). Product DoD: NOT MET.** PR24 run40803673614 identified the preserved
-2-second soundtrack that the old test incorrectly expected to truncate implicitly.
-Both hosted offline jobs passed. The explicit-audio-edit fixture correction below
-is NOT_RUN in a browser. Earlier sections retain the initial candidate history;
-no successful browser result or device PASS is inferred.
+**Both scopes: PASS_SYNTHETIC_BROWSER. Product DoD: NOT MET.**
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) remains pending integration. Last-tested implementation head
+`a767cc976a719cf325f0e717a3eab4d32e768b9c`, tree `3b0f6429e16277256e48a6a9ee272975538a2d22`, passed
+[run40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070), attempt1, on2026-10-29 UTC.
+Final documentation-head CI, actual integration SHA and main-run verification are
+recorded in PR24 when observed; none is inferred from this earlier code-head run.
+The older failure and NOT_RUN checkpoints below remain historical evidence.
 
 Base main is PR #23 `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`, source tree
 `77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`. Source relinking is integrated there;
@@ -16,18 +17,88 @@ replay are separate existing evidence. The older baseline workflow has no actual
 browser step, so even its successful completion cannot establish this acceptance.
 
 The approved nine-file design and implementation plan are in
-`docs/work/BROWSER_ACCEPTANCE_DESIGN_20261029.md`. Root reviews and publishes one
-candidate PR, dispatches its exact branch through the existing manual GitHub UI,
-and records the terminal run/head evidence before integration. This worker makes
-no remote mutations or dispatches. No production module, schema, engine or product
-dependency manifest is changed by the initial verification candidate.
+`docs/work/BROWSER_ACCEPTANCE_DESIGN_20261029.md`. The same PR24 now contains the
+reviewed workflow, diagnostic and explicit-audio fixture corrections. The final
+amendment updates existing documentation only. No product module, schema, engine,
+runtime dependency manifest or permission policy is changed by this verification unit.
+
+## Actual successful hosted execution
+
+Both jobs completed **SUCCESS** on the exact head above: browser123220852085 and
+offline123220852236. Every step in both terminal job records succeeded, including
+temporary-file cleanup. Browser runtime: standard Ubuntu24.04 image20261026.354.1,
+Chrome156.0.8078.47,Playwright1.64.1,Node24.22.1,Python3.12.14,
+FFmpeg/FFprobe6.1.1-3ubuntu5,Pillow13.0.0,fonttools4.61.1,NumPy2.3.5.
+
+| Actual browser scope | Output bytes | Playback | Full decode | MP4 SHA256 |
+|---|---:|---|---|---|
+| Existing editor |112392 |Time advanced;960px width |PASS |`ef867951a413ebca67a511c21f05cc048bd810a3516a7ac6fa1bcd0a95df572c` |
+| Two-workspace relink |42074 |Time advanced;960px width |PASS |`3884487a5752a6a3c0c77a083767efb4257cf2eef1ece2baf2019e84424f4288` |
+
+Both downloaded MP4s match their own QA record hashes. The existing-editor flow
+explicitly preserves the selected original source/bus/gain while editing its end
+before video trim, then retains that audio through Undo/Redo and saved JSON.
+The relink flow recovered3 source IDs from2 physical files, dual MP4 roles,
+current/Undo/Redo and historical BGM; wrong same-name content preserved the prior
+edit, restart retained partial copies but still required explicit Open, and manual
+gain survived another restart. The exported880Hz BGM amplitude was
+`0.08796487420197949`. Original media and workspace A were unchanged.
+These are actual generated-media browser actions, not DOM-double inference.
+
+### Actual input and saved-evidence hashes
+
+| Scope | Artifact | SHA256 |
+|---|---|---|
+| Editor | videoSha256 |`72c3035f71fbd42928646b43727055b40e21548be45bb41e6ee783529709f84a` |
+| Editor | clearVideoSha256 |`be1d5959033c26b659de637ebe56c07a91006e62bab5784da9c8bd6ad108b45c` |
+| Editor | bgmSha256 |`04cc48bd406484c1e294e955a27a2e98cfaa4ebb9da93515fdede613e1bf0229` |
+| Editor | savedProjectSha256 |`54b1ce7ba635fef19e48b0be37e14a48059b5d179311a00ce245fb728786e1af` |
+| Editor | qaSha256 |`d8772da864196565e8aa097086e7226c9605eb6cdccc5eefd959cbc78af56720` |
+| Relink | videoSha256 |`6d95a5452de77ba83fd42b387f615e214af70ebbe0de87b12129ae731abca26f` |
+| Relink | historicalBgmSha256 |`deb08de94c3711c321523c48f98f535bd6d44ba825bccee5e26f1ada2ed30e9f` |
+| Relink | wrongSameNameBgmSha256 |`81349aa4f33e24937778dfdc4e178b3105bf692d74e71aca91a6234f883d4c37` |
+| Relink | savedProjectSha256 |`3af5224f0fedfdd04a7ac8e533d10164553c35d9dad56831d7678b7a2f5a8a6a` |
+| Relink | previousWorkspaceSha256 |`34f53664b9a45b4cf9fc9bb4fa501caab5e23828bbc18fc7c92b231ea701afa0` |
+| Relink | recoveredProjectSha256 |`f91bda77247ef7b616627e2dff6012be978a80724783409b451547437f018e73` |
+| Relink | qaSha256 |`5f874d73aea78df61bbdabae69c969013a69448a8c543cab18ac9fbf90764c85` |
+
+### Existing offline regression job
+
+Distinct executed command groups were checked against the workflow and terminal
+log. Node ran167 cases in6 invocations; Python ran60 cases in8 invocations.
+All227 test-case executions passed,0 skipped/failures/errors. The two overlapping
+browser flows and earlier108-case local gate are not added to this total.
+
+| Runtime | Distinct command target | Passed |
+|---|---|---:|
+| Node |`cloud/tests/*.test.mjs` |21 |
+| Node |`packages/edit-planner/auto-edit.test.mjs` |11 |
+| Node |`packages/project/*.test.mjs` |30 |
+| Node |`apps/local-editor/*.test.mjs` |81 |
+| Node |`prototypes/device-lab/audio-mix.test.mjs` |14 |
+| Node |`prototypes/device-lab/audio-compat.test.mjs` |10 |
+| Python |`engine.test_manifest engine.test_caption_raster cloud.processor.test_r2_run` |16 |
+| Python |`prototypes/audio/test_mix.py` |3 |
+| Python |`engine.test_local_signals engine.test_autoplan_pipeline` |7 |
+| Python |`engine.test_project_pipeline` |2 |
+| Python |`engine.test_saved_project_audio` |6 |
+| Python |`engine.test_output_qa` |17 |
+| Python |`engine.test_saved_sync` |5 |
+| Python |`engine.test_saved_first_cut` |4 |
+
+Windows/macOS/iPhone/Android and native pipelines, novice usability, authorized
+real11GB performance, intelligibility, semantic AI and full Product DoD remain
+open. The next existing safe requirement after integration is static-caption and
+trim preview/export parity (ROADMAP P0,GOAL F5/F8): compare actual preview/export
+frames at matched project times using generated media before proposing a repair.
+No next-unit implementation is part of this PR.
 
 ## What the two scripts exercise
 
 | Script | Actual actions and independent checks | Result |
 |---|---|---|
-| `apps/local-editor/browser-acceptance.mjs` | Existing UI import, manual sync, first-cut preview/confirm/apply, caption/trim, Undo/Redo, JSON download/reload, BGM timing/fades, render, QA download, Chrome MP4 playback, MP4 download and whole-file FFmpeg decode. All previous assertions retained; hashes/runtime and QA-to-output identity added. | NOT_RUN |
-| `apps/local-editor/browser-relink-acceptance.mjs` | Real UI creates a session in A, downloads JSON, selects it in empty B, recovers three source IDs from two physical files, rejects wrong same-name bytes, restarts with partial copies, explicitly Opens, restores history-only BGM through Redo, edits gain, reloads/restarts, renders/downloads/plays/decodes and checks 880Hz BGM. Original media and all A project/registry/assets stay byte-identical. | NOT_RUN |
+| `apps/local-editor/browser-acceptance.mjs` | Existing UI import, manual sync, first-cut preview/confirm/apply, caption/trim, Undo/Redo, JSON download/reload, BGM timing/fades, render, QA download, Chrome MP4 playback, MP4 download and whole-file FFmpeg decode. All previous assertions retained; hashes/runtime and QA-to-output identity added. | PASS_SYNTHETIC_BROWSER on run40804733070 |
+| `apps/local-editor/browser-relink-acceptance.mjs` | Real UI creates a session in A, downloads JSON, selects it in empty B, recovers three source IDs from two physical files, rejects wrong same-name bytes, restarts with partial copies, explicitly Opens, restores history-only BGM through Redo, edits gain, reloads/restarts, renders/downloads/plays/decodes and checks 880Hz BGM. Original media and all A project/registry/assets stay byte-identical. | PASS_SYNTHETIC_BROWSER on run40804733070 |
 
 The new flow uses one audiovisual MP4 with a 440Hz source tone twice: first as
 video, then as BGM, preserving separate IDs/roles. A generated 880Hz `music.wav`
@@ -87,7 +158,7 @@ progression and complete decode. The relink result additionally records recovery
 history, same-MP4 roles and historical BGM evidence. Physical acceptance stays
 NOT_RUN even after a Linux synthetic browser PASS.
 
-## Local preliminary checks, observed on this candidate
+## Historical local preliminary checks before hosted execution
 
 Local runtime: Node24.22.1, Python3.12.14, Pillow13.0.0, fonttools4.61.1,
 NumPy2.3.5, FFmpeg/FFprobe6.1.1-3ubuntu5, verified Noto CJK test font.
@@ -100,7 +171,7 @@ NumPy2.3.5, FFmpeg/FFprobe6.1.1-3ubuntu5, verified Noto CJK test font.
 | Existing audio suite with actual local FFmpeg/FFprobe |3/3 PASS,0 skips/errors/failures;1.419 seconds | Local generated-media regression; hosted dependency installation not yet executed |
 | Both scripts with a deliberately unavailable browser path | `BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE`, exit2 | Fail-closed behavior; no browser/server started |
 | Existing affected Node gate below |108 tests,108 pass,0 fail,0 skipped;24.780 seconds | Actual HTTP/generated media/files/FFmpeg and existing DOM doubles; no actual browser |
-| Hosted candidate run | NOT_RUN | To be recorded after root's exact-candidate dispatch |
+| Successful code-head hosted run |40804733070 SUCCESS |Exact `a767cc976a719cf325f0e717a3eab4d32e768b9c`; final documentation-head/main checks recorded separately in PR24 |
 | Windows/macOS/iPhone/Android, novice and large-media acceptance | NOT_RUN | Separate device/product gates |
 
 ```sh
@@ -125,14 +196,13 @@ race test. Hosted Linux Chrome does not prove native platforms, novice usability
 - Official pinned release: https://github.com/microsoft/playwright/releases/tag/v1.64.1
 - Integrated source-relink evidence: `docs/validation/SOURCE_RELINK_F1_2026-10-29.md`
 
-## Next evidence gate
+## Final integration gate
 
-Freeze and independently review this candidate, publish one PR, then manually run
-that exact candidate branch. Record actual run URL/head, terminal job/step results,
-observed runtime and each script's structured evidence. A concrete failure must be
-investigated on the same PR without weakening acceptance. Any additional production
-file requires root's scope review before modification. Until those logs exist,
-the two browser results above stay NOT_RUN.
+Root independently reviews the final documentation-only amendment on the same
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24), verifies its exact-head run, integrates safely and manually verifies
+actual main. PR24 carries the resulting SHA/tree/run evidence. These documents
+retain the last-tested implementation head and do not require an endless sequence
+of commits to name their own later hashes. Product/device gates remain open.
 
 ## Actual original-main failure and bounded repair
 
@@ -170,9 +240,9 @@ The initial candidate manifest/patch/frozen files/review were preserved. Its
 manifest SHA256 was `0b96888c84fa0330cf45b869f5cbd67b110f7df98a4f483307c9d8479d05677a`
 and tree `b6fd208b2381b28d6cd656b144e7abe062e4f4d3`. Root must independently review
 the replacement manifest and the small amendment before publishing one candidate
-PR. The amended hosted workflow and both browser scopes are still **NOT_RUN**;
-local audio success is not a claim that GitHub prerequisite installation or the
-full workflow has succeeded. Preserve the failed baseline as evidence.
+PR. At that checkpoint the amended hosted workflow and both browser scopes were
+**NOT_RUN**; local audio success did not establish hosted success. Run40804733070
+above supplies the later actual hosted result. Preserve the failed baseline.
 
 ## First actual PR24 browser run and diagnostic amendment
 
@@ -198,7 +268,8 @@ existing Playwright timeout or workflow setting changes.
 Both script syntax and the missing-browser failure path are checked locally.
 The next exact-head hosted run must establish which condition failed before any
 product repair or timeout change is considered. This amendment does not claim
-the original browser flow passed, and its hosted result is **NOT_RUN**.
+the original browser flow passed; its then-NOT_RUN diagnostic execution is
+recorded in the following section, with later success recorded above.
 
 ## Actual diagnosis and explicit-audio fixture correction
 
@@ -225,5 +296,6 @@ video and Redo1second while retaining the selected1-second audio. The112,376-byt
 MP4 fully decoded, with original440Hz amplitude0.1248186030; input bytes were
 unchanged. Output SHA256:
 `b789d7f7a88112422f638eb65e234bbfb028b16f327e1c794dd98b658348c6f5`.
-This local HTTP/FFmpeg result is not browser PASS. The corrected exact-head hosted
-run, both browser scopes and physical acceptance remain unverified.
+This local HTTP/FFmpeg result did not establish browser PASS. The later corrected
+exact-head run40804733070 above supplies both actual browser successes; physical
+acceptance remains unverified.

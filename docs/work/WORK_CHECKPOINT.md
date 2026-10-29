@@ -1,48 +1,45 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
-Updated: 2026-10-29 JST (2026-10-28 UTC)
-Status: IN_PROGRESS. Current slice: actual browser acceptance verification candidate; both browser scopes NOT_RUN pending reviewed manual CI execution.
-Product DoD NOT MET. Actual GUI/native/physical acceptance NOT_RUN/BLOCKED.
+Updated: 2026-10-29 JST / 2026-10-29 UTC
+Status: IN_PROGRESS. Both bounded Ubuntu Chrome browser scopes PASS_SYNTHETIC_BROWSER; PR24 final documentation/integration pending.
+Product DoD NOT MET. Physical/native/novice acceptance remains NOT_RUN/BLOCKED.
 previousIntegratedMainSHA (source-relink PR #23): `9bf5c9cf993df8ea4b93ee71b216dfb0f0b18209`
 previousIntegratedSourceTree: `77f8d8b5d04c9cddd9bbe5ba3a3b0d570b02354f`
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
-## Current browser acceptance candidate — 2026-10-29 JST
+## Verified browser slice; same PR24 pending integration — 2026-10-29 UTC/JST
 
-The exact nine-file design is approved under the existing development mandate.
-Root has observed the signed-in manual workflow control and owns one candidate
-PR, independent review, exact-branch dispatch and integration. The worker prepares
-local files only. No trigger workaround, new service, secret, permission increase,
-public product deployment or private media is included.
+Last-tested implementation head `a767cc976a719cf325f0e717a3eab4d32e768b9c`, tree
+`3b0f6429e16277256e48a6a9ee272975538a2d22`. [Run40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070), attempt1, is **SUCCESS**:
+browser job123220852085 passed both actual UI scripts; offline job123220852236
+passed all existing steps (167 Node +60 Python test-case executions,0 skips/errors).
+Do not add overlapping browser/API runs to a single feature count.
 
-All original workflow test steps, triggers, permissions and timeouts are retained.
-The initial candidate's unchanged prefix is superseded only by the approved
-FFmpeg prerequisite installation and runtime checks described below. A new
-standard Ubuntu job is manual-only, contents-read-only and bounded to 12 minutes.
-It uses installed Google Chrome, Playwright1.64.1, Node24.22.1/Python3.12.14 and
-the documented test-library pins; actual versions are logged. Both scripts have
-a 300-second outer timeout and remove only test-owned temporary synthetic media.
+Actual browser runtime: standard Ubuntu24.04 image20261026.354.1,
+Chrome156.0.8078.47,Playwright1.64.1,Node24.22.1,Python3.12.14,
+FFmpeg/FFprobe6.1.1-3ubuntu5. Both outputs advanced in Chrome at960px width,
+matched their QA hashes and passed whole-file decode:
 
-Existing editor assertions remain. New real-UI coverage builds a saved session
-with a dual-role MP4 and historical-only WAV, moves to another workspace, rejects
-wrong same-name bytes, reuses partial verified copies across restart and requires
-explicit Open. History, gain edits, reload/restart, QA/output identity, real Chrome
-playback, full decode and historical BGM frequency are asserted.
+- Existing editor112,392bytes: `ef867951a413ebca67a511c21f05cc048bd810a3516a7ac6fa1bcd0a95df572c`.
+- Two-workspace relink42,074bytes: `3884487a5752a6a3c0c77a083767efb4257cf2eef1ece2baf2019e84424f4288`.
 
-Local preliminary checks: Node syntax PASS for both scripts, parsed YAML/prefix
-invariants PASS, controlled missing-browser BLOCKED/exit2 for both, unchanged
-affected editor/project/local-store gate 108/108 PASS, zero failures/skips,
-24.780 seconds. These are not browser PASS. Hosted candidate/browser results and
-all physical-device/novice acceptance are NOT_RUN.
+The relink flow preserves source IDs/current/Undo/Redo, requires explicit Open,
+rejects wrong same-name bytes, reuses partial copies after restart, retains manual
+gain and restored880Hz BGM (amplitude0.0879648742), and preserves originals/workspace A.
+The editor flow explicitly trims preserved original audio before shortening video;
+actual saved audio differs only at that chosen end time, including after Undo/Redo.
+
+Keep the failure history distinct:40788585989 lacked FFmpeg;40802909769 failed an
+unlocalized browser wait;40803673614 showed AUDIO_EXCEEDS_VIDEO_TIMELINE. The
+original2-second soundtrack was correctly protected. The fixture now explicitly
+edits it through the UI before the1-second video trim. No product source or original
+assertion/timeout was weakened. Earlier files and diagnostic logs remain evidence.
+
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) is still pending integration. Root independently reviews this final
+bounded documentation amendment, checks its exact head, integrates the same PR,
+and verifies actual main. PR24 is the record for the final SHA and main CI; no
+future result or self-referential documentation hash is invented here.
 Evidence: `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`.
-Design/plan: `docs/work/BROWSER_ACCEPTANCE_DESIGN_20261029.md`.
-
-Actual original-main run40788585989/job123167857722 failed: FFmpeg was absent,
-the version pipeline did not stop, and the audio suite ran3 cases with2 missing-
-FFmpeg errors. Root approved explicit FFmpeg installation/checks in both jobs.
-No product/test source or original test commands change. The unchanged audio
-suite passes3/3 locally,0 skips/errors,1.419 seconds with actual FFmpeg/FFprobe.
-The initial candidate and independent review remain preserved; root independently
-reviews the small amendment before publication. Amended hosted CI remains NOT_RUN.
+Physical/native devices, novice usability, real11GB media and Product DoD remain open.
 
 ## Integrated source-relinking slice — 2026-10-29 JST
 
@@ -204,18 +201,17 @@ observed; no policies changed. Actions manual-only NOT_RUN, not a CI PASS.
 
 ## Continuation after this bounded slice
 
-1. Independently review the nine-file browser candidate against PR #23 main and
-   freeze its exact files/tree. Root publishes one PR and dispatches that branch
-   through the observed existing GitHub manual workflow control.
-2. Read actual terminal logs for both browser scopes. Record source head, runtime,
-   hashes, exit status and any failure. Repair a reproduced failure on the same
-   PR; product-code scope expansion needs root review before editing new files.
-3. Keep NOT_RUN until the corresponding browser script passes. Existing API/DOM
-   results, a baseline workflow without browser steps or the presence of the new
-   test files cannot clear this gate. Do not repeat the blocked local download.
-4. Target-device and novice replay remain separate from Linux Chrome. Retain the
-   same source IDs, Undo/Redo and originals. Speech intelligibility,
-   limiter guarantees, native adapters and the full physical-device flows remain open.
+1. Finish [PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) with reviewed documentation, actual final-head CI and safe
+   merge; verify the merged main through the existing manual workflow. Record the
+   actual main SHA/tree/run in PR24 rather than inventing it in this earlier file.
+2. After integration, investigate the existing P0/GOAL F5/F8 static-caption and
+   trim preview/export parity gap. Compare actual browser preview and exported
+   frames at matched project times using generated media, then propose the smallest
+   correction supported by a reproduced discrepancy. No next-unit code exists yet.
+3. Preserve these actual synthetic successes and both earlier browser failures.
+   Physical iPhone/Android/Windows/macOS, novice tasks, native adapters and real11GB
+   performance remain separate acceptance. Continue safe portable work while those
+   external observations are unavailable.
 
 ## Browser/device blocker and replay
 
@@ -231,8 +227,9 @@ using Python >=3.11 and Pillow 13, and AIVS_CAPTION_FONT to a verified Japanese 
 both `node apps/local-editor/browser-acceptance.mjs` and
 `node apps/local-editor/browser-relink-acceptance.mjs`. The candidate's manual CI
 job uses the runner's installed Chrome instead of downloading another browser.
-Both scripts use temporary synthetic media; their actual hosted execution is
-NOT_RUN until recorded in the browser validation document.
+Both scripts use temporary synthetic media; their actual hosted execution now
+passes in run40804733070. The local missing executable does not block that established
+hosted route. Physical-device and novice acceptance remain separate.
 API/DOM-stub/FFmpeg results are not browser/device PASS.
 PC startup/recovery and exact owned-media checks: apps/local-editor/README.md;
 S1/P1/F8 evidence documents have acceptance steps. Historical phone replay still
