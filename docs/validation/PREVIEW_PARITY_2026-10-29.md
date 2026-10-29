@@ -1,6 +1,6 @@
 # Saved-cut visual preview — synthetic evidence, 2026-10-29
 
-Status **at candidate freeze**: **TESTED_SYNTHETIC locally; new browser acceptance BLOCKED/NOT_RUN; integration pending**.
+Status **at initial candidate freeze**: **TESTED_SYNTHETIC locally; new browser acceptance BLOCKED/NOT_RUN; integration pending**.
 Base main: `c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`, tree
 `2175c9bde1a35ab6629c9d8cda95a939ee709dd5` (194 source entries).
 The new candidate's exact commit/tree and hosted/main results belong to its implementation PR;
@@ -41,7 +41,7 @@ guarded CLI close path; unconfirmed cleanup keeps the parent alive. Forced SIGKI
 power loss and Windows/macOS descendant cleanup are not proven. Leftover preview data after
 abnormal termination blocks new preview work until safe recovery; originals/exports are not removed.
 
-## Actual local verification
+## Actual local verification at initial candidate freeze
 
 Runtime: Linux, Node24.22.1, Python3.12.14, FFmpeg/FFprobe6.1.1-3ubuntu5,
 Pillow13.0.0, fontTools4.61.1, NumPy2.3.5. A local installed Noto CJK font was used;
@@ -137,3 +137,46 @@ at300 seconds. No artifact upload, public editor deployment, private footage or 
 Independent review and actual hosted exact-head acceptance must precede integration. Physical
 native devices, separate-PC portability, novice use, real11GB media, full-timeline audio/effect
 parity and the overall Product DoD remain open.
+
+## PR25 review and first hosted failure — amendment freeze, 2026-10-29 UTC
+
+The initial candidate was published as PR25 head
+`08a751ba2d641d4d58f18f15678bae0f2d519e06`, tree
+`b3a2062abaaffd5bc1c1c9481402c36d400d7fab`. Preserve that candidate and the earlier
+local results above as historical evidence.
+
+Independent review reproduced a real ready-result expiry race. After `ready` was
+cleared, delayed close of an actual rendered-output descriptor left `busy()` false.
+A second preview was admitted; the old cleanup failure could then overwrite its
+status. The manager now retains disposal ownership in its busy/start/close paths
+until successful cleanup, and retains a fail-closed state after cleanup ambiguity.
+Expiry failure callbacks only update the matching current job. Concurrent close
+calls join the same bounded attempt.
+
+Three real-descriptor regression cases first failed with the original manager,
+then passed after correction: successful delayed cleanup followed by a new render;
+cleanup deadline failure that still blocks new work after late close settlement;
+and close during retirement, including repeated close calls. Focused GREEN:3/3,
+0 skips,18.762s. The complete editor suite then passed **94/94**,0 failures/cancel/skips,
+29.825s. Its new3 cases are not added again to the full-suite count. Python worker,
+Python tests, shared renderer and the workflow are unchanged from the initial
+candidate; their earlier6+17 results were not rerun or relabelled as new executions.
+
+[Actual hosted run40810377968](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40810377968)
+passed offline CI and the two existing browser flows. The new saved-cut flow
+**FAILED**, browser job123239010400, at `staleRace` line144 / stage
+`delayed-adoption-selection-and-revision`. It had reached this stage after the
+preview playback/replay, completed export and frame-comparison assertions. The
+failure is not a completed-flow PASS. Safe UI diagnostics showed selection changed,
+`video.hidden=true`, `paused=true`, cleared source and readyState0, but Playwright
+`isHidden()` returned false. The page's existing author `video{display:block}` rule
+was overriding the hidden attribute's presentation.
+
+The correction adds only `#saved-cut-preview [hidden]{display:none}` to the new
+panel's scope, also covering its hidden clear button. Removing that one rule yields
+the identical initial-candidate HTML. Actual Playwright visibility assertions,
+all browser scripts, their timeouts and all previous workflow steps remain unchanged.
+Static scope and syntax checks passed; **the corrected browser flow is NOT_RUN at
+this amendment freeze**, pending actual hosted Chrome. PR25 and its receipts carry
+subsequent exact-head/main results. The180-second lifetime,2-second cleanup attempt,
+Linux/visual-only boundary and open physical/novice/11GB/Product DoD gates remain.

@@ -70,7 +70,7 @@ async function stopGroup(record,until=Date.now()+CLEANUP_MS){
 
 export async function createPreviewManager({folder,root,getSession,getBindings,python=process.env.AIVS_PYTHON||'python3',budgetMs=LIMIT_MS}={}){
   if(!Number.isInteger(budgetMs)||budgetMs<100||budgetMs>LIMIT_MS)fail('PREVIEW_BUDGET_INVALID');
-  const directory=join(resolve(folder),'previews'),owned=new Set();let active,ready,closed=false,cleanupFailed=false,checks=0,queue=Promise.resolve();
+  const directory=join(resolve(folder),'previews'),owned=new Set(),retiring=new Set();let active,ready,closing,closed=false,cleanupFailed=false,checks=0,queue=Promise.resolve();
   let setupError;const supported=process.platform==='linux';
   if(supported)try{
     await mkdir(directory,{recursive:true,mode:0o700});if((await lstat(directory)).isSymbolicLink()||await realpath(directory)!==directory)fail('PREVIEW_DIRECTORY_UNSAFE');
@@ -94,6 +94,9 @@ export async function createPreviewManager({folder,root,getSession,getBindings,p
   }
   async function dispose(record){
     if(record.disposal)return record.disposal;
+    // Clearing ready does not release ownership of descriptors or files. Keep
+    // this slot through cleanup, and retain it on ambiguous/failed cleanup.
+    retiring.add(record);
     const until=Date.now()+CLEANUP_MS;clearTimeout(record.timer);
     record.disposal=cleanupDeadline((async()=>{
       // A cleanup attempt is bounded; an uninterruptible kernel/filesystem
@@ -104,7 +107,7 @@ export async function createPreviewManager({folder,root,getSession,getBindings,p
       await Promise.allSettled([...record.pending]);
       await Promise.all([...record.handles].map(closeHandle));record.handles.clear();
       if(owned.has(record.dir)){await rm(record.dir,{recursive:true,force:true});owned.delete(record.dir);}
-    })(),until);return record.disposal;
+    })(),until).then(()=>{retiring.delete(record);},error=>{cleanupFailed=true;throw error;});return record.disposal;
   }
   function abort(record,code){if(!record.abort.signal.aborted){const error=new Error(code);error.status=409;record.abort.abort(error);}}
   async function expire(record){
@@ -113,7 +116,7 @@ export async function createPreviewManager({folder,root,getSession,getBindings,p
       // Supervise cleanup independently of run(): even a stalled close/read
       // must not leave the status RUNNING without a bounded failure response.
       try{await cleanupDeadline(Promise.all([stopGroup(record),record.work]),Date.now()+CLEANUP_MS);}
-      catch{cleanupFailed=true;job={id:record.id,status:'FAIL',error:'PREVIEW_CLEANUP_UNCONFIRMED'};}
+      catch{cleanupFailed=true;if(job.id===record.id)job={id:record.id,status:'FAIL',error:'PREVIEW_CLEANUP_UNCONFIRMED'};}
       return;
     }
     if(ready===record){ready=undefined;job={id:record.id,status:'FAIL',error:'PREVIEW_EXPIRED: 確認動画の有効期限が切れました。もう一度確認してください。'};await dispose(record);}
@@ -176,28 +179,29 @@ export async function createPreviewManager({folder,root,getSession,getBindings,p
       return {...checked,report:record.report,expiresAt:record.deadline};
     }finally{checks--;record.openings--;release();}
   }
-  return {state,busy:()=>Boolean(active)||checks>0||cleanupFailed,
+  return {state,busy:()=>Boolean(active)||retiring.size>0||checks>0||cleanupFailed,
     async start(request){
       const began=Date.now();
       if(closed)fail('PREVIEW_CLOSED',409);if(!supported)fail('PREVIEW_PLATFORM_UNVERIFIED: この確認機能は現在Linuxで検証しています。');if(setupError)fail(setupError);
-      if(active||checks||cleanupFailed)fail('PREVIEW_BUSY',409);
+      if(active||retiring.size||checks||cleanupFailed)fail('PREVIEW_BUSY',409);
       const project=validateRequest(request),session=getSession(),serialized=session.serialize(),id=randomUUID().replaceAll('-','');
       // Snapshot remains independent even if a direct embedding later edits its session.
       const record={id,dir:join(directory,id),request:structuredClone(request),session:EditSession.open(serialized),sessionHash:hash(serialized),project:structuredClone(project),bindings:structuredClone(getBindings()),sourceStats:new Map(),handles:new Set(),pending:new Set(),openings:0,deadline:began+budgetMs,abort:new AbortController()};
       const old=ready;ready=undefined;active=record;job={id,status:'RUNNING'};
-      record.timer=setTimeout(()=>{expire(record).catch(()=>{cleanupFailed=true;job={id,status:'FAIL',error:'PREVIEW_CLEANUP_FAILED'};});},Math.max(0,record.deadline-Date.now()));record.timer.unref();
+      record.timer=setTimeout(()=>{expire(record).catch(()=>{cleanupFailed=true;if(job.id===id)job={id,status:'FAIL',error:'PREVIEW_CLEANUP_FAILED'};});},Math.max(0,record.deadline-Date.now()));record.timer.unref();
       record.work=run(record,old);return state();
     },
     async adopt(id){const checked=await openResult(id);try{return {id,status:'PASS',report:structuredClone(checked.report),download:'/previews/'+id,expiresAt:checked.expiresAt};}finally{await checked.handle.close();}},
     open:openResult,
     async close(){
-      if(closed){if(cleanupFailed)fail('PREVIEW_CLEANUP_UNCONFIRMED',409);return;}closed=true;
+      if(closing)return closing;closed=true;
       const until=Date.now()+CLEANUP_MS;
-      try{await cleanupDeadline((async()=>{
+      closing=(async()=>{try{await cleanupDeadline((async()=>{
         if(active){const current=active;abort(current,'PREVIEW_CLOSED');await current.work;}
         if(ready){const current=ready;ready=undefined;abort(current,'PREVIEW_CLOSED');await dispose(current);}
+        await Promise.all([...retiring].map(record=>record.disposal));
         await queue;if(cleanupFailed)fail('PREVIEW_CLEANUP_UNCONFIRMED',409);
         for(const dir of [...owned]){await rm(dir,{recursive:true,force:true});owned.delete(dir);}
-      })(),until);}catch{cleanupFailed=true;job={status:'FAIL',error:'PREVIEW_CLEANUP_UNCONFIRMED'};fail('PREVIEW_CLEANUP_UNCONFIRMED',409);}
+      })(),until);}catch{cleanupFailed=true;job={...job,status:'FAIL',error:'PREVIEW_CLEANUP_UNCONFIRMED'};fail('PREVIEW_CLEANUP_UNCONFIRMED',409);}})();return closing;
     }};
 }

@@ -129,6 +129,72 @@ test('held preview descriptors are capped and releasing one admits a new media r
   }finally{for(const handle of handles)await handle.close().catch(()=>{});if(manager)await manager.close();await f.close();}
 });
 
+async function expiringPreview(f){
+  const {createPreviewManager}=await import('./preview-job.mjs');
+  const session=EditSession.open(await readFile(join(f.folder,'project.aivs.json'),'utf8')),bindings=JSON.parse(await readFile(join(f.folder,'bindings.json')));
+  const folder=join(f.dir,'expiry-manager'),manager=await createPreviewManager({folder,root:resolve(import.meta.dirname,'../..'),getSession:()=>session,getBindings:()=>bindings,budgetMs:5000});
+  const request={clipId:session.current.timeline[0].clipId,startSec:0};let held,release;
+  try{
+    const {id}=await manager.start(request);await waitFor(()=>manager.state().status!=='RUNNING');assert.equal(manager.state().status,'PASS',JSON.stringify(manager.state()));
+    held=(await manager.open(id)).handle;
+    const actualClose=held.close.bind(held),gate=new Promise(resolve=>{release=resolve;});let enteredAt=0;
+    // Delay settlement of a real rendered-output descriptor, not a fake manager.
+    held.close=async()=>{enteredAt||=Date.now();await gate;return actualClose();};
+    await waitFor(()=>enteredAt,6000);
+    return {manager,id,request,folder,release,get enteredAt(){return enteredAt;},async finish(){release();await held.close().catch(()=>{});await manager.close().catch(()=>{});}};
+  }catch(error){release?.();if(held)await held.close().catch(()=>{});await manager.close().catch(()=>{});throw error;}
+}
+
+test('ready expiry holds the worker slot until actual descriptor cleanup succeeds, then admits a new job',async()=>{
+  const f=await fixture();let expired;
+  try{
+    const before=await protectedBytes(f.folder);expired=await expiringPreview(f);
+    const {manager,id,request,folder}=expired;
+    assert.equal(manager.busy(),true,'expiry released the slot before descriptor close');
+    await assert.rejects(manager.start(request),/PREVIEW_BUSY/);
+    assert.equal(manager.state().id,id);assert.match(manager.state().error,/PREVIEW_EXPIRED/);
+    await stat(join(folder,'previews',id,'output.mp4'));
+    expired.release();await waitFor(()=>!manager.busy(),1500);
+    await assert.rejects(stat(join(folder,'previews',id)),{code:'ENOENT'});
+    const next=await manager.start(request);assert.notEqual(next.id,id);
+    await waitFor(()=>manager.state().status!=='RUNNING');assert.equal(manager.state().status,'PASS');assert.equal(manager.state().id,next.id);
+    const adopted=await manager.adopt(next.id);assert.equal(adopted.id,next.id);assert.equal(adopted.report.wholeFileDecode,'PASS');
+    assert.deepEqual(await protectedBytes(f.folder),before);assert.deepEqual(await readFile(f.source),f.original);
+  }finally{if(expired)await expired.finish();await f.close();}
+});
+
+test('ready expiry cleanup deadline remains fail-closed even when the delayed descriptor later closes',async()=>{
+  const f=await fixture();let expired;
+  try{
+    expired=await expiringPreview(f);const {manager,id,request,folder}=expired;
+    assert.equal(manager.busy(),true,'expiry cleanup is not owned');await assert.rejects(manager.start(request),/PREVIEW_BUSY/);
+    await waitFor(()=>/PREVIEW_CLEANUP_/.test(manager.state().error??''),2500);
+    assert.ok(Date.now()-expired.enteredAt<2500,'cleanup failure was not reported within its bounded attempt');
+    assert.equal(manager.state().id,id);assert.equal(manager.state().status,'FAIL');assert.equal(manager.busy(),true);
+    await assert.rejects(manager.start(request),/PREVIEW_BUSY/);
+    expired.release();await waitFor(async()=>{try{await stat(join(folder,'previews',id));return false;}catch(error){if(error.code!=='ENOENT')throw error;return true;}},1500);
+    assert.equal(manager.busy(),true,'late cleanup silently removed the fail-closed state');
+    assert.equal(manager.state().id,id);await assert.rejects(manager.start(request),/PREVIEW_BUSY/);
+    await assert.rejects(manager.close(),/PREVIEW_CLEANUP_UNCONFIRMED/);
+  }finally{if(expired)await expired.finish();await f.close();}
+});
+
+test('close during ready expiry joins the same disposal before returning or removing owned files',async()=>{
+  const f=await fixture();let expired;
+  try{
+    expired=await expiringPreview(f);const {manager,id,request,folder}=expired;
+    let firstDone=false,secondDone=false;
+    const first=manager.close().then(()=>{firstDone=true;}),second=manager.close().then(()=>{secondDone=true;});
+    await delay(100);
+    assert.equal(firstDone,false,'close returned while the real descriptor remained open');
+    assert.equal(secondDone,false,'concurrent close did not join the active cleanup');
+    assert.equal(manager.busy(),true);await stat(join(folder,'previews',id,'output.mp4'));
+    await assert.rejects(manager.start(request),/PREVIEW_CLOSED/);
+    expired.release();await Promise.all([first,second]);assert.equal(manager.busy(),false);
+    await assert.rejects(stat(join(folder,'previews',id)),{code:'ENOENT'});
+  }finally{if(expired)await expired.finish();await f.close();}
+});
+
 // DOM-double behavior only. Pixel geometry/playback require the hosted browser.
 class PreviewElement extends EventTarget{
   children=[];value='';textContent='';disabled=false;hidden=false;paused=true;dataset={};style={};
