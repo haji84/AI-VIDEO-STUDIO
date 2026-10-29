@@ -1,7 +1,8 @@
 # PC内で動かすローカル編集版
 
 **開発版。製品全体は未完成です。** API・編集操作・実MP4の合成試験は通過。
-このWork環境にはブラウザ本体がなく、画面操作の受入試験は未実施です。
+GitHubのUbuntu環境と実Chromeで、編集・書き出しと別保存先への素材再リンクの
+合成素材による画面試験が成功しました（実行40804733070）。PR24は統合待ちです。
 iPhone/Android/Windows/Macの実機成功とは扱っていません。
 
 ## 起動
@@ -182,13 +183,42 @@ JSONを選び直してください。大きい素材の照合は時間がかか�
 ```sh
 node --test apps/local-editor/*.test.mjs
 node apps/local-editor/browser-acceptance.mjs
+node apps/local-editor/browser-relink-acceptance.mjs
 ```
 
-前者はHTTP・実ファイル・FFmpeg・DOMスタブと編集・検査参照操作のテストです。後者は
-Playwright + 実Chromiumが必要。既存Chromeを使う場合は、その実在するパスを
-`AIVS_BROWSER_EXECUTABLE` へ設定。ブラウザがなければ `BLOCKED`、終了コード2。
-この環境では実際に `BROWSER_EXECUTABLE_UNAVAILABLE` でした。CDN接続確認も
-Proxy CONNECTタイムアウト。API成功をブラウザ成功へ読み替えません。
+最初のコマンドはHTTP・実ファイル・FFmpeg・DOMスタブと編集・検査参照操作のテストです。
+後の2つはPlaywrightと実ブラウザを使います。H.264/AACの完成動画を再生できる
+既存Google Chromeの実在するパスを `AIVS_BROWSER_EXECUTABLE` に設定し、
+`AIVS_PYTHON` にPython 3.11以上・Pillow 13の実行ファイル、`AIVS_CAPTION_FONT` に
+日本語を表示できるフォントを指定します。ブラウザやPlaywrightがなければ `BLOCKED`、
+終了コード2で停止します。このWork環境のブラウザ取得はHTMLエラーになったため、
+同じダウンロードを繰り返していません。
 
-ブラウザ試験は合成映像だけで、追加→手動同期確認→候補生成/個別プレビュー/明示適用→字幕/トリム→Undo/Redo→保存/再読込→
-実MP4再生/ダウンロード→全編デコードを確認します。実機/初心者評価は別です。
+`browser-acceptance.mjs` は合成映像の追加→手動同期確認→候補生成・個別プレビュー・
+明示適用→字幕・トリム→Undo/Redo→JSON保存・再読込→音声配置・フェード→
+実MP4再生・ダウンロード・全編デコードを操作します。
+
+`browser-relink-acceptance.mjs` は別の一時保存先で保存JSONを選び、映像とBGMの両方に
+使った同じMP4と、Redo履歴にだけ残したBGMを復元します。同名の誤った素材の拒否、
+途中まで確認した素材の再起動後の再利用、明示的に「開く」を押すまでの編集保全、
+Undo/Redo・音量編集・再起動、完成動画の実再生とBGM成分も確認する試験です。
+ファイル選択・編集・保存・書き出しは実際の画面から行います。
+
+既存 `manual-smoke.yml` の手動実行に、独立した `synthetic-browser-acceptance` ジョブを
+追加しています。標準Ubuntu runnerのChromeを利用し、Playwright1.64.1、Node24.22.1、
+Python3.12.14と試験用Python依存を固定します。両ジョブでFFmpeg/FFprobeを明示的に
+導入し、コマンドの存在を確認します。ChromeとFFmpegの実際の版はログに残します。
+既存mainの実行40788585989はFFmpeg未導入で失敗したため、この依存環境を修正しています。
+元の音声テストは変更せず、修正後の実行40804733070で通常CIと両画面試験が成功しました。
+ジョブは12分、各画面試験は300秒までです。合成素材だけを一時フォルダ内に生成し、
+成果物のアップロードや製品公開は行いません。成功時は入力・JSON・検査記録・MP4の
+SHA256、実ブラウザの版、再生・全編デコード結果を記録します。
+
+[実行40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070)で、両方とも **PASS_SYNTHETIC_BROWSER** を確認しました。
+検証したコードは `a767cc976a719cf325f0e717a3eab4d32e768b9c`。Chrome156.0.8078.47で、
+112,392バイトと42,074バイトのMP4を実際に再生・保存し、検査記録とのハッシュ一致と
+全編デコードを確認しています。素材・保存履歴・音量編集の復元も検証済みです。
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24)は統合待ちで、最終の統合SHAとmainの検証結果はPRに記録します。
+Windows/macOS/iPhone/Androidの実機、初心者評価、実11GB素材、プレビューと書き出しの
+一致、製品全体の完成は未確認です。詳細は
+`docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md` を参照してください。

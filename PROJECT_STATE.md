@@ -1,13 +1,54 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-10-29 JST (2026-10-28 UTC)
+Updated: 2026-10-29 JST / 2026-10-29 UTC
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current implementation candidate: explicit source relinking (2026-10-29 JST)
+## Verified synthetic browser acceptance; PR24 integration pending (2026-10-29)
+
+[PR24](https://github.com/haji84/AI-VIDEO-STUDIO/pull/24) remains pending integration. Last-tested code head:
+`a767cc976a719cf325f0e717a3eab4d32e768b9c`, tree `3b0f6429e16277256e48a6a9ee272975538a2d22`.
+[Manual run40804733070](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40804733070), attempt1, completed **SUCCESS** for both jobs.
+PR24 records the final documentation-head checks, actual merge SHA and later
+main-run evidence; this entry does not invent those future results.
+
+On GitHub's standard Ubuntu24.04 runner, actual Chrome156.0.8078.47 with
+Playwright1.64.1/Node24.22.1 passed both `PASS_SYNTHETIC_BROWSER` scopes:
+
+- Existing editor: import, sync/first-cut preview and apply, explicit preserved
+  original-audio trim, video trim/caption, Undo/Redo, JSON save/reload, BGM edits,
+  actual output playback/download, QA hash match and whole-file decode.
+  Output112,392bytes, SHA256 `ef867951a413ebca67a511c21f05cc048bd810a3516a7ac6fa1bcd0a95df572c`.
+- Two-workspace relink: three source IDs from two files, dual MP4 video/BGM roles,
+  wrong same-name rejection without changing the edit, partial-copy restart,
+  explicit Open, restored history-only BGM, manual gain/restart and actual export.
+  Output42,074bytes, SHA256 `3884487a5752a6a3c0c77a083767efb4257cf2eef1ece2baf2019e84424f4288`.
+  Both outputs advanced in Chrome at960px width and fully decoded. Relink BGM
+  amplitude was0.0879648742; originals and workspace A remained unchanged.
+
+The separate offline job passed167 Node and60 Python test-case executions,
+0 failures/errors/skips. Its distinct commands are enumerated in the validation
+record; the two overlapping browser flows are not added to that total.
+
+Retain the actual history: missing FFmpeg caused original-main run40788585989 to
+fail; the first browser run40802909769 failed at an unlocalized wait; diagnostic
+run40803673614 identified correctly preserved2-second original audio blocking a
+1-second video-only trim. Explicit UI audio editing corrected the test sequence.
+Product code, original assertions/timeouts, manual-only triggers and read-only
+permissions were preserved. No private media, new service or product deployment.
+
+This is synthetic Linux browser evidence. Windows/macOS/iPhone/Android, native
+adapters, novice usability, authorized real11GB performance, semantic AI accuracy,
+preview/export parity and full Product DoD remain open. Product status: IN_PROGRESS.
+Detailed runtimes, hashes and failure history:
+`docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`. After PR24 integration, the next
+bounded existing gap is static-caption/trim preview-export parity (GOAL F5/F8 and
+ROADMAP P0), using generated media and matched browser/export frames.
+
+## Integrated implementation: explicit source relinking (2026-10-29 JST)
 
 Saved JSON can now be prepared in a new local workspace, followed by explicitly
 selected original video/audio and a separate Open action. The entire current /
@@ -27,8 +68,8 @@ same-MP4 video/BGM compatibility finding was reproduced through existing import
 and fixed with fresh per-target probe checks. Independent review also reproduced
 a final-Open/delayed-response cancellation race; cancellation is now disabled and
 guarded during final Open, and actual HTTP regression plus independent replay pass.
-No additional code blocker remained before the final gate. The carrying PR records
-the final frozen-candidate audit and integration.
+No additional code blocker remained before the final gate. PR #23 records the
+final frozen-candidate audit and integration at the main/tree above.
 Registry-write failure is not acknowledged success and can leave an unregistered
 copied file; it is never admitted by scanning or claimed automatically reusable.
 This bounded F1 flow is TESTED_SYNTHETIC on Linux. Full F1/F8/F9 and Product DoD
@@ -108,17 +149,20 @@ agent reran caption 9 + Japanese manifest 2: 11/11 PASS under
 Pillow 13.0.0. Hosted CI and Docker build remain NOT_RUN. Detailed evidence and exact remaining
 gates: `docs/validation/CAPTION_RASTER_F8_2026-10-28.md`.
 
-Current GUI acceptance remains BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE (exit 2).
+The local GUI execution environment remains BLOCKED/BROWSER_EXECUTABLE_UNAVAILABLE (exit 2).
 Playwright 1.62.1 is present, but the matching Chromium is absent. One permitted
 official download on 2026-10-29 JST returned 195 bytes of "Site Unavailable"
 HTML, not a browser ZIP. That browser acceptance attempt stopped before
 browser/server startup; the HTTP acceptance above is separate. The failed
-download was not repeated. Native iPhone/Android/Windows/macOS, GUI/novice and
-preview/export parity acceptance remain unverified for this editor.
+download was not repeated. The candidate above adds an installed-Chrome hosted
+execution route; both bounded synthetic browser flows passed run40804733070 as
+recorded above. Native iPhone/Android/Windows/macOS, novice and preview/export
+parity acceptance remain unverified for this editor.
 
 The manual gain follow-through and bounded output history are TESTED_SYNTHETIC.
-Explicit source relinking into a new workspace has the synthetic candidate above;
-actual GUI/device acceptance and the broader project workflow remain unfinished.
+Explicit source relinking into a new workspace is integrated through PR #23;
+its bounded Linux Chrome relink flow now passes; physical-device acceptance and
+the broader project workflow remain unfinished.
 Intelligibility, automatic repair, limiter guarantees, real large-media performance
 and all platform goals remain open. Exact continuation: `docs/work/WORK_CHECKPOINT.md`. The dated sections below are history,
 including their old "current" test totals and implementation limits.
