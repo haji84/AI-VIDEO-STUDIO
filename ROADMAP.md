@@ -2,7 +2,7 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-Current checkpoint: 2026-10-29 JST / UTC. PR24 is integrated at main
+Historical checkpoint: 2026-10-29 JST / UTC. PR24 is integrated at main
 `c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`, tree `2175c9bde1a35ab6629c9d8cda95a939ee709dd5`.
 [Main run40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)
 passed both jobs: existing-editor and two-workspace source-relink return
@@ -13,7 +13,7 @@ The earlier failed and first-success runs remain in
 `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md`; PR24 carries final-head/main evidence.
 These synthetic results do not complete the product/platform goal.
 
-## Current bounded requirement — saved-cut visual preview
+## Historical candidate — saved-cut visual preview (completed via PR #25)
 
 P0 and GOAL F5/F8 already require preview/export timing and visible effects to match.
 The candidate adds an explicit, read-only, maximum7-output-second saved-cut result
@@ -25,6 +25,14 @@ subsequent review, hosted exact-head acceptance and integration;
 full-timeline audio/effect parity, native platforms and novice testing remain open.
 Design: `docs/work/PREVIEW_PARITY_DESIGN_20261029.md`.
 Evidence: `docs/validation/PREVIEW_PARITY_2026-10-29.md`.
+
+## Current verified baseline and next work (2026-11-02 JST)
+
+[PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pull/25) is integrated at main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, tree `2d9a87e270e53880386abc19fd6a81fb8c4095c0`. [Main Actions 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222) completed successfully for offline and all three actual-Chrome synthetic browser paths. The saved-cut **visual/static-caption** preview is implemented on Linux; do not repeat it as an open candidate. Four-bus **audible** preview/export parity is still unverified; a completed output MP4 remains the currently documented way to hear the saved mix.
+
+**Next candidate, not yet implemented or verified:** establish a bounded, read-only four-bus audio-preview slice matching saved MP4 export. Before coding, inspect `engine/render_saved_project.py`, `engine/preview_saved_clip.py`, the Node validator/audio schema and preview manager. Specify explicit behavior for cut output-time vs project-time, delayed/trimmed/looped audio, source-clock offsets, speed, gain/mute, fades and ducking. Preserve existing 7-second/180-second/one-heavy-job Linux limits unless a separately justified and reviewed change is approved. Do not substitute intermediate camera sound for the actual four-bus mix or claim a muted visual preview is audio parity. The first test fixtures should compare generated audible preview versus saved export at known time/frequency points, plus whole-file decode and no mutation of source/project/Undo/Redo/output history; include silent and boundary overlaps. A test/implementation is **not started** merely by this plan. Source-based independent design/code review and actual execution evidence remain required.
+
+Platform-native and real-user acceptance remain separate and BLOCKED/NOT_RUN as appropriate. No new paid/cloud resource, private-media upload, security policy change, or public deployment is authorized by this checkpoint.
 
 ## P0 Local-first mobile foundation
 

@@ -1,4 +1,25 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
+Updated: 2026-11-02 JST (read-only Github revalidation)
+Status: IN_PROGRESS; Product DoD NOT MET. Native/physical/novice/full-size acceptance still pending.
+mainSHA (PR #25): `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`
+mainTree: `2d9a87e270e53880386abc19fd6a81fb8c4095c0`
+Active PRs at readback: 0. [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pull/25) is merged, not a pending candidate.
+Latest verified [main workflow 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222): completed/success, offline and synthetic browser jobs both successful on this main SHA. Three Chrome paths passed according to PR #25's preserved evidence. No fresh code or test execution at this checkpoint.
+Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
+
+## Exact next task and acceptance gate
+
+Candidate: bounded four-bus **audible saved-cut preview/export parity** on the existing local Linux editor, with no changes to product security, GoAL, paid services, private files or mandatory cloud.
+1. Read canonical audio/video timing, `engine/render_saved_project.py`, `engine/preview_saved_clip.py`, `apps/local-editor/preview-job.mjs`, and Node manifest schema. Write a small design and falsifiable audio-time/window contract before implementation. Independent nonauthor design review is required; do not mark it completed without an actual separate reviewer.
+2. Add failing synthetic tests for selected audible window with source/narration/BGM/SE, trim, rate, gain/mute, fades/ducking, loops, boundaries and missing/silent inputs. Prevent intermediate single-camera audio from being confused with the saved four-bus export. Compare actual decoded audio against actual saved MP4 at aligned time ranges and explicit tolerances, not just report/status strings.
+3. Implement without altering originals, saved project/history/Undo/Redo/audio settings or the completed-export journal. Respect the existing one-heavy-job, 7-second window, 180-second absolute deadline and Linux cleanup ownership unless deliberately designed/reviewed. Validate audio-specific errors and stale/swap behavior.
+4. Run targeted and regression tests, real generated MP4, full decode and browser playback; review current PR HEAD independently, address reproducible findings in the same PR, verify exact-head CI and guarded main integration, then main-based re-verification. Keep physical platforms unverified.
+5. If execution remains unavailable, leave tests as NOT_RUN, record exact blocker and evidence, and do not assert merge-ready or product completion.
+
+**Execution constraint observed in this chat:** GitHub connector can read/write the repository, but local `git ls-remote` failed DNS resolution of github.com, so there is no verified repository checkout here. Existing Node/Python/FFmpeg binaries do not compensate for missing source tree. Source and tests must be staged into a real execution environment, or the scope must remain untested. Do not invent runnable integration results.
+
+## Historical checkpoint records below (2026-10-29 candidate freeze)
+
 Updated: 2026-10-29 JST / 2026-10-29 UTC
 Status: IN_PROGRESS. At candidate freeze, PR24 is integrated and actual main verified; saved-cut visual-preview candidate awaits independent review/hosted browser acceptance. Subsequent exact-head/main acceptance is recorded in the carrying implementation PR and its receipts.
 Product DoD NOT MET. Physical/native/novice acceptance remains NOT_RUN/BLOCKED.

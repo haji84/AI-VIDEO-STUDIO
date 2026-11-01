@@ -1,11 +1,19 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-10-29 JST / 2026-10-29 UTC
+Updated: 2026-11-02 JST (latest-state reconciliation; prior sections are historical)
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
+
+## Latest verified integration — PR #25 (read back 2026-11-02 JST)
+
+The canonical main at this checkpoint is `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, Git tree `2d9a87e270e53880386abc19fd6a81fb8c4095c0`. GitHub confirms [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pull/25) **merged** at this exact main commit, and there were **zero open PRs at the start of this reconciliation**. The formerly candidate-only saved-cut preview is integrated. It renders at most seven output seconds of the saved picture/static caption using the export compositor, with read-only project/revision/source identity checks and Linux-only guarded subprocess cleanup. It is **visual-only/muted by default** and does not establish four-bus audio preview, Windows/macOS preview cleanup, or full editing parity.
+
+[Actual main workflow run 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222) is completed/success on this SHA. Both `offline-prototype-smoke` and `synthetic-browser-acceptance` jobs succeeded. The PR carries evidence for 180 Node and 66 Python cases and all three actual Chrome routes (editor, two-workspace relink, saved-cut preview). Test-case totals are sourced from the PR's inspected record; this 2026-11-02 checkpoint **did not re-run or re-count CI logs**. A successful Linux/synthetic browser run is not iPhone/Android/Windows/Mac physical-device product acceptance.
+
+F1/F5/F8 have partial TESTED_SYNTHETIC evidence. F6 preview/export parity, persisted Japanese TTS (F7), semantic AI (F3), broader effects (F5), drift correction (F2), complete output QA/self-repair (F8), novice validation (F4), and physical-device pipelines (F9) remain incomplete. Overall **IN_PROGRESS**. Earlier PR #24/frozen-candidate sections below are retained as historical dated evidence, not the current active work item.
 
 ## Integrated synthetic browser acceptance — PR24 (2026-10-29)
 
