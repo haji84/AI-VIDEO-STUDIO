@@ -30,3 +30,8 @@ The current PR's `index.html` and `server.mjs` wiring were separately read back 
 5. Independently generated **short** four-bus preview remains NOT_IMPLEMENTED; design draft `docs/work/AUDIO_PREVIEW_PARITY_DESIGN_20261102.md` still governs its future correctness criteria.
 
 No third-party service, paid model/review/compute, cloud transfer, or source media was added.
+
+## Hosted Chrome acceptance added, execution still pending
+
+The existing `apps/local-editor/browser-preview-acceptance.mjs` was extended **on the same PR**, without modifying its workflow, existing fixtures or prior assertions. After actual FFmpeg MP4 export, it now selects a **second cut with nonzero project-global start**, requests the authenticated `/api/qa` through the button, checks that completed-output video is visible/unmuted/seeked in project time, and later refuses the previous output after a project-revision change. This is a new **test implementation**, not proof it passed. The new source branch requires the existing manually dispatched GitHub-hosted real-Chrome run before integration.
+
