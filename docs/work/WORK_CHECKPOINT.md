@@ -1,4 +1,44 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
+Updated: 2026-11-02 JST (read-only Github revalidation)
+Status: IN_PROGRESS; Product DoD NOT MET. Native/physical/novice/full-size acceptance still pending.
+mainSHA (PR #25): `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`
+mainTree: `2d9a87e270e53880386abc19fd6a81fb8c4095c0`
+Active PRs at readback: 0. [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pull/25) is merged, not a pending candidate.
+Latest verified [main workflow 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222): completed/success, offline and synthetic browser jobs both successful on this main SHA. Three Chrome paths passed according to PR #25's preserved evidence. No fresh code or test execution at this checkpoint.
+Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
+
+## Owner reviewer/tool policy and current gating (2026-11-02)
+
+Owner explicitly excludes **Copilot and CodeRabbit** for current and future development/review. See `AGENTS.md`; do not invoke or recommend these tools as reviewer fallback.
+
+Verified before this documentation commit: PR #26 is Draft at HEAD `3f9d3b40e1ed08fc1c2349f2d7c1fede2db31f31`, main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, independent GitHub review submissions **0**. The last completed full Actions success is run 41386923713 on **older** HEAD `7c972adc77979d58dde84f0b7dbdc334a63f2abc`, not the repaired current candidate. New HEAD after this policy checkpoint must be read again; current full CI is **NOT_RUN**.
+
+Reusable reviewer investigation: `haji84/AI-` includes `.github/workflows/goriq-ai09-pr-review.yml` and scripts for trusted-code Ollama/Qwen review, but it is triggered by the AI- repository's own CI `workflow_run` and scoped to same-repository PR/CI. Its existing success does not prove cross-repository authorization or a review of AI VIDEO STUDIO. `haji84/independent-ai09-reviewer` currently only has a README, not a deployed cross-repo reviewer. HUB reviewer in `haji84/habuAI-private` PR #136 explicitly has quality `HOLD` in `docs/qa/habu_cpu_review_quality_gate.md`, with unreliable false alarms; do not auto-promote its results.
+
+**Next:** design an explicit read-only, SHA-bound, non-billable cross-repository review adapter with independent execution and credential boundaries if permissible. Obtain actual model outputs for this PR and independently validate claims; use `INDEPENDENT_REVIEW_BLOCKED` until this exists. After verified fixes, run existing CI on the final exact PR HEAD, inspect logs, then honor any required formal approvals before integration. Preserve this single PR, no paid model/service, and no unchecked changes to the separate AI- repository.
+
+## Latest PR #26 work completed within chat (2026-11-02 JST; do not mistake for main)
+
+PR: https://github.com/haji84/AI-VIDEO-STUDIO/pull/26
+Branch: `feat/audio-preview-parity-20261102` based on main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`. Re-fetch exact branch HEAD on resume. Candidate only; keep Draft. The new opt-in completed-export audible replay uses existing finished MP4 and the project-global cut clock, requiring matching current report and revision. **It does not create a new mixed preview.**
+
+Local tested exact blobs: module `8826ba618a1e21052149e08f3c252982887f99d9`, standard test `0aa61cb0ef5ca68c439460b27414f53526dae143`, synthetic media test `040a2f76fa5b8ad3948a21fbb2ff8438475ee0eb`. Node22/FFmpeg7 isolated tests **13/13 PASS**, generated four-tone AAC/MP4 fully decoded. UI/server were statically wired and fetched back but NOT_RUN as a browser/server. No fresh Actions, no independent reviewer, no main integration. Prior main Actions 40811805222 validate PR #25 only.
+
+**Next mandatory gate:** get a real nonauthor reviewer (avoid billable model usage without separate approval); run the repository's existing manual Actions on *this exact PR HEAD* and inspect all relevant Node/Python and actual Chrome paths, specifically current four-bus finished output, stale revision, history switch, metadata delay, and window-end playback. Fix verified defects in this same PR, re-review, and only then consider guarded merge. No workflow trigger change, new cloud or paid compute. A separately generated seven-second audio mix remains unimplemented. Evidence: `docs/validation/COMPLETED_AUDIO_REPLAY_2026-11-02.md`.
+
+## Exact next task and acceptance gate
+
+Candidate: bounded four-bus **audible saved-cut preview/export parity** on the existing local Linux editor, with no changes to product security, GOAL, paid services, private files or mandatory cloud.
+1. Read and independently review the new unapproved design draft `docs/work/AUDIO_PREVIEW_PARITY_DESIGN_20261102.md` against the canonical audio/video timing, `engine/render_saved_project.py`, `engine/preview_saved_clip.py`, `apps/local-editor/preview-job.mjs`, and Node manifest schema. The design exists only on the branch, has **no nonauthor review**, and must not be marked approved from its presence.
+2. Add failing synthetic tests for selected audible window with source/narration/BGM/SE, trim, rate, gain/mute, fades/ducking, loops, boundaries and missing/silent inputs. Prevent intermediate single-camera audio from being confused with the saved four-bus export. Compare actual decoded audio against actual saved MP4 at aligned time ranges and explicit tolerances, not just report/status strings.
+3. Implement without altering originals, saved project/history/Undo/Redo/audio settings or the completed-export journal. Respect the existing one-heavy-job, 7-second window, 180-second absolute deadline and Linux cleanup ownership unless deliberately designed/reviewed. Validate audio-specific errors and stale/swap behavior.
+4. Run targeted and regression tests, real generated MP4, full decode and browser playback; review current PR HEAD independently, address reproducible findings in the same PR, verify exact-head CI and guarded main integration, then main-based re-verification. Keep physical platforms unverified.
+5. If execution remains unavailable, leave tests as NOT_RUN, record exact blocker and evidence, and do not assert merge-ready or product completion.
+
+**Execution constraint observed in this chat:** GitHub connector can read/write the repository, but local `git ls-remote` failed DNS resolution of github.com, so there is no verified repository checkout here. Existing Node/Python/FFmpeg binaries do not compensate for missing source tree. Source and tests must be staged into a real execution environment, or the scope must remain untested. Do not invent runnable integration results.
+
+## Historical checkpoint records below (2026-10-29 candidate freeze)
+
 Updated: 2026-10-29 JST / 2026-10-29 UTC
 Status: IN_PROGRESS. At candidate freeze, PR24 is integrated and actual main verified; saved-cut visual-preview candidate awaits independent review/hosted browser acceptance. Subsequent exact-head/main acceptance is recorded in the carrying implementation PR and its receipts.
 Product DoD NOT MET. Physical/native/novice acceptance remains NOT_RUN/BLOCKED.

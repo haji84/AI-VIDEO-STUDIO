@@ -2,6 +2,14 @@
 
 0. **Highest product outcome:** read `GOAL.md` first and follow `docs/work/AUTONOMOUS_EXECUTION.md` for Work sessions. These do not weaken any security, copyright, owner approval or testing rules below. Update `docs/work/WORK_CHECKPOINT.md` after each verified change. Work cannot claim endless background execution merely from a text instruction.
 
+## Owner-approved reviewer/tool exclusions (2026-11-02)
+
+- **Never invoke, request, auto-enable or rely on GitHub Copilot or CodeRabbit for coding, design review, PR review, security review, approval or automated quality gates.** Prior skipped/inactive integrations are not evidence of review. Do not suggest either as a default fallback.
+- Prefer existing authorized local/hosted **non-Copilot/non-CodeRabbit** review engines after checking actual availability, coverage, source/model independence, running cost and evidence quality. GORIQ AI-09 and the experimental HUB Qwen reviewer are potential reusable codebases, **not automatic approval of another repository**.
+- Do not call a checklist, author's own re-reading, a green CI run, a prompt-only review, or a second pass by the same author an independent review. Require actual separate-model/reviewer execution plus source-SHA-bound findings and reproducible validation; if unavailable, record `INDEPENDENT_REVIEW_BLOCKED` and leave the PR unmerged.
+- Respect required repository approvals; model comments do not impersonate formal GitHub `APPROVED` events. No new paid provider, permission increase, external code transfer, untrusted runner execution or security-policy change without the owner's specific approval.
+- Fix existing feature/PR in place; no duplicate PR for the same defect.
+
 1. Treat `docs/specs/PRODUCT_SPEC_v0.3.1.md`, `docs/specs/AUDIO_SPEC_v0.3.1.md`, `PROJECT_STATE.md`, and `ROADMAP.md` as the present draft product source of truth. This repository is independent of GORIQ.
 2. Before coding, determine current implementation and limitations. Do not fabricate test results, mobile support, deployment status, or video understanding ability.
 3. Prefer existing code reuse (`engine/`, `cloud/`, `prototypes/audio/`) but never force the optional cloud architecture on the offline-first product.

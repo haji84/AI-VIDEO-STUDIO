@@ -125,6 +125,7 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
         '/output-history-panel.mjs':join(HERE,'output-history-panel.mjs'),
         '/source-relink-panel.mjs':join(HERE,'source-relink-panel.mjs'),
         '/preview-panel.mjs':join(HERE,'preview-panel.mjs'),
+        '/completed-audio-preview.mjs':join(HERE,'completed-audio-preview.mjs'),
         '/audio-panel.mjs':join(HERE,'audio-panel.mjs'),'/audio-edits.mjs':join(HERE,'audio-edits.mjs'),
         '/first-cut-panel.mjs':join(HERE,'first-cut-panel.mjs'),
         '/packages/project/first-cut.mjs':join(ROOT,'packages/project/first-cut.mjs'),
