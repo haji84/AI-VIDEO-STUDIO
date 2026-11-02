@@ -86,3 +86,16 @@ test('a late verified reply is dropped if another finished output was selected',
 test('no completed output means no possible audible action',()=>{
   const f=domFixture({exported:false});try{assert.equal(f.button.disabled,true);}finally{f.restore();}
 });
+test('when a completed MP4 is not loaded, playback waits for its metadata',async()=>{
+  const f=domFixture({readiness:0});try{
+    await f.button.onclick();assert.equal(f.video.playCount,undefined);
+    f.video.readyState=1;f.video.fire('loadedmetadata');
+    assert.equal(f.video.currentTime,5.25);assert.equal(f.video.playCount,1);
+  }finally{f.restore();}
+});
+test('metadata from an invalidated selection cannot start audible playback',async()=>{
+  const f=domFixture({readiness:0});try{
+    await f.button.onclick();f.outputChanged();f.ctrl.show();f.video.readyState=1;f.video.fire('loadedmetadata');
+    assert.equal(f.video.playCount,undefined);
+  }finally{f.restore();}
+});
