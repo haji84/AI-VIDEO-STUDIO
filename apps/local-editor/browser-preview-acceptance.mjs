@@ -227,8 +227,39 @@ try{
       browserVersusPreview:difference(decoded.stdout,own.pixels),browserVersusExport:difference(decoded.stdout,exported.pixels),
       actualCaption:actual,exportCaption:expected});
   }
+  step('completed-output-audible-clip-real-browser');
+  // Use the existing completed movie, not the muted intermediate camera preview.
+  await page.locator('#clips button').nth(1).click();
+  const audibleProject=await json(join(workspace,'project.aivs.json'));
+  const audibleCut=audibleProject.project.timeline[1];
+  assert.ok(audibleCut.startSec>0,'The test must distinguish project-global vs cut-local clock');
+  await page.locator('#saved-preview-start').fill('0.1');
+  const audibleButton=page.getByRole('button',{name:'完成済みMP4で音付き確認',exact:true});
+  assert.equal(await audibleButton.isDisabled(),false);
+  const audibleResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/qa'&&r.request().method()==='GET');
+  await audibleButton.click();
+  const verifiedAudioReport=await audibleResponse;assert.equal(verifiedAudioReport.status(),200);
+  await page.waitForFunction(()=>{
+    const video=document.getElementById('output'),status=document.querySelector('#completed-audio-preview [role=status]');
+    return !video.hidden&&!video.muted&&video.readyState>=1&&
+      /完成MP4の|確認が終わりました|再生できません/.test(status?.textContent??'');
+  });
+  const audibleView=await page.locator('#output').evaluate(v=>({
+    currentTime:v.currentTime,muted:v.muted,hidden:v.hidden,readyState:v.readyState,
+    src:new URL(v.currentSrc||v.src).pathname}));
+  assert.equal(audibleView.src,'/exports/'+JSON.parse(await readFile(join(workspace,'last-job.json'),'utf8')).id);
+  assert.equal(audibleView.muted,false);
+  assert.ok(audibleView.currentTime>=audibleCut.startSec-0.05,'Seek must use project-global time');
+  assert.ok(audibleView.currentTime<=audibleCut.startSec+audibleCut.durationSec/audibleCut.speed+0.3);
   step('delayed-adoption-selection-and-revision');const races=[];
   for(const kind of ['selection','revision'])races.push(await staleRace(kind,workspace));
+  step('reject-completed-output-after-project-revision-change');
+  assert.equal(await audibleButton.isDisabled(),false);
+  const oldReport=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/qa'&&r.request().method()==='GET');
+  await audibleButton.click();assert.equal((await oldReport).status(),200);
+  await page.waitForFunction(()=>document.querySelector('#completed-audio-preview [role=status]')?.textContent.includes('一致しません'));
+  const afterReject=await page.locator('#completed-audio-preview [role=status]').textContent();
+  assert.match(afterReject,/一致しません/);
   step('save-undo-redo-and-reopen');
   for(const action of ['undo','redo']){await edit(()=>page.locator('#'+action).click(),'/api/'+action);assert.equal(await page.locator('#saved-preview-video').getAttribute('src'),null);}
   const savedPath=join(folder,'reopened.aivs.json');await download(page.locator('#save-project'),savedPath);
