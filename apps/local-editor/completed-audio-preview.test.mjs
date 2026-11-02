@@ -36,9 +36,11 @@ test('only a byte-identified successful export of same exact revision is eligibl
 // Isolated DOM-double interaction checks; these do not replace real Chrome acceptance.
 import {mountCompletedAudioPreview} from './completed-audio-preview.mjs';
 function domFixture({exported=true,readiness=1,request=async()=>report}={}) {
-  const input={value:'2'},elements=[];
+  const elements=[];
   class Fake {
-    constructor(){this.listeners=new Map();this.attrs=new Map();this.hidden=true;this.muted=true;this.readyState=readiness;this.currentTime=0;this.paused=true;}
+    constructor(){this.listeners=new Map();this.attrs=new Map();this.hidden=true;this.muted=true;this.readyState=readiness;this.currentTime=0;this.paused=true;this.seeking=false;}
+    removeAttribute(k){if(k==='src')delete this.src;this.attrs.delete(k);}
+    load(){this.loaded=(this.loaded??0)+1;}
     setAttribute(k,v){this.attrs.set(k,v);}
     getAttribute(k){return k==='src'?this.src??null:this.attrs.get(k);}
     addEventListener(k,fn){this.listeners.set(k,[...(this.listeners.get(k)??[]),fn]);}
@@ -48,6 +50,7 @@ function domFixture({exported=true,readiness=1,request=async()=>report}={}) {
     pause(){this.paused=true;}
     append(...children){this.children=(this.children??[]).concat(children);}
   }
+  const input=new Fake();input.value='2';
   const oldDocument=globalThis.document;
   globalThis.document={createElement(){const e=new Fake();elements.push(e);return e;},getElementById(id){return id==='saved-preview-start'?input:null;}};
   const state={session:{project},job:exported?{id:'a'.repeat(32),status:'PASS',download:'/exports/'+'a'.repeat(32)}:{status:'NOT_RUN'}};
@@ -97,5 +100,26 @@ test('metadata from an invalidated selection cannot start audible playback',asyn
   const f=domFixture({readiness:0});try{
     await f.button.onclick();f.outputChanged();f.ctrl.show();f.video.readyState=1;f.video.fire('loadedmetadata');
     assert.equal(f.video.playCount,undefined);
+  }finally{f.restore();}
+});
+test('changing the cut-local start while playing stops and unloads stale audio',async()=>{
+  const f=domFixture();try{
+    await f.button.onclick();assert.equal(f.video.paused,false);
+    f.input.value='3';f.input.fire('input');
+    assert.equal(f.video.paused,true);assert.equal(f.video.hidden,true);assert.equal(f.video.src,undefined);
+  }finally{f.restore();}
+});
+test('native Play cannot continue into the next cut after bounded end',async()=>{
+  const f=domFixture();try{
+    await f.button.onclick();f.video.currentTime=12.251;f.video.fire('timeupdate');
+    assert.equal(f.video.paused,true);
+    await f.video.play();f.video.fire('play');assert.equal(f.video.paused,true);
+  }finally{f.restore();}
+});
+test('audible playback waits until an in-progress media seek completes',async()=>{
+  const f=domFixture();try{
+    f.video.seeking=true;await f.button.onclick();assert.equal(f.video.playCount,undefined);
+    f.video.seeking=false;f.video.fire('seeked');await Promise.resolve();
+    assert.equal(f.video.playCount,1);
   }finally{f.restore();}
 });

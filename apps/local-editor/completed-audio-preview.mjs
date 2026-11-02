@@ -31,10 +31,11 @@ export function mountCompletedAudioPreview({container, video, current, selected,
   mediaURL, outputGeneration = () => 0} = {}) {
   const button = document.createElement('button');
   const status = document.createElement('p');
-  button.type = 'button'; button.textContent = '完成済みMP4で音付き確認';
+  button.type = 'button'; button.textContent = '最新の完成MP4で音付き確認';
   status.className = 'muted'; status.setAttribute('role', 'status');
   container.append(button, status);
   let generation = 0, active = null, busy = false, closed = false;
+  const startInput = document.getElementById('saved-preview-start');
   const snapshot = () => {
     const state = current(), project = state?.session?.project,
       clip = project?.timeline?.[selected()], job = state?.job;
@@ -46,7 +47,10 @@ export function mountCompletedAudioPreview({container, video, current, selected,
   const keyOf = s => [s.project?.projectId, s.project?.revision, s.job?.id,
     s.window?.clipId, s.window?.cutStartSec, s.outputGeneration].join('|');
   function invalidate(message = '') {
-    generation++; if (active) {video.pause(); active = null;}
+    generation++;
+    // The audible player is a dedicated read-only view. Invalidation must
+    // release its old media, not leave a stale completed export playable.
+    video.pause(); active = null; video.removeAttribute('src'); video.load(); video.hidden = true;
     busy = false; if (message) status.textContent = message;
   }
   function show() {
@@ -58,13 +62,22 @@ export function mountCompletedAudioPreview({container, video, current, selected,
     button.disabled = busy || !available;
     if (!available && !busy) status.textContent = '現在の編集版の完成MP4が必要です。完成動画を作ってから確認してください。';
   }
-  const onTimeUpdate = () => {
-    if (active && Number.isFinite(video.currentTime) && video.currentTime >= active.window.endSec - 0.02) {
-      video.pause(); active = null;
+  const onBoundedPlayback = () => {
+    if (!active || !Number.isFinite(video.currentTime)) return;
+    if (video.currentTime < active.window.startSec - 0.05) {
+      video.pause(); video.currentTime = active.window.startSec;
+      status.textContent = '選択したカットの範囲外です。再生位置を戻しました。';
+      return;
+    }
+    if (video.currentTime >= active.window.endSec - 0.02) {
+      // Keep the active boundary, including after a user presses native Play.
+      video.pause();
       status.textContent = '選択したカットの確認が終わりました。';
     }
   };
-  video.addEventListener('timeupdate', onTimeUpdate);
+  const onStartInput = () => { if (closed) return; invalidate('開始位置が変わりました。もう一度確認してください。'); show(); };
+  startInput?.addEventListener('input', onStartInput);
+  for (const event of ['timeupdate', 'play', 'seeking']) video.addEventListener(event, onBoundedPlayback);
   button.onclick = async () => {
     if (closed || busy || button.disabled) return;
     const s = snapshot(), key = keyOf(s), id = ++generation;
@@ -85,10 +98,16 @@ export function mountCompletedAudioPreview({container, video, current, selected,
       video.hidden = false; video.muted = false;
       const start = async () => {
         if (closed || id !== generation || !active || key !== keyOf(snapshot())) return;
-        video.currentTime = window.startSec;
-        status.textContent = `完成MP4の ${window.startSec.toFixed(2)}–${window.endSec.toFixed(2)} 秒を音付き確認中（カットの終端で停止）`;
-        try {await video.play();}
-        catch (error) {if (id === generation) status.textContent = '再生できません。動画の再生ボタンで確認してください。';}
+        video.pause();
+        if (Math.abs(video.currentTime - window.startSec) > 0.03) video.currentTime = window.startSec;
+        const afterSeek = async () => {
+          if (closed || id !== generation || !active || key !== keyOf(snapshot())) return;
+          if (video.seeking) {video.addEventListener('seeked', afterSeek, {once:true}); return;}
+          status.textContent = `完成MP4の ${window.startSec.toFixed(2)}–${window.endSec.toFixed(2)} 秒を音付き確認中（カットの終端で停止）`;
+          try {await video.play();}
+          catch (error) {if (id === generation) status.textContent = '再生できません。動画の再生ボタンで確認してください。';}
+        };
+        await afterSeek();
       };
       if (video.readyState >= 1) await start();
       else video.addEventListener('loadedmetadata', start, {once: true});
@@ -100,5 +119,7 @@ export function mountCompletedAudioPreview({container, video, current, selected,
   };
   show();
   return {show, invalidate, close() {if (closed) return; closed = true; invalidate();
-    video.removeEventListener('timeupdate', onTimeUpdate); button.disabled = true;}};
+    startInput?.removeEventListener('input', onStartInput);
+    for (const event of ['timeupdate','play','seeking']) video.removeEventListener(event, onBoundedPlayback);
+    button.disabled = true;}};
 }

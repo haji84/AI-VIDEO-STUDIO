@@ -234,21 +234,25 @@ try{
   const audibleCut=audibleProject.project.timeline[1];
   assert.ok(audibleCut.startSec>0,'The test must distinguish project-global vs cut-local clock');
   await page.locator('#saved-preview-start').fill('0.1');
-  const audibleButton=page.getByRole('button',{name:'完成済みMP4で音付き確認',exact:true});
+  const audibleButton=page.getByRole('button',{name:'最新の完成MP4で音付き確認',exact:true});
   assert.equal(await audibleButton.isDisabled(),false);
   const audibleResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/qa'&&r.request().method()==='GET');
   await audibleButton.click();
   const verifiedAudioReport=await audibleResponse;assert.equal(verifiedAudioReport.status(),200);
   await page.waitForFunction(()=>{
-    const video=document.getElementById('output'),status=document.querySelector('#completed-audio-preview [role=status]');
+    const video=document.getElementById('completed-audio-video'),status=document.querySelector('#completed-audio-preview [role=status]');
     return !video.hidden&&!video.muted&&video.readyState>=1&&
       /完成MP4の|確認が終わりました|再生できません/.test(status?.textContent??'');
   });
-  const audibleView=await page.locator('#output').evaluate(v=>({
+  const audibleView=await page.locator('#completed-audio-video').evaluate(v=>({
     currentTime:v.currentTime,muted:v.muted,hidden:v.hidden,readyState:v.readyState,
     src:new URL(v.currentSrc||v.src).pathname}));
   assert.equal(audibleView.src,'/exports/'+JSON.parse(await readFile(join(workspace,'last-job.json'),'utf8')).id);
   assert.equal(audibleView.muted,false);
+  // Audio replay must never replace the main completed-output/history player.
+  assert.equal(await page.locator('#output').evaluate(v=>v.muted),false);
+  assert.notEqual(await page.locator('#output').evaluate(v=>v),await page.locator('#completed-audio-video').evaluate(v=>v));
+
   assert.ok(audibleView.currentTime>=audibleCut.startSec-0.05,'Seek must use project-global time');
   assert.ok(audibleView.currentTime<=audibleCut.startSec+audibleCut.durationSec/audibleCut.speed+0.3);
   step('delayed-adoption-selection-and-revision');const races=[];
