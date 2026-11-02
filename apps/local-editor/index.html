@@ -6,7 +6,7 @@
 <button id="conflict-save" hidden>未保存の変更を保存</button><p id="notice" role="status" aria-live="polite">保存内容を読み込んでいます</p>
 <section id="source-relink" hidden></section>
 <section><div class="row"><label>動画を追加<input id="video-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm"></label><label>名前<input id="project-name" maxlength="160"></label></div><p class="muted">素材はこのPC内の専用フォルダに保存します。元ファイルは変更しません。</p></section>
-<div class="grid"><div><section><h2 id="source-preview-label">素材を確認</h2><div class="preview"><video id="preview" controls playsinline></video><div id="caption-preview" class="caption"></div></div><p class="muted">素材の簡易プレビューです。音量と仕上がりは完成動画で確認できます。</p><ol id="clips"></ol><div class="tools"><button id="add-clip">カット追加</button><button id="split">ここで分割</button><button id="move-left">前へ</button><button id="move-right">後ろへ</button></div></section><section id="saved-cut-preview"></section><section><h2>完成動画</h2><button id="render" class="primary">完成動画を作る</button><span id="render-state" class="muted"></span><video id="output" controls playsinline hidden></video><a id="download" hidden download="aivs-edited.mp4">MP4を保存</a></section></div>
+<div class="grid"><div><section><h2 id="source-preview-label">素材を確認</h2><div class="preview"><video id="preview" controls playsinline></video><div id="caption-preview" class="caption"></div></div><p class="muted">素材の簡易プレビューです。音量と仕上がりは完成動画で確認できます。</p><ol id="clips"></ol><div class="tools"><button id="add-clip">カット追加</button><button id="split">ここで分割</button><button id="move-left">前へ</button><button id="move-right">後ろへ</button></div></section><section id="saved-cut-preview"></section><section><h2>完成動画</h2><button id="render" class="primary">完成動画を作る</button><span id="render-state" class="muted"></span><video id="output" controls playsinline hidden></video><a id="download" hidden download="aivs-edited.mp4">MP4を保存</a><div id="completed-audio-preview"></div></section></div>
 <div><section><h2>選んだカット</h2><label class="field">カメラ<select id="camera"></select></label><div class="row"><label>開始 秒<input id="trim-start" type="number" min="0" step="0.1"></label><label>使う長さ 秒<input id="duration" type="number" min="0.2" step="0.1"></label><label>速度<select id="speed"><option value="0.5">0.5倍</option><option value="1">1倍</option><option value="2">2倍</option><option value="4">4倍</option></select></label></div><label class="field">テロップ<textarea id="caption" maxlength="200" placeholder="表示する言葉"></textarea></label><button id="apply" class="primary">このカットを保存</button><hr><label>このカメラの同期位置 秒<input id="sync-offset" type="number" step="0.1"></label><label class="field"><input id="sync-confirm" type="checkbox">映像と音で同期位置を確認した</label><button id="apply-sync">同期位置を保存</button><p class="muted">追加カメラは同期確認後に使えます。音声の同期候補を下で調べられます。画面分割の操作は今後対応します。</p></section>
 <section><h2>音声</h2><div id="buses"></div><label class="field">BGM<input id="bgm-file" type="file" accept="audio/*"></label><label class="field">ナレーション音源<input id="narration-file" type="file" accept="audio/*"></label><label class="field">効果音<input id="sfx-file" type="file" accept="audio/*"></label><p class="muted">利用権のある音源を選んでください。読み込んだ音源は先頭へ配置します。音声生成には未対応です。</p></section></div></div></main>
 <script type="module" nonce="__NONCE__">
@@ -18,6 +18,7 @@ import {mountFirstCutPanel} from '/first-cut-panel.mjs';
 import {mountOutputHistory} from '/output-history-panel.mjs';
 import {mountSourceRelink} from '/source-relink-panel.mjs';
 import {mountPreviewPanel} from '/preview-panel.mjs';
+import {mountCompletedAudioPreview} from '/completed-audio-preview.mjs';
 const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll,outputView=0;
 const names={source:'元音声',narration:'ナレーション',bgm:'BGM',sfx:'効果音'};
 function notice(message){$('notice').textContent=message;}
@@ -32,7 +33,10 @@ const firstCutPanel=mountFirstCutPanel({container:firstCutContainer,current:()=>
 const relinkPanel=mountSourceRelink({container:$('source-relink'),fileInput:$('open-project'),current:()=>state,request:api,notice,onOpen:data=>{state=data;selected=0;show();}});
 const previewPanel=mountPreviewPanel({container:$('saved-cut-preview'),current:()=>state,selected:()=>selected,request:api,mediaURL:path=>path+'?token='+token,
  onJobChange:()=>{$('render').disabled=!state.session.project.timeline.length||state.job.status==='RUNNING'||state.sync?.status==='RUNNING'||state.firstCut?.status==='RUNNING'||state.preview?.status==='RUNNING';}});
-window.addEventListener('pagehide',()=>previewPanel.close(),{once:true});
+const completedAudio=mountCompletedAudioPreview({container:$('completed-audio-preview'),video:$('output'),
+ current:()=>state,selected:()=>selected,request:api,mediaURL:path=>path+'?token='+token,
+ outputGeneration:()=>outputView});
+window.addEventListener('pagehide',()=>{previewPanel.close();completedAudio.close();},{once:true});
 function show(){const p=state.session.project;selected=Math.min(selected,Math.max(0,p.timeline.length-1));$('project-name').value=p.name;
  $('undo').disabled=!state.session.undo.length;$('redo').disabled=!state.session.redo.length;
  $('clips').replaceChildren();p.timeline.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.textContent=(i+1)+' · '+(c.durationSec/c.speed).toFixed(1)+'秒';b.className=i===selected?'selected':'';b.onclick=()=>{selected=i;show();};li.append(b);$('clips').append(li);});
@@ -49,7 +53,7 @@ function show(){const p=state.session.project;selected=Math.min(selected,Math.ma
  syncPanel.show();
  firstCutPanel.show();
  relinkPanel.show();
- previewPanel.show();
+ previewPanel.show();completedAudio.show();
 }
 function showSync(){const s=state.session.project.sourceRefs.find(s=>s.assetId===$('camera').value);if(!s)return;$('sync-offset').value=s.offsetSec;$('sync-confirm').checked=['master','verified'].includes(s.syncStatus);}
 async function act(action){if(working)return;working=true;try{notice('処理中…');await action();show();notice('端末内に保存済み');}catch(e){if(e.status===409&&e.message.includes('REVISION_CONFLICT')){try{state=await api('/api/state');show();if(e.draft){$('conflict-save').hidden=false;$('conflict-save').onclick=()=>downloadJson(e.draft,'unsaved-edit.aivs.json');}notice('別の画面の更新を読み直しました。未保存の変更は保存ボタンから取り出せます。');}catch{notice(e.message);}}else notice(e.message);}finally{working=false;}}
@@ -73,7 +77,7 @@ const quality=document.createElement('div');quality.id='quality-review';$('downl
 const historyContainer=document.createElement('div');historyContainer.id='output-history';quality.after(historyContainer);
 const outputLabel=document.createElement('p');outputLabel.className='muted';$('output').before(outputLabel);
 const historyPanel=mountOutputHistory({container:historyContainer,request:api,notice,onSelect:view=>{
- outputView++;const url=view.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;
+ completedAudio.invalidate('以前の完成動画を表示しています。');outputView++;const url=view.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;
  outputLabel.textContent='表示中：以前の完成動画（編集版'+view.report.projectRevision+'）';showQA(view.report);
 }});
 const findingNames={BLACK_INTERVAL:'黒い映像の可能性',SILENCE_WHILE_AUDIO_SELECTED:'選択した音声が無音',SILENCE_REQUIRES_CONTEXT:'無音区間',NEAR_SAMPLE_CLIPPING:'音量ピークが大きい',TRUE_PEAK_AT_OR_ABOVE_REFERENCE:'音量ピーク（サンプル間を含む）が確認目安以上（全編最大値・時刻未特定）',TRUE_PEAK_UNAVAILABLE:'サンプル間の音量ピークを測定できませんでした',STATIC_OR_FREEZE_INTERVAL:'静止画・フリーズの候補（意図した静止画の場合あり）',VARIABLE_FRAME_CADENCE:'フレーム間隔の変化（意図した可変間隔の場合あり）'};
@@ -95,9 +99,9 @@ function showQA(report){
  }
  if(report.inspection?.omittedFindings){const p=document.createElement('p');p.textContent='検出箇所が多いため記録は256件までです。全編を再生して確認してください。';quality.append(p);}
 }
-function finished(job){if(job.status!=='PASS')return;const view=++outputView;historyPanel.invalidate();const url=job.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;$('render-state').textContent=job.historyWarning||'完成動画を確認できます';outputLabel.textContent='表示中：最新の完成動画';
+function finished(job){if(job.status!=='PASS')return;completedAudio.invalidate('現在の完成動画が利用できます。');const view=++outputView;completedAudio.show();historyPanel.invalidate();const url=job.download+'?token='+token;$('output').src=url;$('output').hidden=false;$('download').href=url;$('download').hidden=false;$('render-state').textContent=job.historyWarning||'完成動画を確認できます';outputLabel.textContent='表示中：最新の完成動画';
  quality.replaceChildren();api('/api/qa').then(report=>{if(outputView===view)showQA(report);}).catch(()=>{if(outputView===view)quality.textContent='この出力の詳細な検査記録を確認できません。編集内容から再作成できます。';});historyPanel.refresh();}
 function watch(){clearInterval(poll);poll=setInterval(async()=>{try{const latest=await api('/api/job');state.job=latest;if(latest.status==='RUNNING')return;clearInterval(poll);$('render').disabled=false;if(latest.status!=='PASS'){notice(latest.error);$('render-state').textContent='作成できませんでした';return;}finished(latest);}catch(e){clearInterval(poll);notice(e.message);}},500);}
-$('render').onclick=()=>act(async()=>{state.job=await api('/api/render',{method:'POST'});outputView++;historyPanel.invalidate();quality.replaceChildren();$('output').hidden=true;$('download').hidden=true;$('render-state').textContent='作成中。このPCのアプリを終了しないでください。';watch();});
+$('render').onclick=()=>act(async()=>{completedAudio.invalidate('新しい完成動画を作成中です。');state.job=await api('/api/render',{method:'POST'});outputView++;historyPanel.invalidate();quality.replaceChildren();$('output').hidden=true;$('download').hidden=true;$('render-state').textContent='作成中。このPCのアプリを終了しないでください。';watch();});
 api('/api/state').then(data=>{state=data;show();if(state.job.status==='RUNNING')watch();else finished(state.job);if(state.job.status!=='PASS')historyPanel.refresh();notice('端末内に保存済み');}).catch(e=>notice(e.message));
 </script></html>
