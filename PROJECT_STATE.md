@@ -7,6 +7,10 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Draft PR #26 candidate: completed MP4 audible cut replay (2026-11-02)
+
+New source and isolated tests were added on `feat/audio-preview-parity-20261102` (not merged). The user explicitly plays a selected seven-second-or-shorter cut window from the **already completed, integrity-checked MP4**, not a newly mixed preview. Matching project ID/revision is required; existing visual preview stays muted. Local source subset: Node22/FFmpeg7 **13/13 PASS** including a generated four-tone 16 s MP4/full decode. Full repo, Chrome browser, independent reviewer and physical-device tests remain NOT_RUN. See `docs/validation/COMPLETED_AUDIO_REPLAY_2026-11-02.md`. Product IN_PROGRESS; stand-alone short four-bus mixing NOT_IMPLEMENTED.
+
 ## Latest verified integration — PR #25 (read back 2026-11-02 JST)
 
 The canonical main at this checkpoint is `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, Git tree `2d9a87e270e53880386abc19fd6a81fb8c4095c0`. GitHub confirms [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pull/25) **merged** at this exact main commit, and there were **zero open PRs at the start of this reconciliation**. The formerly candidate-only saved-cut preview is integrated. It renders at most seven output seconds of the saved picture/static caption using the export compositor, with read-only project/revision/source identity checks and Linux-only guarded subprocess cleanup. It is **visual-only/muted by default** and does not establish four-bus audio preview, Windows/macOS preview cleanup, or full editing parity.

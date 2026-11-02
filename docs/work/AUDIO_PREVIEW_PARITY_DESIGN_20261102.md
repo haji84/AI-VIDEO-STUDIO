@@ -2,6 +2,10 @@
 
 Status: **DESIGN DRAFT / NOT REVIEWED / NOT IMPLEMENTED / NOT TESTED**. This document does not approve a schema, backend or policy change. The canonical goal remains `GOAL.md` and the current integrated baseline is main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8` (PR #25; main run 40811805222 SUCCESS).
 
+## 0A. Initial smaller slice after author-side design critique (2026-11-02)
+
+**NOT an independent review.** Reusing the visual-preview's intermediate audio would not be the saved four-bus mix. A new short mixer risks loop-phase, mid-fade/ducking, clock-domain and limiter-state discrepancies, and a full-length render for each short window violates performance goals. The first PR #26 code slice therefore only replays an **existing, verified completed MP4** for the selected cut and exact current revision. It has local generated-media test evidence, but **no full repo, Chrome or independent-review gate**. This is not the original pre-export mixed preview, which remains unimplemented. Sections 1-6 below still specify that future feature. See `docs/validation/COMPLETED_AUDIO_REPLAY_2026-11-02.md`.
+
 ## 1. Verified current behavior and missing result
 
 - `engine/preview_saved_clip.py` uses the checked `tools/project-manifest.mjs --format bundle` plan, selects a saved visual cut, limits it to 7 output seconds, runs `process_manifest`, and publishes an MP4/report. It does **not** run the saved four-bus mixer. Intermediate camera audio in the visual renderer must never be represented as the saved audio mix.

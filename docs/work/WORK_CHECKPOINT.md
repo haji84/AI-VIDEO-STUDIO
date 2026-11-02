@@ -7,6 +7,15 @@ Active PRs at readback: 0. [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pu
 Latest verified [main workflow 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222): completed/success, offline and synthetic browser jobs both successful on this main SHA. Three Chrome paths passed according to PR #25's preserved evidence. No fresh code or test execution at this checkpoint.
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
+## Latest PR #26 work completed within chat (2026-11-02 JST; do not mistake for main)
+
+PR: https://github.com/haji84/AI-VIDEO-STUDIO/pull/26
+Branch: `feat/audio-preview-parity-20261102` based on main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`. Re-fetch exact branch HEAD on resume. Candidate only; keep Draft. The new opt-in completed-export audible replay uses existing finished MP4 and the project-global cut clock, requiring matching current report and revision. **It does not create a new mixed preview.**
+
+Local tested exact blobs: module `8826ba618a1e21052149e08f3c252982887f99d9`, standard test `0aa61cb0ef5ca68c439460b27414f53526dae143`, synthetic media test `040a2f76fa5b8ad3948a21fbb2ff8438475ee0eb`. Node22/FFmpeg7 isolated tests **13/13 PASS**, generated four-tone AAC/MP4 fully decoded. UI/server were statically wired and fetched back but NOT_RUN as a browser/server. No fresh Actions, no independent reviewer, no main integration. Prior main Actions 40811805222 validate PR #25 only.
+
+**Next mandatory gate:** get a real nonauthor reviewer (avoid billable model usage without separate approval); run the repository's existing manual Actions on *this exact PR HEAD* and inspect all relevant Node/Python and actual Chrome paths, specifically current four-bus finished output, stale revision, history switch, metadata delay, and window-end playback. Fix verified defects in this same PR, re-review, and only then consider guarded merge. No workflow trigger change, new cloud or paid compute. A separately generated seven-second audio mix remains unimplemented. Evidence: `docs/validation/COMPLETED_AUDIO_REPLAY_2026-11-02.md`.
+
 ## Exact next task and acceptance gate
 
 Candidate: bounded four-bus **audible saved-cut preview/export parity** on the existing local Linux editor, with no changes to product security, GOAL, paid services, private files or mandatory cloud.

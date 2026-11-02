@@ -26,6 +26,10 @@ full-timeline audio/effect parity, native platforms and novice testing remain op
 Design: `docs/work/PREVIEW_PARITY_DESIGN_20261029.md`.
 Evidence: `docs/validation/PREVIEW_PARITY_2026-10-29.md`.
 
+### New PR #26 candidate, not yet main (2026-11-02)
+
+First safe slice: opt-in audible replay of an existing exact-revision completed MP4 for the selected cut (not standalone four-bus preview before export). New module/UI/test and generated-media 13/13 isolated tests passed. See `docs/validation/COMPLETED_AUDIO_REPLAY_2026-11-02.md`. Next gates: independent nonauthor design/code review, branch exact-HEAD full Node/Python and actual Chrome CI, reproducible four-bus editor export/browser proof, guarded merge, postmerge main validation. Full short independent mix preview with phase-correct loops/fades/ducking/limiter remains UNIMPLEMENTED.
+
 ## Current verified baseline and next work (2026-11-02 JST)
 
 [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pull/25) is integrated at main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, tree `2d9a87e270e53880386abc19fd6a81fb8c4095c0`. [Main Actions 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222) completed successfully for offline and all three actual-Chrome synthetic browser paths. The saved-cut **visual/static-caption** preview is implemented on Linux; do not repeat it as an open candidate. Four-bus **audible** preview/export parity is still unverified; a completed output MP4 remains the currently documented way to hear the saved mix.
