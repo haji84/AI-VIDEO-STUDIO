@@ -7,6 +7,16 @@ Active PRs at readback: 0. [PR #25](https://github.com/haji84/AI-VIDEO-STUDIO/pu
 Latest verified [main workflow 40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222): completed/success, offline and synthetic browser jobs both successful on this main SHA. Three Chrome paths passed according to PR #25's preserved evidence. No fresh code or test execution at this checkpoint.
 Goal: GOAL.md; protocol: docs/work/AUTONOMOUS_EXECUTION.md; tracking Issue #10.
 
+## Owner reviewer/tool policy and current gating (2026-11-02)
+
+Owner explicitly excludes **Copilot and CodeRabbit** for current and future development/review. See `AGENTS.md`; do not invoke or recommend these tools as reviewer fallback.
+
+Verified before this documentation commit: PR #26 is Draft at HEAD `3f9d3b40e1ed08fc1c2349f2d7c1fede2db31f31`, main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, independent GitHub review submissions **0**. The last completed full Actions success is run 41386923713 on **older** HEAD `7c972adc77979d58dde84f0b7dbdc334a63f2abc`, not the repaired current candidate. New HEAD after this policy checkpoint must be read again; current full CI is **NOT_RUN**.
+
+Reusable reviewer investigation: `haji84/AI-` includes `.github/workflows/goriq-ai09-pr-review.yml` and scripts for trusted-code Ollama/Qwen review, but it is triggered by the AI- repository's own CI `workflow_run` and scoped to same-repository PR/CI. Its existing success does not prove cross-repository authorization or a review of AI VIDEO STUDIO. `haji84/independent-ai09-reviewer` currently only has a README, not a deployed cross-repo reviewer. HUB reviewer in `haji84/habuAI-private` PR #136 explicitly has quality `HOLD` in `docs/qa/habu_cpu_review_quality_gate.md`, with unreliable false alarms; do not auto-promote its results.
+
+**Next:** design an explicit read-only, SHA-bound, non-billable cross-repository review adapter with independent execution and credential boundaries if permissible. Obtain actual model outputs for this PR and independently validate claims; use `INDEPENDENT_REVIEW_BLOCKED` until this exists. After verified fixes, run existing CI on the final exact PR HEAD, inspect logs, then honor any required formal approvals before integration. Preserve this single PR, no paid model/service, and no unchecked changes to the separate AI- repository.
+
 ## Latest PR #26 work completed within chat (2026-11-02 JST; do not mistake for main)
 
 PR: https://github.com/haji84/AI-VIDEO-STUDIO/pull/26
