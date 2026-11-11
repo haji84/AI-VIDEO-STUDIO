@@ -1,0 +1,96 @@
+name: HUB NATURAL - synthetic intake and draft validation
+on:
+  pull_request:
+    paths:
+      - 'integrations/hub-natural/**'
+      - '.github/workflows/hub-natural-synthetic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hub-natural-synthetic-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  offline-contract-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refuse private media in public source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files integrations/hub-natural | grep -Ei '\.(mp4|mov|mkv|m4v|wav|mp3|aac|jpg|jpeg|png|gif|webp|insv)$'; then
+            echo 'Private media appears in public repository'; exit 1
+          fi
+      - name: Python syntax and network-free contract/security tests
+        working-directory: integrations/hub-natural
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile pipeline.py drive_intake.py new_arrival_job.py interest_eval.py test_pipeline.py test_drive_intake.py test_new_arrival_job.py test_interest_eval.py
+          python -m unittest -v test_drive_intake test_interest_eval
+      - name: No secrets, private footage or publication used
+        run: echo 'Offline-only synthetic contract checks; no OAuth or publication.'
+
+  real-media-synthetic-tests:
+    # These tests generate their own test clips. No private footage is imported.
+    needs: offline-contract-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare FFmpeg and Japanese font without Ubuntu apt mirrors
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A known runner apt mirror had DNS failures; use a published GitHub
+          # release archive and its published SHA-256 checksum when needed.
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            asset='ffmpeg-n9.0-latest-linux64-gpl-9.0.tar.xz'
+            base='https://github.com/BtbN/FFmpeg-Builds/releases/download/latest'
+            mkdir -p "$RUNNER_TEMP/btbn-ffmpeg"
+            curl -fsSL --retry 2 --connect-timeout 15 --max-time 220 \
+              -o "$RUNNER_TEMP/$asset" "$base/$asset"
+            curl -fsSL --retry 2 --connect-timeout 15 --max-time 60 \
+              -o "$RUNNER_TEMP/checksums.sha256" "$base/checksums.sha256"
+            awk -v name="$asset" '$2 == name || $2 == "*" name {print; found=1} END {if(!found) exit 2}' \
+              "$RUNNER_TEMP/checksums.sha256" > "$RUNNER_TEMP/verified-asset.sha256"
+            (cd "$RUNNER_TEMP" && sha256sum --check verified-asset.sha256)
+            tar -xJf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP/btbn-ffmpeg" --strip-components=1
+            test -x "$RUNNER_TEMP/btbn-ffmpeg/bin/ffmpeg"
+            test -x "$RUNNER_TEMP/btbn-ffmpeg/bin/ffprobe"
+            echo "$RUNNER_TEMP/btbn-ffmpeg/bin" >> "$GITHUB_PATH"
+            export PATH="$RUNNER_TEMP/btbn-ffmpeg/bin:$PATH"
+          fi
+          if ! command -v fc-match >/dev/null; then
+            echo 'No fontconfig available; cannot claim Japanese caption test coverage'; exit 2
+          fi
+          family="$(fc-match -f '%{family}\n' 'Noto Sans CJK JP' | head -1)"
+          if [[ "$family" != *'Noto Sans CJK'* ]]; then
+            # Download at test runtime only; never commit or upload a font.
+            # Licensing stays with the upstream Noto project.
+            mkdir -p "$HOME/.local/share/fonts"
+            curl -fsSL --retry 2 --connect-timeout 15 --max-time 120 \
+              -o "$HOME/.local/share/fonts/NotoSansCJKjp-Regular.otf" \
+              'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf'
+            fc-cache -f "$HOME/.local/share/fonts"
+          fi
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+          fc-match -f '%{family} %{file}\n' 'Noto Sans CJK JP' | head -1
+      - name: Render and decode three true synthetic MP4 outputs
+        working-directory: integrations/hub-natural
+        run: python -m unittest -v test_pipeline test_drive_intake test_new_arrival_job test_interest_eval
+      - name: No media or generated artifact uploads
+        run: echo 'Synthetic outputs are ephemeral; no artifact upload and no posting.'
