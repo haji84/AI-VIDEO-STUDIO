@@ -257,7 +257,10 @@ def sync_once(client, folder_id, inbox, state_path, *, max_bytes=DEFAULT_MAX_BYT
                     raise Hold("SOURCE_TOO_LARGE")
                 previous = assets.get(file_id)
                 if previous is not None:
-                    if previous["md5"] != f["md5"] or previous["bytes"] != f["bytes"]:
+                    # Any provider-version change must be reviewed, even when
+                    # weak MD5 and byte size look unchanged.
+                    if (previous["md5"] != f["md5"] or previous["bytes"] != f["bytes"] or
+                            previous.get("version") != f["version"]):
                         raise Hold("IMPORTED_ORIGINAL_CHANGED")
                     if previous["status"] == "DUPLICATE":
                         source = inbox / previous["duplicateOf"]
@@ -270,25 +273,16 @@ def sync_once(client, folder_id, inbox, state_path, *, max_bytes=DEFAULT_MAX_BYT
                         raise Hold("LOCAL_ORIGINAL_MISSING_OR_CHANGED")
                     counts["already_present"] += 1
                     continue
-                duplicate = next((asset for asset in assets.values()
-                                  if asset.get("sha256") and asset.get("md5") == f["md5"]
-                                  and asset.get("bytes") == f["bytes"] and asset.get("status") == "IMPORTED"), None)
-                if duplicate:
-                    existing = inbox / duplicate["local"]
-                    if existing.is_symlink() or not existing.exists() or _md5_sha(existing)[1] != duplicate["sha256"]:
-                        raise Hold("DUPLICATE_SOURCE_NOT_VERIFIABLE")
-                    assets[file_id] = {**f, "sha256": duplicate["sha256"],
-                                       "status": "DUPLICATE", "duplicateOf": duplicate["local"]}
-                    _atomic_json(state_path, state)
-                    counts["duplicate"] += 1
-                    continue
                 target = inbox / f["local"]
                 if target.is_symlink():
                     raise Hold("UNSAFE_LOCAL_SYMLINK")
                 if target.exists():
+                    # Crash-recovery orphan: only reuse if complete and verified.
                     m, sha = _md5_sha(target)
                     if m != f["md5"] or target.stat().st_size != f["bytes"]:
                         raise Hold("UNTRACKED_LOCAL_FILE_COLLISION")
+                    if not _stable(f, client.file_metadata(file_id), folder_id):
+                        raise Hold("REMOTE_ORIGINAL_CHANGED_DURING_READ")
                 else:
                     tmp = None
                     try:
@@ -296,7 +290,7 @@ def sync_once(client, folder_id, inbox, state_path, *, max_bytes=DEFAULT_MAX_BYT
                                                          suffix=".tmp", delete=False) as dst:
                             tmp = Path(dst.name)
                             os.chmod(dst.name, 0o600)
-                            total, md5, sha = 0, hashlib.md5(), hashlib.sha256()
+                            total, md5, sha_hasher = 0, hashlib.md5(), hashlib.sha256()
                             with client.media(file_id) as src:
                                 while True:
                                     buf = src.read(1024 * 1024)
@@ -307,18 +301,33 @@ def sync_once(client, folder_id, inbox, state_path, *, max_bytes=DEFAULT_MAX_BYT
                                         raise Hold("DOWNLOAD_EXCEEDS_EXPECTED_SIZE")
                                     dst.write(buf)
                                     md5.update(buf)
-                                    sha.update(buf)
+                                    sha_hasher.update(buf)
                             dst.flush()
                             os.fsync(dst.fileno())
                         if total != f["bytes"] or md5.hexdigest() != f["md5"]:
                             raise Hold("DOWNLOADED_CONTENT_MISMATCH")
                         if not _stable(f, client.file_metadata(file_id), folder_id):
                             raise Hold("REMOTE_ORIGINAL_CHANGED_DURING_READ")
+                        sha = sha_hasher.hexdigest()
+                        # Never deduplicate distinct Drive IDs solely by MD5.
+                        # SHA-256 of the *actually downloaded bytes* is required.
+                        duplicate = next((asset for asset in assets.values()
+                                          if asset.get("sha256") == sha and
+                                          asset.get("bytes") == f["bytes"] and
+                                          asset.get("status") == "IMPORTED"), None)
+                        if duplicate:
+                            existing = inbox / duplicate["local"]
+                            if existing.is_symlink() or not existing.exists() or _md5_sha(existing)[1] != sha:
+                                raise Hold("DUPLICATE_SOURCE_NOT_VERIFIABLE")
+                            assets[file_id] = {**f, "sha256": sha,
+                                               "status": "DUPLICATE", "duplicateOf": duplicate["local"]}
+                            _atomic_json(state_path, state)
+                            counts["duplicate"] += 1
+                            continue
                         os.replace(tmp, target)
                     finally:
                         if tmp is not None:
                             tmp.unlink(missing_ok=True)
-                    sha = sha.hexdigest()
                 assets[file_id] = {**f, "sha256": sha, "status": "IMPORTED"}
                 _atomic_json(state_path, state)
                 counts["imported"] += 1

@@ -158,14 +158,56 @@ def validate_labels(root, labels):
     return clips
 
 
-def create_plans(clips, *, max_clips=4):
+def create_plans(clips, *, max_clips=4, interest_ranking=None):
+    """Select three *distinct editorial hypotheses*, not asserted viral winners.
+
+    If interest_ranking is supplied, all scored scenes must match actual
+    source SHA, segment times, and previously reviewed event labels. Without
+    editorial evidence, older tag-order fallback remains visibly uncalibrated.
+    """
     plans = {}
+    lookup = {(c['sha256'], round(c['start'], 3), round(c['end'], 3), c['tag']):c
+              for c in clips}
+    if interest_ranking is not None:
+        if (not isinstance(interest_ranking, dict) or
+                interest_ranking.get('schema') != 'hub-natural-interest-ranking-v1' or
+                interest_ranking.get('reviewedEligible', 0) == 0 or
+                interest_ranking.get('publishingAllowed') is not False):
+            raise Hold('INTEREST_EVIDENCE_NOT_VERIFIED')
+        rankings = interest_ranking.get('ranked', {})
+        if set(rankings) != set(PRESETS):
+            raise Hold('INTEREST_MODES_INCOMPLETE')
+        for mode, ranked in rankings.items():
+            for r in ranked:
+                key = (r['sourceSha256'], round(r['inSeconds'], 3),
+                       round(r['outSeconds'], 3), r['event'])
+                if key not in lookup:
+                    raise Hold('INTEREST_SCENE_SOURCE_OR_LABEL_MISMATCH')
     for name, preset in PRESETS.items():
-        order = {tag: i for i, tag in enumerate(preset['priority'])}
-        # Preserve chronological order among clips of the same verified type.
-        selected = sorted(enumerate(clips), key=lambda p: (order[p[1]['tag']], p[0]))[:max_clips]
+        if interest_ranking is None:
+            order = {tag: i for i, tag in enumerate(preset['priority'])}
+            selected = sorted(enumerate(clips), key=lambda p: (order[p[1]['tag']], p[0]))[:max_clips]
+            chosen = [c for _, c in selected]
+            ranking_evidence = 'TAG_PRIORITY_FALLBACK_NO_MEASURED_INTEREST'
+        else:
+            eligible_events = set(preset['priority'])
+            chosen=[]
+            for r in interest_ranking['ranked'][name]:
+                if r['event'] not in eligible_events:
+                    continue
+                key=(r['sourceSha256'], round(r['inSeconds'],3),
+                     round(r['outSeconds'],3),r['event'])
+                c=lookup[key]
+                if c not in chosen:
+                    chosen.append(c)
+                if len(chosen)>=max_clips:
+                    break
+            if not chosen:
+                raise Hold('INTEREST_REVIEW_HAS_NO_RELEVANT_SCENES')
+            ranking_evidence = 'HUMAN_REVIEWED_EDITORIAL_SCORE_NOT_VIRALITY_FORECAST'
         plans[name] = {'intro': preset['intro'], 'subtitle': preset['subtitle'],
-                       'clips': [c for _, c in selected], 'reviewRequired': True,
+                       'clips': chosen, 'reviewRequired': True,
+                       'rankingEvidence': ranking_evidence,
                        'semanticSource': 'reviewed_labels_not_AI_detection'}
     return plans
 
@@ -227,7 +269,7 @@ def render_part(clip, *, output, intro, subtitle, font, logo, tempdir):
     run(args, timeout=220)
 
 
-def render(root, label_file, out, *, logo_file=None, font=None):
+def render(root, label_file, out, *, logo_file=None, font=None, interest_file=None):
     """Build private drafts into staging; publish a complete reviewed receipt atomically.
 
     An existing output directory is never reused or overwritten. Broken or
@@ -244,7 +286,15 @@ def render(root, label_file, out, *, logo_file=None, font=None):
     logo = Path(logo_file).resolve(strict=True) if logo_file else None
     if logo and (not logo.is_file() or logo.suffix.lower() not in {'.png', '.jpg', '.jpeg'}):
         raise Hold('LOGO_FORMAT_INVALID')
-    plans = create_plans(clips)
+    interest_ranking = None
+    if interest_file is not None:
+        from interest_eval import rank_reviewed
+        try:
+            reviews = json.loads(Path(interest_file).read_text(encoding='utf-8'))
+            interest_ranking = rank_reviewed(reviews)
+        except (ValueError, OSError) as exc:
+            raise Hold('EDITORIAL_REVIEWS_INVALID') from exc
+    plans = create_plans(clips, interest_ranking=interest_ranking)
     out.parent.mkdir(parents=True, exist_ok=True)
     staged = Path(tempfile.mkdtemp(prefix='.hub-natural-render-', dir=out.parent))
     try:
@@ -273,7 +323,8 @@ def render(root, label_file, out, *, logo_file=None, font=None):
                               'parts': [{'sourceSha256': c['sha256'], 'inSeconds': c['start'],
                                          'outSeconds': c['end'], 'tag': c['tag']} for c in plan['clips']],
                               'fullDecode': 'PASS', 'privacyAndSafety': 'REVIEW_REQUIRED',
-                              'labelEvidence': 'OWNER_REVIEWED_NOT_MODEL_INFERRED'}
+                              'labelEvidence': 'DECLARED_REVIEWED_NOT_INDEPENDENTLY_AUDITED',
+                              'rankingEvidence': plan['rankingEvidence']}
         # Even a race during FFmpeg reading is caught before any final draft appears.
         for clip in clips:
             if sha_file(clip['file']) != clip['sha256']:
@@ -281,7 +332,8 @@ def render(root, label_file, out, *, logo_file=None, font=None):
         result = {'schema': 'hub-natural-private-drafts-v1', 'status': 'REVIEW_REQUIRED',
                   'posting': 'NOT_IMPLEMENTED', 'public_safe': False,
                   'gorilla_logo': 'APPLIED' if logo else 'MISSING_HOLD_FOR_PUBLICATION',
-                  'face_location_plate_qa': 'NOT_PROVEN', 'drafts': receipts}
+                  'face_location_plate_qa': 'NOT_PROVEN',
+                  'interestPrediction': 'NOT_A_VIRALITY_FORECAST', 'drafts': receipts}
         (staged / 'receipt.json').write_text(json.dumps(result, ensure_ascii=False, indent=2),
                                              encoding='utf-8')
         if out.exists():
@@ -305,6 +357,7 @@ def main():
     r.add_argument('--out', required=True)
     r.add_argument('--logo')
     r.add_argument('--font')
+    r.add_argument('--interest-reviews')
     args = p.parse_args()
     try:
         if args.command == 'scan':
@@ -312,7 +365,8 @@ def main():
             print(json.dumps({'status': 'SCAN_ONLY', 'count': len(ans),
                               'semanticRecognition': 'NOT_PERFORMED'}))
         else:
-            result = render(args.root, args.labels, args.out, logo_file=args.logo, font=args.font)
+            result = render(args.root, args.labels, args.out, logo_file=args.logo, font=args.font,
+                            interest_file=args.interest_reviews)
             print(json.dumps({'status': result['status'],
                               'draftNames': list(result['drafts'])}))
     except (Hold, FileNotFoundError, ValueError) as e:

@@ -68,14 +68,14 @@ class TestDriveIntake(unittest.TestCase):
         self.assertEqual(s["already_present"], 1)
         self.assertEqual(d.downloads, 1)
 
-    def test_duplicate_content_does_not_download_second_video(self):
+    def test_duplicate_content_verified_by_sha_after_second_download(self):
         original = b"samesame" * 400
         d = FakeDrive([(fixture("sampleVID123456789", original), original),
                        (fixture("secondVID123456789", original), original)])
         result = self.sync(d)
         self.assertEqual(result["imported"], 1)
         self.assertEqual(result["duplicate"], 1)
-        self.assertEqual(d.downloads, 1)
+        self.assertEqual(d.downloads, 2)  # distinct IDs require their own SHA-256 proof
         self.assertEqual(len(list(self.inbox.glob("owner_*.mp4"))), 1)
 
     def test_updated_original_not_overwritten(self):
@@ -122,6 +122,27 @@ class TestDriveIntake(unittest.TestCase):
         self.state.write_text(json.dumps({"schema": "other", "folder": FOLDER, "assets": {}}))
         with self.assertRaisesRegex(Hold, "PRIVATE_STATE_INVALID"):
             self.sync(FakeDrive([]))
+
+    def test_same_md5_but_changed_provider_version_is_hold(self):
+        old = b"content"
+        d = FakeDrive([(fixture("sampleVID123456789", old), old)])
+        self.sync(d)
+        d.files = [(fixture("sampleVID123456789", old, version="2"), old)]
+        self.assertEqual(self.sync(d)["hold"], 1)
+        self.assertEqual(d.downloads, 1)
+
+    def test_second_file_with_md5_collision_claim_must_be_downloaded_and_refused(self):
+        real = b"example-01"
+        fake = b"example-02"  # same length but different actual checksum
+        x = fixture("sampleVID123456789", real)
+        y = fixture("secondVID123456789", real)
+        d = FakeDrive([(x, real), (y, fake)])  # falsified MD5 metadata on second
+        result = self.sync(d)
+        self.assertEqual(result["imported"], 1)
+        self.assertEqual(result["hold"], 1)
+        self.assertEqual(result["duplicate"], 0)
+        self.assertEqual(d.downloads, 2)
+        self.assertEqual(len(list(self.inbox.glob("owner_*.mp4"))), 1)
 
     def test_drive_client_does_not_accept_bad_access_token(self):
         with self.assertRaisesRegex(Hold, "OAUTH_NOT_CONNECTED"):

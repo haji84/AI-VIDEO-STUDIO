@@ -35,8 +35,8 @@ jobs:
       - name: Syntax and synthetic unit/integration tests
         working-directory: integrations/hub-natural
         run: |
-          python -m py_compile pipeline.py drive_intake.py test_pipeline.py test_drive_intake.py
-          python -m unittest -v test_pipeline test_drive_intake
+          python -m py_compile pipeline.py drive_intake.py new_arrival_job.py interest_eval.py test_pipeline.py test_drive_intake.py test_new_arrival_job.py test_interest_eval.py
+          python -m unittest -v test_pipeline test_drive_intake test_new_arrival_job test_interest_eval
       - name: Confirm no production credentials needed
         run: |
           echo 'Synthetic only: no OAuth, Drive network, cloud export, real media, Instagram posting or deployment.'
