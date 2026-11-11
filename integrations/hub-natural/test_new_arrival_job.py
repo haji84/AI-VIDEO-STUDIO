@@ -57,6 +57,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.client.calls,1)
         self.assertEqual(hashlib.sha256(next(self.inbox.glob('owner_*.mp4')).read_bytes()).hexdigest(),
                          hashlib.sha256(self.bytes).hexdigest())
+    def test_repeated_schedule_does_not_enqueue_same_asset_again(self):
+        first = self.run_job()
+        self.assertEqual(first['newlyQueued'], 1)
+        before = self.queue.read_bytes()
+        second = self.run_job()
+        self.assertEqual(second['newlyQueued'], 0)
+        self.assertEqual(second['queuePending'], 1)
+        self.assertEqual(self.client.calls, 1)
+        after = json.loads(self.queue.read_text())
+        self.assertEqual(after['assets'], json.loads(before)['assets'])
+
+    def test_unexpected_queue_status_mutation_fails_closed(self):
+        self.run_job()
+        doc = json.loads(self.queue.read_text())
+        doc['assets'][0]['sceneStatus'] = 'APPROVED_WITHOUT_EVIDENCE'
+        self.queue.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUE_SOURCE_OR_STATUS_CHANGED'):
+            self.run_job()
+
     def test_corrupted_existing_original_cannot_be_treated_as_new_safe_media(self):
         self.run_job()
         source=next(self.inbox.glob('owner_*.mp4'))

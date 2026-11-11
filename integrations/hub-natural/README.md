@@ -215,3 +215,10 @@ are **NOT implemented**.
 - Commit/PR review, actual Drive OAuth proof, durable state on the chosen host,
   user iPhone playback, approved gorilla artwork, privacy/safety review and
   post-publication Instagram analysis are separate gates.
+
+## 2026-11-11 security and unattended-intake hardening
+
+- The test workflow was split into a quick no-network/no-FFmpeg security job and a separate actual synthetic-MP4 job. The previous run #43033409657 was cancelled before tests due to Ubuntu Azure apt mirror DNS failures. The media job no longer calls `apt-get` and obtains FFmpeg+FFprobe (if absent) from a public GitHub release with a SHA-256 checksum of that release, plus a temporary Noto CJK font. Downloads may still fail; if so the job is **FAILED/BLOCKED**, never silently skipped or green. No font files or footage enter Git.
+- `DriveHTTP` now refuses redirects rather than forwarding the bearer token to an arbitrary redirect target. Legitimate provider redirects, if they occur, will result in `DRIVE_REDIRECT_REQUIRES_REVIEW` until a separately reviewed allowlisted no-credential-forwarding handler is implemented. This fail-closed behavior must be checked with actual OAuth only on the owner-approved private host.
+- Repeated `new_arrival_job` runs preserve the list of known immutable sources and report `newlyQueued=0` on unchanged content. A queue with unrecognized schema or tampered status stops. This is still NOT a durable independent semantic approval store; it only records `NEEDS_SEMANTIC_REVIEW` and never writes a publishable file.
+- Latest code was reviewed locally for static failure modes and exercised with 37 synthetic tests; the author of this code is not an independent human reviewer. Actual GitHub Actions HEAD success and a distinct reviewer remain explicit gates.

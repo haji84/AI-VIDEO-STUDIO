@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from drive_intake import DriveHTTP, Hold, sync_once, SCHEMA
+from drive_intake import DriveHTTP, Hold, sync_once, SCHEMA, _RejectRedirect
 
 FOLDER = "fakeDriveFolder0123456789"
 
@@ -147,6 +147,21 @@ class TestDriveIntake(unittest.TestCase):
     def test_drive_client_does_not_accept_bad_access_token(self):
         with self.assertRaisesRegex(Hold, "OAUTH_NOT_CONNECTED"):
             DriveHTTP("")
+
+    def test_bearer_token_is_never_forwarded_to_http_redirect(self):
+        # Pure transport test, no Google network or OAuth credentials used.
+        from urllib import request
+        handler = _RejectRedirect()
+        initial = request.Request(
+            "https://www.googleapis.com/drive/v3/files/abcde0123456?alt=media",
+            headers={"Authorization": "Bearer dummy-not-real"})
+        with self.assertRaisesRegex(Hold, "DRIVE_REDIRECT_REQUIRES_REVIEW"):
+            handler.redirect_request(initial, None, 302, "Moved", {},
+                                     "https://example.com/collect")
+        # URL prefix is insufficient: files.evil must not be accepted as files.
+        with self.assertRaisesRegex(Hold, "UNEXPECTED_REMOTE_HOST"):
+            DriveHTTP("dummy-not-real")._open(
+                "https://www.googleapis.com/drive/v3/files.evil.com")
 
     def test_symlink_to_untracked_media_is_hold(self):
         original = b"real-synthetic-media"

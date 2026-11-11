@@ -106,6 +106,17 @@ def _load_state(state_path, folder_id):
     return doc
 
 
+class _RejectRedirect(request.HTTPRedirectHandler):
+    """Never forward a Drive bearer credential to a redirected endpoint.
+
+    A legitimate Google-side redirect must be reviewed and handled by a separate
+    allowlisted transport, not by urllib's default automatic redirect behavior.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise Hold("DRIVE_REDIRECT_REQUIRES_REVIEW")
+
+
 class DriveHTTP:
     """Fixed-host Google Drive v3 client. Caller must supply a scoped OAuth token."""
 
@@ -113,10 +124,13 @@ class DriveHTTP:
         if not token or not isinstance(token, str):
             raise Hold("OAUTH_NOT_CONNECTED")
         self.__token = token
-        self._opener = opener or request.urlopen
+        self._opener = opener or request.build_opener(_RejectRedirect()).open
 
     def _open(self, url, *, data=None):
-        if not url.startswith(BASE) and url != TOKEN_URL:
+        parsed = parse.urlsplit(url)
+        if (parsed.scheme != "https" or parsed.netloc != "www.googleapis.com" or
+                not (parsed.path == "/drive/v3/files" or
+                     parsed.path.startswith("/drive/v3/files/"))):
             raise Hold("UNEXPECTED_REMOTE_HOST")
         req = request.Request(url, headers={"Authorization": "Bearer " + self.__token,
                                               "User-Agent": "HUB-NATURAL-private-intake/1"}, data=data)
