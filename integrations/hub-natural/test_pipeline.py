@@ -128,6 +128,15 @@ class HabuPipelineTests(unittest.TestCase):
                             for v in result['drafts'].values()))
         self.assertTrue(all(v['fullDecode']=='PASS' for v in result['drafts'].values()))
 
+    def test_no_discovery_scene_means_no_discovery_draft_claim(self):
+        reviewed=subject.validate_labels(self.sources,self.labels)
+        changed=[{**c} for c in reviewed]
+        for c in changed:
+            if c['tag']=='discovery':
+                c['tag']='closeup'
+        with self.assertRaisesRegex(subject.Hold,'PLAN_CORE_EVENT_MISSING:B_discovery'):
+            subject.create_plans(changed)
+
     def test_unverified_interest_data_does_not_produce_false_edits(self):
         from interest_eval import SCHEMA
         clips=subject.validate_labels(self.sources,self.labels)
@@ -148,6 +157,9 @@ class HabuPipelineTests(unittest.TestCase):
         self.assertFalse(result['public_safe'])
         self.assertEqual(result['posting'], 'NOT_IMPLEMENTED')
         self.assertEqual(result['gorilla_logo'], 'MISSING_HOLD_FOR_PUBLICATION')
+        self.assertEqual(result['variationReview']['uniqueOpeners'], 3)
+        self.assertIn('ALL_VARIANTS_SAME_SHOT_INVENTORY', result['variationReview']['warnings'])
+        self.assertFalse(result['variationReview']['postingReady'])
         self.assertEqual(subject.sha_file(self.sources / 'a.mp4'), self.sha_a)
         self.assertEqual(subject.sha_file(self.sources / 'b.mp4'), self.sha_b)
         for item in result['drafts'].values():

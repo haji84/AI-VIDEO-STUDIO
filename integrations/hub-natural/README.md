@@ -194,6 +194,10 @@ drafts, records pairwise Jaccard overlap and warns if all three reuse the same
 shot inventory or if opening scenes are not distinct. This is **structural QA**:
 it catches an old weak-edit pattern, but does not prove any edit is interesting.
 A "3 MP4 files exist" result can never be counted as creative readiness.
+Each genre also requires a genuine confirmed central event: capture for A,
+discovery for B, and observation/other wildlife for C. A batch with no reviewed
+discovery cannot be miscaptioned as a discovery video merely because it
+contains closeups. The job HOLDs instead of fabricating the story.
 
 `evaluated_detections()` can compare future model suggestions with independently
 human-checked positives *and negative/night footage*. It returns precision,

@@ -17,7 +17,7 @@ import sys
 import tempfile
 
 ALLOWED_TYPES = {'.mp4', '.mov', '.m4v', '.mkv'}
-TAGS = {'discovery', 'capture', 'observation', 'closeup'}
+TAGS = {'discovery', 'capture', 'observation', 'closeup', 'other_wildlife'}
 PRESETS = {
     'A_challenge': {
         'intro': 'ハブ捕り1年目', 'subtitle': '200匹への道｜2026年の記録',
@@ -29,7 +29,7 @@ PRESETS = {
     },
     'C_wildlife': {
         'intro': '夜の奄美を記録する', 'subtitle': '野生のハブ・観察記録',
-        'priority': ['observation', 'closeup', 'discovery', 'capture'],
+        'priority': ['observation', 'other_wildlife', 'closeup', 'discovery', 'capture'],
     },
 }
 
@@ -205,6 +205,11 @@ def create_plans(clips, *, max_clips=4, interest_ranking=None):
             if not chosen:
                 raise Hold('INTEREST_REVIEW_HAS_NO_RELEVANT_SCENES')
             ranking_evidence = 'HUMAN_REVIEWED_EDITORIAL_SCORE_NOT_VIRALITY_FORECAST'
+        required = {'A_challenge': {'capture'},
+                    'B_discovery': {'discovery'},
+                    'C_wildlife': {'observation', 'other_wildlife'}}[name]
+        if not any(c['tag'] in required for c in chosen):
+            raise Hold('PLAN_CORE_EVENT_MISSING:' + name)
         plans[name] = {'intro': preset['intro'], 'subtitle': preset['subtitle'],
                        'clips': chosen, 'reviewRequired': True,
                        'rankingEvidence': ranking_evidence,
