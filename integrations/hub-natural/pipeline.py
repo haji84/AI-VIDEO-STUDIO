@@ -212,6 +212,39 @@ def create_plans(clips, *, max_clips=4, interest_ranking=None):
     return plans
 
 
+def measure_plan_diversity(plans):
+    """Structural QA, *not* a user-interest or post-performance metric."""
+    if set(plans) != set(PRESETS):
+        raise Hold('THREE_PLANS_REQUIRED')
+    shot_sets = {}
+    openers = []
+    for name, plan in plans.items():
+        shots = {(c['sha256'], round(c['start'],3), round(c['end'],3))
+                 for c in plan['clips']}
+        if not shots:
+            raise Hold('EMPTY_PLAN')
+        shot_sets[name] = shots
+        c=plan['clips'][0]
+        openers.append((c['sha256'],round(c['start'],3),round(c['end'],3)))
+    names=list(PRESETS)
+    jaccards={}
+    for i,a in enumerate(names):
+        for b in names[i+1:]:
+            union=shot_sets[a] | shot_sets[b]
+            jaccards[a+'__'+b]=round(len(shot_sets[a]&shot_sets[b])/len(union),3)
+    warnings=[]
+    if len(set(openers)) < 3:
+        warnings.append('OPENERS_NOT_THREE_DISTINCT_SCENES')
+    if all(x==1 for x in jaccards.values()):
+        warnings.append('ALL_VARIANTS_SAME_SHOT_INVENTORY')
+    return {'structuralEvidence':'SHOT_IDS_AND_ORDER_ONLY',
+            'uniqueOpeners':len(set(openers)),
+            'pairwiseShotJaccard':jaccards,
+            'warnings':warnings,
+            'creativeQuality':'NOT_MEASURED',
+            'postingReady':False}
+
+
 def font_file(explicit=None):
     if explicit:
         f = Path(explicit).resolve(strict=True)
@@ -295,6 +328,7 @@ def render(root, label_file, out, *, logo_file=None, font=None, interest_file=No
         except (ValueError, OSError) as exc:
             raise Hold('EDITORIAL_REVIEWS_INVALID') from exc
     plans = create_plans(clips, interest_ranking=interest_ranking)
+    variation = measure_plan_diversity(plans)
     out.parent.mkdir(parents=True, exist_ok=True)
     staged = Path(tempfile.mkdtemp(prefix='.hub-natural-render-', dir=out.parent))
     try:
@@ -333,7 +367,8 @@ def render(root, label_file, out, *, logo_file=None, font=None, interest_file=No
                   'posting': 'NOT_IMPLEMENTED', 'public_safe': False,
                   'gorilla_logo': 'APPLIED' if logo else 'MISSING_HOLD_FOR_PUBLICATION',
                   'face_location_plate_qa': 'NOT_PROVEN',
-                  'interestPrediction': 'NOT_A_VIRALITY_FORECAST', 'drafts': receipts}
+                  'interestPrediction': 'NOT_A_VIRALITY_FORECAST',
+                  'variationReview': variation, 'drafts': receipts}
         (staged / 'receipt.json').write_text(json.dumps(result, ensure_ascii=False, indent=2),
                                              encoding='utf-8')
         if out.exists():

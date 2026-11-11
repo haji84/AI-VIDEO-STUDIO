@@ -189,6 +189,12 @@ Private editorial file example (synthetic, do not commit real ratings):
 ]}
 ```
 
+`measure_plan_diversity()` also compares exact shot identities across the three
+drafts, records pairwise Jaccard overlap and warns if all three reuse the same
+shot inventory or if opening scenes are not distinct. This is **structural QA**:
+it catches an old weak-edit pattern, but does not prove any edit is interesting.
+A "3 MP4 files exist" result can never be counted as creative readiness.
+
 `evaluated_detections()` can compare future model suggestions with independently
 human-checked positives *and negative/night footage*. It returns precision,
 recall and F1 based on temporal IoU+event match, but marks insufficient datasets

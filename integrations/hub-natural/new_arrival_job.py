@@ -8,11 +8,8 @@ stops at a review queue, rather than inventing a snake event or exporting footag
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
-import tempfile
-import os
 
 from drive_intake import (DriveHTTP, Hold, _assert_private, _atomic_json,
                           oauth_token_from_env, sync_once)
