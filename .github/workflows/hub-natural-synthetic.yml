@@ -1,0 +1,42 @@
+name: HUB NATURAL - synthetic intake and draft validation
+on:
+  pull_request:
+    paths:
+      - 'integrations/hub-natural/**'
+      - '.github/workflows/hub-natural-synthetic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hub-natural-synthetic-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  private-boundary-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Media tools and Japanese font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+      - name: Refuse tracked private media
+        run: |
+          if git ls-files integrations/hub-natural | grep -Ei '\.(mp4|mov|mkv|m4v|wav|mp3|aac|jpg|jpeg|png|gif|webp|insv)$'; then
+            echo 'Private media appears in public repository'; exit 1
+          fi
+      - name: Syntax and synthetic unit/integration tests
+        working-directory: integrations/hub-natural
+        run: |
+          python -m py_compile pipeline.py drive_intake.py test_pipeline.py test_drive_intake.py
+          python -m unittest -v test_pipeline test_drive_intake
+      - name: Confirm no production credentials needed
+        run: |
+          echo 'Synthetic only: no OAuth, Drive network, cloud export, real media, Instagram posting or deployment.'

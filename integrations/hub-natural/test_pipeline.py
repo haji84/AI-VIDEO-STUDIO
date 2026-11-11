@@ -74,6 +74,22 @@ class HabuPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(subject.Hold, 'SOURCE_SHA_MISMATCH'):
             subject.validate_labels(self.sources, corrupt)
 
+    def test_scan_will_not_overwrite_original_mp4(self):
+        original = self.sources / 'a.mp4'
+        before = subject.sha_file(original)
+        with self.assertRaisesRegex(subject.Hold, 'CATALOG_MUST_BE_OUTSIDE_ORIGINALS'):
+            subject.scan(self.sources, original)
+        self.assertEqual(subject.sha_file(original), before)
+
+    def test_render_refuses_existing_output_and_preserves_older_receipt(self):
+        dest = self.folder / 'already-present'
+        dest.mkdir(exist_ok=True)
+        receipt = dest / 'receipt.json'
+        receipt.write_text('original receipt', encoding='utf-8')
+        with self.assertRaisesRegex(subject.Hold, 'OUTPUT_ALREADY_EXISTS'):
+            subject.render(self.sources, self.labels, dest)
+        self.assertEqual(receipt.read_text(encoding='utf-8'), 'original receipt')
+
     def test_plans_change_first_beat_with_same_verified_sources(self):
         clips = subject.validate_labels(self.sources, self.labels)
         plans = subject.create_plans(clips)

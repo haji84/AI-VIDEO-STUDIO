@@ -88,6 +88,10 @@ def probe(path):
 
 def scan(root, out):
     root = Path(root).resolve(strict=True)
+    out = Path(out).resolve()
+    # A mistaken --out pointing at an original .mp4 must never replace footage.
+    if out == root or out.is_relative_to(root):
+        raise Hold('CATALOG_MUST_BE_OUTSIDE_ORIGINALS')
     results = []
     for path in sorted(root.rglob('*')):
         if path.suffix.lower() not in ALLOWED_TYPES:
@@ -105,11 +109,21 @@ def scan(root, out):
         if 'sha256' in item:
             item['duplicate_of'] = known.get(item['sha256'])
             known.setdefault(item['sha256'], item['relative_name'])
-    out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({'schema': 'hub-natural-media-catalog-v1', 'status': 'PRIVATE',
-                               'semantic_recognition': 'NOT_PERFORMED', 'assets': results},
-                              ensure_ascii=False, indent=2), encoding='utf-8')
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=out.parent,
+                                         prefix='.catalog-', suffix='.tmp', delete=False) as file:
+            temp_path = Path(file.name)
+            json.dump({'schema': 'hub-natural-media-catalog-v1', 'status': 'PRIVATE',
+                       'semantic_recognition': 'NOT_PERFORMED', 'assets': results},
+                      file, ensure_ascii=False, indent=2)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temp_path, out)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
     return results
 
 
@@ -214,50 +228,69 @@ def render_part(clip, *, output, intro, subtitle, font, logo, tempdir):
 
 
 def render(root, label_file, out, *, logo_file=None, font=None):
-    """Create private three-variant proofs. Even successful output remains REVIEW_REQUIRED."""
+    """Build private drafts into staging; publish a complete reviewed receipt atomically.
+
+    An existing output directory is never reused or overwritten. Broken or
+    interrupted renders cannot leave a stale public-ready receipt beside video.
+    """
     out = Path(out).resolve()
     root = Path(root).resolve(strict=True)
     if out.is_relative_to(root):
         raise Hold('OUTPUT_CANNOT_BE_INSIDE_SOURCE_DIRECTORY')
+    if out.exists():
+        raise Hold('OUTPUT_ALREADY_EXISTS_USE_NEW_DIRECTORY')
     clips = validate_labels(root, label_file)
     font = font_file(font)
     logo = Path(logo_file).resolve(strict=True) if logo_file else None
     if logo and (not logo.is_file() or logo.suffix.lower() not in {'.png', '.jpg', '.jpeg'}):
         raise Hold('LOGO_FORMAT_INVALID')
     plans = create_plans(clips)
-    out.mkdir(parents=True, exist_ok=True)
-    receipts = {}
-    for name, plan in plans.items():
-        output = out / (name + '.mp4')
-        with tempfile.TemporaryDirectory(prefix='hub_natural_') as scratch:
-            paths = []
-            for i, clip in enumerate(plan['clips']):
-                path = Path(scratch) / f'part_{i:03}.mp4'
-                render_part(clip, output=path, intro=plan['intro'], subtitle=plan['subtitle'],
-                            font=font, logo=logo, tempdir=scratch)
-                paths.append(path)
-            concat = Path(scratch) / 'list.txt'
-            concat.write_text(''.join(f"file '{p}'\n" for p in paths), encoding='utf-8')
-            run(['ffmpeg', '-hide_banner', '-y', '-nostdin', '-v', 'error', '-f', 'concat', '-safe', '0',
-                 '-i', str(concat), '-map_metadata', '-1', '-map_chapters', '-1',
-                 '-c', 'copy', '-movflags', '+faststart', str(output)], timeout=180)
-        info = probe(output)
-        if not (info['width'] == 720 and info['height'] == 1280 and info['audio']):
-            raise Hold(f'OUTPUT_STREAM_INVALID:{name}')
-        run(['ffmpeg', '-hide_banner', '-nostdin', '-v', 'error', '-xerror', '-i', str(output),
-             '-f', 'null', '-'], timeout=220)  # full output independent decode
-        receipts[name] = {'file': output.name, 'sha256': sha_file(output),
-                          'seconds': round(info['duration'], 3), 'dimensions': [720, 1280],
-                          'parts': [{'sourceSha256': c['sha256'], 'inSeconds': c['start'],
-                                     'outSeconds': c['end'], 'tag': c['tag']} for c in plan['clips']],
-                          'fullDecode': 'PASS', 'privacyAndSafety': 'REVIEW_REQUIRED',
-                          'labelEvidence': 'OWNER_REVIEWED_NOT_MODEL_INFERRED'}
-    result = {'schema': 'hub-natural-private-drafts-v1', 'status': 'REVIEW_REQUIRED',
-              'posting': 'NOT_IMPLEMENTED', 'public_safe': False,
-              'gorilla_logo': 'APPLIED' if logo else 'MISSING_HOLD_FOR_PUBLICATION',
-              'face_location_plate_qa': 'NOT_PROVEN', 'drafts': receipts}
-    (out / 'receipt.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
-    return result
+    out.parent.mkdir(parents=True, exist_ok=True)
+    staged = Path(tempfile.mkdtemp(prefix='.hub-natural-render-', dir=out.parent))
+    try:
+        receipts = {}
+        for name, plan in plans.items():
+            output = staged / (name + '.mp4')
+            with tempfile.TemporaryDirectory(prefix='hub_natural_') as scratch:
+                paths = []
+                for i, clip in enumerate(plan['clips']):
+                    path = Path(scratch) / f'part_{i:03}.mp4'
+                    render_part(clip, output=path, intro=plan['intro'], subtitle=plan['subtitle'],
+                                font=font, logo=logo, tempdir=scratch)
+                    paths.append(path)
+                concat = Path(scratch) / 'list.txt'
+                concat.write_text(''.join(f"file '{p}'\n" for p in paths), encoding='utf-8')
+                run(['ffmpeg', '-hide_banner', '-y', '-nostdin', '-v', 'error', '-f', 'concat', '-safe', '0',
+                     '-i', str(concat), '-map_metadata', '-1', '-map_chapters', '-1',
+                     '-c', 'copy', '-movflags', '+faststart', str(output)], timeout=180)
+            info = probe(output)
+            if not (info['width'] == 720 and info['height'] == 1280 and info['audio']):
+                raise Hold(f'OUTPUT_STREAM_INVALID:{name}')
+            run(['ffmpeg', '-hide_banner', '-nostdin', '-v', 'error', '-xerror', '-i', str(output),
+                 '-f', 'null', '-'], timeout=220)
+            receipts[name] = {'file': output.name, 'sha256': sha_file(output),
+                              'seconds': round(info['duration'], 3), 'dimensions': [720, 1280],
+                              'parts': [{'sourceSha256': c['sha256'], 'inSeconds': c['start'],
+                                         'outSeconds': c['end'], 'tag': c['tag']} for c in plan['clips']],
+                              'fullDecode': 'PASS', 'privacyAndSafety': 'REVIEW_REQUIRED',
+                              'labelEvidence': 'OWNER_REVIEWED_NOT_MODEL_INFERRED'}
+        # Even a race during FFmpeg reading is caught before any final draft appears.
+        for clip in clips:
+            if sha_file(clip['file']) != clip['sha256']:
+                raise Hold('SOURCE_CHANGED_DURING_RENDER')
+        result = {'schema': 'hub-natural-private-drafts-v1', 'status': 'REVIEW_REQUIRED',
+                  'posting': 'NOT_IMPLEMENTED', 'public_safe': False,
+                  'gorilla_logo': 'APPLIED' if logo else 'MISSING_HOLD_FOR_PUBLICATION',
+                  'face_location_plate_qa': 'NOT_PROVEN', 'drafts': receipts}
+        (staged / 'receipt.json').write_text(json.dumps(result, ensure_ascii=False, indent=2),
+                                             encoding='utf-8')
+        if out.exists():
+            raise Hold('OUTPUT_APPEARED_DURING_RENDER')
+        os.rename(staged, out)
+        return result
+    finally:
+        if staged.exists():
+            shutil.rmtree(staged)
 
 
 def main():
