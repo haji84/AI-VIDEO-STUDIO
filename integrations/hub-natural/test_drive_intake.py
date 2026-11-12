@@ -123,6 +123,76 @@ class TestDriveIntake(unittest.TestCase):
         with self.assertRaisesRegex(Hold, "PRIVATE_STATE_INVALID"):
             self.sync(FakeDrive([]))
 
+    def test_killed_worker_releases_lock_for_next_process(self):
+        # A hard exit bypasses contextmanager finally, unlike a normal exception.
+        # OS advisory locks must still release without deleting the lock file.
+        import subprocess
+        import sys
+        script = ("import os, sys\n"
+                  "from drive_intake import _single_writer\n"
+                  "with _single_writer(sys.argv[1]):\n"
+                  "    os._exit(17)\n")
+        child = subprocess.run([sys.executable, "-c", script, str(self.state)],
+                               cwd=str(Path(__file__).resolve().parent),
+                               capture_output=True, timeout=10)
+        self.assertEqual(child.returncode, 17, child.stderr)
+        self.assertTrue(Path(str(self.state) + ".lock").is_file())
+        result = self.sync(FakeDrive([]))
+        self.assertEqual(result["imported"], 0)
+        self.assertTrue(Path(str(self.state) + ".lock").is_file())
+
+    def test_other_process_cannot_enter_while_live_worker_holds_lock(self):
+        import subprocess
+        import sys
+        from drive_intake import _single_writer
+        script = ("import sys\n"
+                  "from drive_intake import _single_writer, Hold\n"
+                  "try:\n"
+                  "    with _single_writer(sys.argv[1]):\n"
+                  "        sys.exit(8)\n"
+                  "except Hold as exc:\n"
+                  "    sys.exit(4 if str(exc) == 'INTAKE_ALREADY_RUNNING' else 5)\n")
+        with _single_writer(self.state):
+            child = subprocess.run([sys.executable, "-c", script, str(self.state)],
+                                   cwd=str(Path(__file__).resolve().parent),
+                                   capture_output=True, timeout=10)
+            self.assertEqual(child.returncode, 4, child.stderr)
+        self.assertEqual(self.sync(FakeDrive([]))["imported"], 0)
+
+    def test_crash_between_media_commit_and_state_write_recovers_without_download(self):
+        from unittest import mock
+        raw = b"synthetic-crash-video-bytes" * 9
+        client = FakeDrive([(fixture("sampleVID123456789", raw), raw)])
+        # The media rename happens before the manifest write; simulate an
+        # abrupt failure in exactly that gap, then restart independently.
+        with mock.patch("drive_intake._atomic_json",
+                        side_effect=RuntimeError("synthetic-crash-before-state")):
+            with self.assertRaisesRegex(RuntimeError, "synthetic-crash-before-state"):
+                self.sync(client)
+        self.assertEqual(client.downloads, 1)
+        self.assertFalse(self.state.exists())
+        committed = list(self.inbox.glob("owner_*.mp4"))
+        self.assertEqual(len(committed), 1)
+        self.assertEqual(hashlib.sha256(committed[0].read_bytes()).hexdigest(),
+                         hashlib.sha256(raw).hexdigest())
+        recovered = self.sync(client)
+        self.assertEqual(recovered["imported"], 1)
+        self.assertEqual(client.downloads, 1)
+        self.assertEqual(self.sync(client)["already_present"], 1)
+        self.assertEqual(client.downloads, 1)
+
+    def test_symlink_lock_cannot_redirect_private_lock(self):
+        import os
+        if os.name == "nt" or not hasattr(os, "O_NOFOLLOW"):
+            self.skipTest("O_NOFOLLOW POSIX contract")
+        self.state.parent.mkdir(parents=True)
+        other = self.root / "unrelated-private-record"
+        other.write_bytes(b"must-stay-unchanged")
+        Path(str(self.state) + ".lock").symlink_to(other)
+        with self.assertRaisesRegex(Hold, "PRIVATE_LOCK_UNAVAILABLE"):
+            self.sync(FakeDrive([]))
+        self.assertEqual(other.read_bytes(), b"must-stay-unchanged")
+
     def test_same_md5_but_changed_provider_version_is_hold(self):
         old = b"content"
         d = FakeDrive([(fixture("sampleVID123456789", old), old)])
