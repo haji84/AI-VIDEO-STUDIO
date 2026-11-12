@@ -200,7 +200,8 @@ def oauth_token_from_env():
     data = parse.urlencode({"client_id": vals[0], "client_secret": vals[1],
                             "refresh_token": vals[2], "grant_type": "refresh_token"}).encode()
     try:
-        with request.urlopen(request.Request(TOKEN_URL, data=data, method="POST"), timeout=30) as res:
+        with request.build_opener(_RejectRedirect()).open(
+            request.Request(TOKEN_URL, data=data, method="POST"), timeout=30) as res:
             raw = res.read(4096)
         token = json.loads(raw).get("access_token")
         if not isinstance(token, str) or not token:
