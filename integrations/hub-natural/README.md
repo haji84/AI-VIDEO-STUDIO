@@ -158,6 +158,31 @@ restricted OAuth credentials, persistent private state, owner-approved cloud
 host/retention boundaries, success/failure monitoring, and real unattended
 new-file proof are still required before production.
 
+### Local restart/crash consistency (synthetic CI only)
+
+- Intake uses a process-owned **private file lock** instead of a removable
+  directory lock. On POSIX, the OS releases the flock on an abrupt exit;
+  a Windows msvcrt fallback exists but needs separate Windows CI evidence.
+  The .lock file remains on disk deliberately. **Never remove it while any
+  process may be running**; deleting an active lock can enable split-brain.
+- A pre-existing **directory** named state.json.lock or queue.json.lock
+  (created by an older build) is held rather than automatically deleted.
+  Owner must verify no older worker runs before migrating that legacy lock.
+- The full intake -> probe -> queue write is guarded against parallel job
+  invocations. Once a worker exits, the next invocation can verify and reuse
+  an already-committed original even when the state write was interrupted;
+  interrupted queue generation can be safely retried without duplicate media
+  download or scene approval. Corrupted/changed media still HOLD.
+- This lock works only with a single owner's local persistent filesystem.
+  **It does not prove distributed/cloud-drive locking, multi-host coordination,
+  full process supervision or real unattended scheduling.** Never store private
+  state under a public checkout or ephemeral runner.
+- CI injects a hard process exit plus state/scan interruptions using synthetic
+  bytes only. Real owner Drive OAuth, new genuine arrival, cross-host restore,
+  semantic scenes, independent Drive draft readback and iPhone playback remain
+  blocked until their separate approved/proven gates.
+
+
 ## Editorial-interest ranking (reviewed evidence only)
 
 `interest_eval.py` adds a transparent, *subjective editorial* rubric:
