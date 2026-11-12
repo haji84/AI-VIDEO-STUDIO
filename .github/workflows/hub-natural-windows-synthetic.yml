@@ -1,0 +1,45 @@
+name: HUB NATURAL - Windows lock and private host preflight (synthetic only)
+
+on:
+  pull_request:
+    paths:
+      - 'integrations/hub-natural/**'
+      - '.github/workflows/hub-natural-windows-synthetic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hub-natural-win-synthetic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows-owner-host-contract:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refuse tracked private media
+        shell: pwsh
+        run: |
+          $files = git ls-files integrations/hub-natural
+          if ($files | Select-String -Pattern '\.(mp4|mov|mkv|m4v|wav|mp3|aac|jpg|jpeg|png|gif|webp|insv)$') {
+            throw 'Private media appears in public GitHub source'
+          }
+      - name: Synthetic Windows crash locks and zero-secret preflight
+        working-directory: integrations/hub-natural
+        shell: pwsh
+        run: |
+          python -m py_compile drive_intake.py private_host_preflight.py test_drive_intake.py test_private_host_preflight.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest -v test_drive_intake test_private_host_preflight
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: No OAuth or private artifacts
+        shell: pwsh
+        run: Write-Output 'Synthetic-only Windows CI. No OAuth, private video, access tokens, or posting.'

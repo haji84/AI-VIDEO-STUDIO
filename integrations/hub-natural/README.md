@@ -246,4 +246,45 @@ are **NOT implemented**.
 - The test workflow was split into a quick no-network/no-FFmpeg security job and a separate actual synthetic-MP4 job. The previous run #43033409657 was cancelled before tests due to Ubuntu Azure apt mirror DNS failures. The media job no longer calls `apt-get` and obtains FFmpeg+FFprobe (if absent) from a public GitHub release with a SHA-256 checksum of that release, plus a temporary Noto CJK font. Downloads may still fail; if so the job is **FAILED/BLOCKED**, never silently skipped or green. No font files or footage enter Git.
 - `DriveHTTP` now refuses redirects rather than forwarding the bearer token to an arbitrary redirect target. Legitimate provider redirects, if they occur, will result in `DRIVE_REDIRECT_REQUIRES_REVIEW` until a separately reviewed allowlisted no-credential-forwarding handler is implemented. This fail-closed behavior must be checked with actual OAuth only on the owner-approved private host.
 - Repeated `new_arrival_job` runs preserve the list of known immutable sources and report `newlyQueued=0` on unchanged content. A queue with unrecognized schema or tampered status stops. This is still NOT a durable independent semantic approval store; it only records `NEEDS_SEMANTIC_REVIEW` and never writes a publishable file.
-- Latest code was reviewed locally for static failure modes and exercised with 37 synthetic tests; the author of this code is not an independent human reviewer. Actual GitHub Actions HEAD success and a distinct reviewer remain explicit gates.
+- Latest code was reviewed locally for static failure modes and exercised with 37 synthetic tests; the author of this code is not an independent human reviewer. Actual GitHub Actions HEAD success are separate checks; third-party code review is optional, not a gate.
+
+## Private host readiness gate (2026-11-13, default OFF)
+
+The owner may choose a persistent, private Windows (e.g. personal ZBook) or
+macOS host. No host has been authorized or installed by this PR.
+
+Run the **read-only** local probe on the chosen host after creating an existing
+owner-only local folder *outside* the Git checkout, synced folders or public
+runners:
+
+```powershell
+py -3.12 integrations/hub-natural/private_host_preflight.py --private-root "$env:LOCALAPPDATA\HUB_NATURAL_PRIVATE"
+```
+
+Use Python 3.11+ with FFmpeg and FFprobe installed on that machine. The probe
+does **not** create the directory, change ACLs, set a schedule, access OAuth,
+connect to Drive or upload videos. Its JSON intentionally contains no private
+paths, OAuth values or media names. On Windows it explicitly warns that NTFS
+ACLs must still be checked on the owner device; the temporary Windows GitHub
+runner cannot prove the owner's actual machine security.
+
+- Public GitHub Actions run offline/FFmpeg *synthetic* tests only. A separate
+  Windows test job validates local lock/restart behavior without credentials.
+- For files continuously added to a pre-existing Drive folder by other apps,
+  `drive.file` only grants per-file access to files opened/shared with the app;
+  it should not be assumed to permit unattended enumeration of every future
+  arrival. Google's `drive.readonly` covers all files and is a **restricted**
+  scope, **not folder-limited**. Any broader grant must be explicitly explained
+  and approved by the owner, with Google authorization requirements checked.
+- `DriveHTTP` currently only reads. To upload finished private MP4s to
+  `DRAFTS`, a separately owner-approved, write-capable destination and OAuth
+  scope are required. Read-only OAuth alone cannot complete the requested
+  end-to-end proof.
+- Once the owner approves the specific host, OAuth scopes, persistence and
+  private write destination, connect one safe local invocation of
+  `new_arrival_job.py`, verify hashes and durable state, then *separately*
+  approve/enable local scheduled polling. The full review/3-draft export still
+  requires verified semantic labels and privacy QA and must HOLD otherwise.
+- Third-party code review is optional. Code/security CI, private readback,
+  real restart/idempotency and actual unattended cycle are mandatory.
+- No automatic post/publish or permission changes occur in this PR.

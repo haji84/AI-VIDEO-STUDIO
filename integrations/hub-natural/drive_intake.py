@@ -88,6 +88,10 @@ def _single_writer(state_path):
     """
     lock = Path(str(state_path) + ".lock")
     lock.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # On Windows O_NOFOLLOW is absent. Never open a known symlink, even for
+    # owner-private local state. The parent ACL must still be owner-only.
+    if lock.is_symlink():
+        raise Hold("UNSAFE_PRIVATE_LOCK_SYMLINK")
     try:
         flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
         fd = os.open(lock, flags, 0o600)
@@ -98,6 +102,8 @@ def _single_writer(state_path):
         raise Hold("PRIVATE_LOCK_UNAVAILABLE") from exc
     try:
         info = os.fstat(fd)
+        if lock.is_symlink():
+            raise Hold("UNSAFE_PRIVATE_LOCK_SYMLINK")
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise Hold("UNSAFE_PRIVATE_LOCK")
         if os.name == "nt":
