@@ -105,6 +105,123 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.run_job()['newlyQueued'], 1)
         self.assertEqual(self.client.calls, 1)
 
+
+    def test_independent_process_hard_crash_then_new_arrival_then_idempotent_replay(self):
+        """Four separate worker processes and two actual FFmpeg-made synthetic MP4s.
+
+        Process 1 dies after committing the first media file but before state.
+        Process 2 independently reattaches media without downloading it.
+        Process 3 sees a second incoming video and downloads only that one.
+        Process 4 reruns with both files and downloads neither. No OAuth/post.
+        """
+        import sys
+        second = Path(self.t.name) / 'second_synthetic.mp4'
+        subprocess.run([
+            'ffmpeg', '-hide_banner', '-y', '-v', 'error',
+            '-f', 'lavfi', '-i', 'color=c=red:s=320x180:r=25:d=2',
+            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', str(second)
+        ], check=True, timeout=30)
+        source1 = self.addPath
+        self.assertNotEqual(hashlib.sha256(source1.read_bytes()).hexdigest(),
+                            hashlib.sha256(second.read_bytes()).hexdigest())
+        script = r'''
+import contextlib, hashlib, io, json, os, sys
+from pathlib import Path
+import drive_intake
+from new_arrival_job import run_once
+from test_new_arrival_job import FOLDER
+
+media1 = Path(sys.argv[1]).read_bytes()
+media2 = Path(sys.argv[2]).read_bytes()
+root = Path(sys.argv[3])
+stage = sys.argv[4]
+inbox = root / "private" / "media"
+state = root / "private" / "state.json"
+catalog = root / "private" / "catalog.json"
+queue = root / "private" / "queue.json"
+entries = [("syntheticFile00000001", media1)]
+if stage in ("arrival", "repeat"):
+    entries.append(("syntheticFile00000002", media2))
+
+class DiskDrive:
+    def __init__(self):
+        self.downloads = []
+        self.data = dict(entries)
+        self.meta = {
+            file_id: {
+                "id": file_id, "mimeType": "video/mp4",
+                "md5Checksum": hashlib.md5(data).hexdigest(),
+                "size": str(len(data)), "version": "1",
+                "modifiedTime": "2026-01-01T00:00:00Z",
+                "trashed": False, "parents": [FOLDER]
+            } for file_id, data in entries
+        }
+    def list_files(self, folder_id):
+        assert folder_id == FOLDER
+        return [dict(entry) for entry in self.meta.values()]
+    def file_metadata(self, file_id):
+        return dict(self.meta[file_id])
+    def media(self, file_id):
+        if stage == "recover" or (stage in ("arrival", "repeat") and file_id == "syntheticFile00000001"):
+            raise AssertionError("PREVIOUS_MEDIA_WAS_DOWNLOADED_AGAIN")
+        self.downloads.append(file_id)
+        return contextlib.closing(io.BytesIO(self.data[file_id]))
+
+client = DiskDrive()
+if stage == "die":
+    original = drive_intake._atomic_json
+    def hard_exit_after_media_rename(path, value):
+        if Path(path) == state:
+            os._exit(39)
+        return original(path, value)
+    drive_intake._atomic_json = hard_exit_after_media_rename
+result = run_once(client, FOLDER, inbox, state, catalog, queue)
+print(json.dumps({"result": result, "downloads": client.downloads}))
+'''
+        def invoke(stage):
+            return subprocess.run([
+                sys.executable, '-c', script, str(source1), str(second),
+                str(self.t.name), stage
+            ], cwd=str(Path(__file__).resolve().parent),
+                capture_output=True, text=True, timeout=30)
+
+        crashed = invoke('die')
+        self.assertEqual(crashed.returncode, 39, crashed.stderr)
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.queue.exists())
+        self.assertEqual(len(list(self.inbox.glob('owner_*.mp4'))), 1)
+        self.assertTrue(Path(str(self.state) + '.lock').is_file())
+
+        recovered = invoke('recover')
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        first = json.loads(recovered.stdout)
+        self.assertEqual(first['downloads'], [])
+        self.assertEqual(first['result']['newImports'], 1)
+        self.assertEqual(first['result']['newlyQueued'], 1)
+
+        arrived = invoke('arrival')
+        self.assertEqual(arrived.returncode, 0, arrived.stderr)
+        second_run = json.loads(arrived.stdout)
+        self.assertEqual(second_run['downloads'], ['syntheticFile00000002'])
+        self.assertEqual(second_run['result']['newImports'], 1)
+        self.assertEqual(second_run['result']['newlyQueued'], 1)
+        self.assertEqual(second_run['result']['queuePending'], 2)
+
+        repeated = invoke('repeat')
+        self.assertEqual(repeated.returncode, 0, repeated.stderr)
+        last = json.loads(repeated.stdout)
+        self.assertEqual(last['downloads'], [])
+        self.assertEqual(last['result']['newImports'], 0)
+        self.assertEqual(last['result']['newlyQueued'], 0)
+        self.assertEqual(last['result']['queuePending'], 2)
+        self.assertEqual(json.loads(self.queue.read_text())['publishing'], 'NOT_PERFORMED')
+        originals = sorted(self.inbox.glob('owner_*.mp4'))
+        self.assertEqual(len(originals), 2)
+        saved_sha = {hashlib.sha256(p.read_bytes()).hexdigest() for p in originals}
+        expected_sha = {hashlib.sha256(source1.read_bytes()).hexdigest(),
+                        hashlib.sha256(second.read_bytes()).hexdigest()}
+        self.assertEqual(saved_sha, expected_sha)
+
     def test_unexpected_queue_status_mutation_fails_closed(self):
         self.run_job()
         doc = json.loads(self.queue.read_text())
