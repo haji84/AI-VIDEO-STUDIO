@@ -163,6 +163,43 @@ class TestDriveIntake(unittest.TestCase):
             DriveHTTP("dummy-not-real")._open(
                 "https://www.googleapis.com/drive/v3/files.evil.com")
 
+    def test_oauth_refresh_rejects_redirects_without_exposing_secrets(self):
+        # Offline regression: token refresh must use a no-redirect transport.
+        # All values here are fake, with no real Google network or OAuth access.
+        import os
+        from unittest import mock
+        from urllib import request
+        from drive_intake import oauth_token_from_env, TOKEN_URL
+
+        class FakeOpener:
+            def open(self, req, timeout=None):
+                self_req = req
+                assert self_req.full_url == TOKEN_URL
+                assert self_req.get_method() == 'POST'
+                assert b'refresh_token=fake-refresh-token' in self_req.data
+                return contextlib.closing(io.BytesIO(b'{"access_token":"synthetic-access"}'))
+
+        def reject_redirects_factory(handler):
+            self.assertIsInstance(handler, _RejectRedirect)
+            outgoing = request.Request(TOKEN_URL, data=b'synthetic-fake-credentials', method='POST')
+            with self.assertRaisesRegex(Hold, 'DRIVE_REDIRECT_REQUIRES_REVIEW'):
+                handler.redirect_request(outgoing, None, 307, 'Temporary Redirect', {},
+                                         'https://not-google.invalid/harvest')
+            return FakeOpener()
+
+        fake_env = {
+            'HUB_NATURAL_GOOGLE_CLIENT_ID': 'fake-client-id',
+            'HUB_NATURAL_GOOGLE_CLIENT_SECRET': 'fake-client-secret',
+            'HUB_NATURAL_GOOGLE_REFRESH_TOKEN': 'fake-refresh-token',
+        }
+        with mock.patch.dict(os.environ, fake_env, clear=True):
+            with mock.patch('drive_intake.request.build_opener',
+                            side_effect=reject_redirects_factory) as opener_factory:
+                with mock.patch('drive_intake.request.urlopen',
+                                side_effect=AssertionError('unsafe default redirect opener called')):
+                    self.assertEqual(oauth_token_from_env(), 'synthetic-access')
+                opener_factory.assert_called_once()
+
     def test_symlink_to_untracked_media_is_hold(self):
         original = b"real-synthetic-media"
         f = fixture("sampleVID123456789", original)
