@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from drive_intake import (DriveHTTP, Hold, _assert_private, _atomic_json,
-                          oauth_token_from_env, sync_once)
+                          _single_writer, oauth_token_from_env, sync_once)
 import pipeline
 
 SCHEMA="hub-natural-private-review-queue-v1"
@@ -32,6 +32,13 @@ def _assert_paths(inbox, state, catalog, queue):
 
 def run_once(client, folder_id, inbox, state, catalog, queue, *, max_bytes=None):
     inbox,state,catalog,queue=_assert_paths(inbox,state,catalog,queue)
+    # Hold the job-level guard through intake, scan and queue commit. Without
+    # this, two concurrent invocations can each overwrite the other's queue.
+    with _single_writer(queue):
+        return _run_once_locked(client,folder_id,inbox,state,catalog,queue,max_bytes=max_bytes)
+
+
+def _run_once_locked(client, folder_id, inbox, state, catalog, queue, *, max_bytes=None):
     options={"max_bytes":max_bytes} if max_bytes is not None else {}
     result=sync_once(client,folder_id,inbox,state,**options)
     # `scan` checks source SHA and actual FFprobe data, and writes catalog atomically.
