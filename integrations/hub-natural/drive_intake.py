@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import stat
 import tempfile
 import time
 from urllib import error, parse, request
@@ -79,15 +80,50 @@ def _assert_private(path):
 
 @contextmanager
 def _single_writer(state_path):
+    """Process-owned file lock; OS releases it even after a hard crash.
+
+    Lock files are deliberately NEVER unlinked. Removing a lock while another
+    process uses it could create two independent locks on different inodes.
+    Only safe for a single owner's local persistent filesystem, not multi-host.
+    """
     lock = Path(str(state_path) + ".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:
-        lock.mkdir(mode=0o700)
-    except FileExistsError as exc:
-        raise Hold("INTAKE_ALREADY_RUNNING") from exc
+        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(lock, flags, 0o600)
+    except OSError as exc:
+        # An old mkdir-style lock can be ambiguous: never delete it blindly.
+        if lock.is_dir():
+            raise Hold("INTAKE_ALREADY_RUNNING") from exc
+        raise Hold("PRIVATE_LOCK_UNAVAILABLE") from exc
     try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise Hold("UNSAFE_PRIVATE_LOCK")
+        if os.name == "nt":
+            # Windows fallback; requires separate Windows CI before production.
+            import msvcrt
+            if info.st_size == 0:
+                os.write(fd, b"0")
+            os.lseek(fd, 0, os.SEEK_SET)
+            try:
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            except OSError as exc:
+                raise Hold("INTAKE_ALREADY_RUNNING") from exc
+        else:
+            import fcntl
+            if info.st_uid != os.getuid() or info.st_mode & 0o077:
+                raise Hold("UNSAFE_PRIVATE_LOCK_PERMISSIONS")
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise Hold("INTAKE_ALREADY_RUNNING") from exc
+            except OSError as exc:
+                raise Hold("PRIVATE_LOCK_UNAVAILABLE") from exc
         yield
     finally:
-        lock.rmdir()
+        # Closing the descriptor releases advisory locks, including on crash.
+        os.close(fd)
 
 
 def _new_state(folder_id):
