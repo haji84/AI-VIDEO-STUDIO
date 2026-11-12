@@ -68,6 +68,43 @@ class Tests(unittest.TestCase):
         after = json.loads(self.queue.read_text())
         self.assertEqual(after['assets'], json.loads(before)['assets'])
 
+    def test_parallel_job_is_blocked_before_source_or_queue_changes(self):
+        from drive_intake import _single_writer
+        with _single_writer(self.queue):
+            with self.assertRaisesRegex(Hold, 'INTAKE_ALREADY_RUNNING'):
+                self.run_job()
+        self.assertEqual(self.client.calls, 0)
+        self.assertFalse(self.queue.exists())
+        self.assertEqual(self.run_job()['newlyQueued'], 1)
+        self.assertEqual(self.client.calls, 1)
+
+    def test_job_restart_after_crash_before_scan_keeps_original_and_queues_once(self):
+        from unittest import mock
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=RuntimeError('simulated-stop-before-queue')):
+            with self.assertRaisesRegex(RuntimeError, 'simulated-stop-before-queue'):
+                self.run_job()
+        self.assertEqual(self.client.calls, 1)
+        self.assertFalse(self.queue.exists())
+        restarted = self.run_job()
+        self.assertEqual(restarted['newImports'], 0)
+        self.assertEqual(restarted['newlyQueued'], 1)
+        self.assertEqual(self.client.calls, 1)
+        self.assertEqual(self.run_job()['newlyQueued'], 0)
+
+    def test_hard_killed_queue_worker_can_restart_without_manual_unlock(self):
+        import sys
+        script = ("import os, sys\n"
+                  "from drive_intake import _single_writer\n"
+                  "with _single_writer(sys.argv[1]):\n"
+                  "    os._exit(23)\n")
+        child = subprocess.run([sys.executable, "-c", script, str(self.queue)],
+                               cwd=str(Path(__file__).resolve().parent),
+                               capture_output=True, timeout=10)
+        self.assertEqual(child.returncode, 23, child.stderr)
+        self.assertEqual(self.run_job()['newlyQueued'], 1)
+        self.assertEqual(self.client.calls, 1)
+
     def test_unexpected_queue_status_mutation_fails_closed(self):
         self.run_job()
         doc = json.loads(self.queue.read_text())
