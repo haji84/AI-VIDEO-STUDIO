@@ -182,14 +182,14 @@ class TestDriveIntake(unittest.TestCase):
         self.assertEqual(client.downloads, 1)
 
     def test_symlink_lock_cannot_redirect_private_lock(self):
-        import os
-        if os.name == "nt" or not hasattr(os, "O_NOFOLLOW"):
-            self.skipTest("O_NOFOLLOW POSIX contract")
         self.state.parent.mkdir(parents=True)
         other = self.root / "unrelated-private-record"
         other.write_bytes(b"must-stay-unchanged")
-        Path(str(self.state) + ".lock").symlink_to(other)
-        with self.assertRaisesRegex(Hold, "PRIVATE_LOCK_UNAVAILABLE"):
+        try:
+            Path(str(self.state) + ".lock").symlink_to(other)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks require local OS privilege")
+        with self.assertRaisesRegex(Hold, "UNSAFE_PRIVATE_LOCK_SYMLINK"):
             self.sync(FakeDrive([]))
         self.assertEqual(other.read_bytes(), b"must-stay-unchanged")
 
