@@ -288,3 +288,48 @@ runner cannot prove the owner's actual machine security.
 - Third-party code review is optional. Code/security CI, private readback,
   real restart/idempotency and actual unattended cycle are mandatory.
 - No automatic post/publish or permission changes occur in this PR.
+
+## No-local-video inventory candidate (2026-11-13, opt-in only)
+
+The owner reports that **ZBook has insufficient free storage for private video
+copies**. Do not select ZBook as the intake, render, or archival media host.
+The existing `drive_intake.py` / `new_arrival_job.py` still download local
+originals and MUST NOT be scheduled on ZBook without an entirely separate,
+owner-approved storage architecture. Google Drive remains the private source
+and destination; being the storage destination does not mean Drive can run
+FFmpeg or AI editing by itself.
+
+`drive_metadata_inventory.py` is a **read-only, media-free candidate inventory**.
+It can execute on a future authorized private runner even with no local video
+storage. It lists only metadata with the existing fixed-host DriveHTTP transport.
+It neither downloads video bytes nor creates local state, scans, edits, saves
+drafts, or posts. It prints only aggregate counts, never private file names,
+provider IDs, credentials or the returned private in-memory snapshot.
+
+```bash
+# Only after the owner has separately approved/configured OAuth on a
+# private runtime. Never run with real tokens on public GitHub Actions.
+python integrations/hub-natural/drive_metadata_inventory.py --folder-id YOUR_PRIVATE_INBOX_FOLDER_ID
+```
+
+With no private, trusted baseline, the first run reports
+`newCandidates: null` / `UNKNOWN_NO_PRIVATE_BASELINE`.
+`observe(client, folder_id, baseline=owner_verified_private_snapshot)` can
+compare in-memory metadata snapshots without media, reporting changed
+candidate counts. **This snapshot contains Drive IDs and provider MD5**
+and must stay private; the module deliberately does not persist or print it.
+A separate owner-approved secure storage mechanism is required before
+scheduled new-arrival history can be guaranteed. Missing prior sources,
+provider-version changes, duplicate IDs and malformed metadata HOLD rather
+than silently accepting an unchanged source. The provider MD5 is not a
+content SHA-256, so neither a real duplicate nor a verified original may
+be claimed from this step alone.
+
+The genuine end-to-end workflow still needs a private compute host with
+adequate transient storage for real input and output; a secure remote
+store, completed OAuth permissions and the independent SHA-256 readback
+test. No such host, OAuth grant, new real arrival or three-draft export
+is connected in this candidate PR. Public GitHub CI uses synthetic
+metadata only, with tests that assert **zero video downloads**.
+
+Drive API reference: https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list
