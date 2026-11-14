@@ -50,7 +50,10 @@ def _target(path):
 
 
 def _check_opened(info):
-    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+    # Two links are accepted ONLY during a verified atomic-publish crash
+    # recovery. The reader must prove the second link is our matching private
+    # staging file, verify HMAC, then remove that staging link under the lock.
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink not in (1, 2):
         raise Hold("PRIVATE_CHECKPOINT_NOT_SINGLE_REGULAR_FILE")
     if os.name == "posix" and (
             info.st_uid != os.getuid() or info.st_mode & 0o077):
@@ -72,6 +75,42 @@ def _invalid_constant(value):
     raise ValueError("Nonfinite JSON number")
 
 
+def _recover_atomic_publish(target, opened_info):
+    """Finish an interrupted hardlink publication only when unambiguous.
+
+    Never touch unrelated files or silently initialize a missing checkpoint.
+    A second hardlink with any other name/location is not trusted.
+    """
+    if opened_info.st_nlink == 1:
+        return
+    candidates = []
+    try:
+        for pending in target.parent.glob(".hub-natural-checkpoint-pending-*.tmp"):
+            if pending.is_symlink():
+                continue
+            info = pending.stat()
+            if (stat.S_ISREG(info.st_mode)
+                    and info.st_dev == opened_info.st_dev
+                    and info.st_ino == opened_info.st_ino):
+                candidates.append(pending)
+    except OSError as exc:
+        raise Hold("PRIVATE_CHECKPOINT_PENDING_UNVERIFIABLE") from exc
+    if len(candidates) != 1:
+        raise Hold("PRIVATE_CHECKPOINT_HARDLINK_AMBIGUOUS")
+    try:
+        # Parent is owner-only; still check the inode immediately before unlink.
+        still = candidates[0].stat()
+        if (still.st_dev != opened_info.st_dev
+                or still.st_ino != opened_info.st_ino):
+            raise Hold("PRIVATE_CHECKPOINT_PENDING_CHANGED")
+        candidates[0].unlink()
+        _sync_parent_directory(target.parent)
+        if target.stat().st_nlink != 1:
+            raise Hold("PRIVATE_CHECKPOINT_HARDLINK_AMBIGUOUS")
+    except OSError as exc:
+        raise Hold("PRIVATE_CHECKPOINT_PENDING_RECOVERY_FAILED") from exc
+
+
 def _load_locked(target, folder_id, key):
     """Caller must hold the persistent per-path OS process lock."""
     if target.is_symlink():
@@ -86,7 +125,8 @@ def _load_locked(target, folder_id, key):
         raise Hold("PRIVATE_CHECKPOINT_UNREADABLE") from exc
     try:
         with os.fdopen(fd, "rb") as source:
-            _check_opened(os.fstat(source.fileno()))
+            opened_info = os.fstat(source.fileno())
+            _check_opened(opened_info)
             data = source.read(MAX_CHECKPOINT_BYTES + 1)
         if target.is_symlink():
             raise Hold("PRIVATE_CHECKPOINT_PATH_SYMLINK")
@@ -100,6 +140,8 @@ def _load_locked(target, folder_id, key):
         except (UnicodeError, ValueError, TypeError) as exc:
             raise Hold("PRIVATE_CHECKPOINT_INVALID_JSON") from exc
         _verify(checkpoint, folder_id, key)
+        # Only after authenticating content may we repair a published temp link.
+        _recover_atomic_publish(target, opened_info)
         return checkpoint
     except OSError as exc:
         raise Hold("PRIVATE_CHECKPOINT_UNREADABLE") from exc
@@ -155,6 +197,10 @@ def initialize_owner_checkpoint(path, folder_id, *, key, checkpoint):
                 raise Hold("PRIVATE_CHECKPOINT_ALREADY_EXISTS") from exc
             except OSError as exc:
                 raise Hold("PRIVATE_CHECKPOINT_ATOMIC_PUBLISH_UNSUPPORTED") from exc
+            # Minimize the hardlink-two-name crash window; a crash in that
+            # window can still be repaired by an authenticated future reader.
+            pending.unlink()
+            pending = None
             try:
                 _sync_parent_directory(target.parent)
             except OSError as exc:
