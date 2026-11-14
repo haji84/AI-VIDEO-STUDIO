@@ -397,3 +397,32 @@ owner-machine verification. No ZBook media storage is assumed.
   iPhone playback and Insights remain separate unfinished gates.
 - Third-party review remains optional. There is no scheduler, permission
   change, public posting, main merge or paid service in this PR.
+
+
+## Private-Drive byte-exact readback bridge (2026-11-15, optional)
+
+The new `drive_checkpoint_exchange.py` is a **pure in-memory** boundary:
+`prepare_private_upload` exports an already HMAC-verified *blinded metadata*
+checkpoint as exact UTF-8 bytes plus a sanitized byte-count/SHA-256 receipt;
+`verify_private_readback` checks independent downloaded bytes against that
+receipt and the original owner-secret HMAC before accepting them. Neither
+function changes the checkpoint, acknowledges a new arrival, requests Google
+OAuth, uploads, downloads, or writes files. No real media, filenames, IDs,
+keys, OAuth values or private observations are in the Public repository.
+
+A separate **owner-authorized** Google Drive connector was used to upload a
+354-byte purely synthetic checkpoint into the existing private development
+folder and download it independently. Its SHA-256 and HMAC matched in a fresh
+Python process. That tests actual storage/readback transport **only**: the
+fixture contains no owner's real metadata, uses a throwaway test key, and is
+not an operational private baseline. The proof is recorded privately in the
+HUB_NATURAL_AUTO development log rather than copied into Public GitHub.
+
+Production still requires the owner to choose the durable private checkpoint
+location, approve scope/credentials and keep the secret key in an independent
+protected store. Signed receipts must also be retained separately from their
+backups. HMAC is integrity protection, not encryption or protection against
+replay of an older otherwise authentic checkpoint; no full owner Drive worker,
+video computation, A/B/C output or real crash recovery has been proven.
+There is no automatic posting, permission change, main merge or local media
+storage on ZBook in this PR. The publication action stays owner-only.
