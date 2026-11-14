@@ -33,8 +33,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile pipeline.py drive_intake.py new_arrival_job.py interest_eval.py private_host_preflight.py drive_metadata_inventory.py test_pipeline.py test_drive_intake.py test_new_arrival_job.py test_interest_eval.py test_private_host_preflight.py test_drive_metadata_inventory.py drive_blinded_baseline.py test_drive_blinded_baseline.py drive_checkpoint_store.py test_drive_checkpoint_store.py
-          python -m unittest -v test_drive_intake test_interest_eval test_private_host_preflight test_drive_metadata_inventory test_drive_blinded_baseline test_drive_checkpoint_store
+          python -m py_compile pipeline.py drive_intake.py new_arrival_job.py interest_eval.py private_host_preflight.py drive_metadata_inventory.py test_pipeline.py test_drive_intake.py test_new_arrival_job.py test_interest_eval.py test_private_host_preflight.py test_drive_metadata_inventory.py drive_blinded_baseline.py test_drive_blinded_baseline.py drive_checkpoint_store.py test_drive_checkpoint_store.py drive_checkpoint_exchange.py test_drive_checkpoint_exchange.py
+          python -m unittest -v test_drive_intake test_interest_eval test_private_host_preflight test_drive_metadata_inventory test_drive_blinded_baseline test_drive_checkpoint_store test_drive_checkpoint_exchange
       - name: No secrets, private footage or publication used
         run: echo 'Offline-only synthetic contract checks; no OAuth or publication.'
 
@@ -91,6 +91,6 @@ jobs:
           fc-match -f '%{family} %{file}\n' 'Noto Sans CJK JP' | head -1
       - name: Render and decode three true synthetic MP4 outputs
         working-directory: integrations/hub-natural
-        run: python -m unittest -v test_pipeline test_drive_intake test_new_arrival_job test_interest_eval test_private_host_preflight test_drive_metadata_inventory test_drive_blinded_baseline test_drive_checkpoint_store
+        run: python -m unittest -v test_pipeline test_drive_intake test_new_arrival_job test_interest_eval test_private_host_preflight test_drive_metadata_inventory test_drive_blinded_baseline test_drive_checkpoint_store test_drive_checkpoint_exchange
       - name: No media or generated artifact uploads
         run: echo 'Synthetic outputs are ephemeral; no artifact upload and no posting.'
