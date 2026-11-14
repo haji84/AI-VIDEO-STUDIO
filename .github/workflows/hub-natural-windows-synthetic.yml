@@ -36,9 +36,9 @@ jobs:
         working-directory: integrations/hub-natural
         shell: pwsh
         run: |
-          python -m py_compile drive_intake.py private_host_preflight.py test_drive_intake.py test_private_host_preflight.py drive_metadata_inventory.py test_drive_metadata_inventory.py drive_blinded_baseline.py test_drive_blinded_baseline.py
+          python -m py_compile drive_intake.py private_host_preflight.py test_drive_intake.py test_private_host_preflight.py drive_metadata_inventory.py test_drive_metadata_inventory.py drive_blinded_baseline.py test_drive_blinded_baseline.py drive_checkpoint_store.py test_drive_checkpoint_store.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -m unittest -v test_drive_intake test_private_host_preflight test_drive_metadata_inventory test_drive_blinded_baseline
+          python -m unittest -v test_drive_intake test_private_host_preflight test_drive_metadata_inventory test_drive_blinded_baseline test_drive_checkpoint_store
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: No OAuth or private artifacts
         shell: pwsh

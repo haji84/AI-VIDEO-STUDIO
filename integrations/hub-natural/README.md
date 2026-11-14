@@ -366,3 +366,34 @@ download, local video storage, disk/network write, draft, post, or scheduler.
 Synthetic tests: `python -m unittest -v test_drive_blinded_baseline` from
 `integrations/hub-natural`; both Linux and Windows workflow jobs run them
 without any real private metadata, credentials, or media.
+
+
+## HMAC checkpoint durable restart gate (2026-11-15, optional and offline)
+
+drive_checkpoint_store.py persists **only blinded metadata checkpoints**, not video,
+GPS, filename, provider ID or OAuth credentials. This code is NOT deployed.
+The owner must choose an existing persistent private directory outside Git and
+a **separately stored**, unpredictable 32+ byte HMAC key. POSIX owner-only
+directory/file permissions are enforced; Windows NTFS ACLs require separate
+owner-machine verification. No ZBook media storage is assumed.
+
+- initialize_owner_checkpoint requires an explicitly owner-confirmed first
+  observation. It publishes a complete HMAC-validated JSON file atomically,
+  with no overwrite, private staging, fsync and a process lock.
+- compare_with_saved_checkpoint authenticates that file **before** Drive
+  listing. It never advances the baseline, downloads videos, calculates media
+  SHA-256, or acknowledges a new arrival. Repeat polls and restarts still
+  report the same unprocessed candidate.
+- A hard process exit before publish leaves no false baseline; a crash in
+  the hardlink publish window may be recovered only after an authenticated
+  match with exactly one private pending hardlink. Ambiguous links, tampering,
+  wrong key/folder, missing data and corrupt JSON cause HOLD.
+- Linux and Windows CI exercise synthetic independent-process restarts and
+  hard crashes. They do **not** prove real owner storage, Drive OAuth,
+  multi-host recovery, Windows ACL privacy, or power-loss durability.
+- HMAC detects modifications but is **not encryption or rollback protection**
+  against an older still-valid checkpoint. Backups, actual persistent host,
+  live Drive new arrival, editing compute, QA, independent video SHA readback,
+  iPhone playback and Insights remain separate unfinished gates.
+- Third-party review remains optional. There is no scheduler, permission
+  change, public posting, main merge or paid service in this PR.
