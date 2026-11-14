@@ -426,3 +426,67 @@ replay of an older otherwise authentic checkpoint; no full owner Drive worker,
 video computation, A/B/C output or real crash recovery has been proven.
 There is no automatic posting, permission change, main merge or local media
 storage on ZBook in this PR. The publication action stays owner-only.
+
+
+## Owner-approved first real metadata baseline: explicit two-phase gate (opt-in)
+
+The optional owner_baseline_bootstrap.py command uses the existing DriveHTTP
+read-only API on an **owner-approved private host only**. It does NOT configure
+Google OAuth, register a scheduled worker, save videos, post anything,
+or overwrite prior checkpoints. Public GitHub Actions exercise it with
+synthetic data only.
+
+The owner must FIRST:
+- Select the exact private Drive INBOX, confirm a persistent owner-private
+  metadata checkpoint directory outside Git, and set up a separate protected
+  key directory. The actual key must be generated securely by the owner
+  (32+ unpredictable bytes), backed up separately from the checkpoint, and
+  never sent to ChatGPT, a public repository, CI or the remote checkpoint file.
+- Explicitly approve the host, limited Google OAuth scope and ongoing access.
+  The current code supports **POSIX** owner-private key files; it fails closed
+  on Windows until real NTFS key ACL safety is implemented/verified.
+- Keep all video intake and editing away from the ZBook, which lacks media
+  working space. This gate reads metadata only, not video contents.
+
+On an approved POSIX private host, with the owner's protected OAuth environment
+already configured, use these commands from the repository root, substituting
+only privately on that host:
+
+    python integrations/hub-natural/owner_baseline_bootstrap.py preview \
+      --folder-id '<private INBOX ID>' \
+      --key-file '/protected-key-store/owner-hmac-key.bin' \
+      --checkpoint '/owner-private-state/owner-baseline.json'
+
+The preview prints a **sanitized count and checkpointPreviewSHA256**, but
+does not save anything or claim the candidates have been processed. The owner
+checks the observed count and selected INBOX and then separately performs:
+
+    python integrations/hub-natural/owner_baseline_bootstrap.py initialize \
+      --folder-id '<private INBOX ID>' \
+      --key-file '/protected-key-store/owner-hmac-key.bin' \
+      --checkpoint '/owner-private-state/owner-baseline.json' \
+      --expected-preview-sha256 '<exact SHA from preview>' \
+      --owner-confirms-initial-baseline
+
+Initialization repeats the current Drive metadata observation and refuses
+a different digest, missing owner confirmation or any existing checkpoint.
+It requires an already-private directory and stores only blinded metadata.
+For subsequent checks:
+
+    python integrations/hub-natural/owner_baseline_bootstrap.py compare \
+      --folder-id '<private INBOX ID>' \
+      --key-file '/protected-key-store/owner-hmac-key.bin' \
+      --checkpoint '/owner-private-state/owner-baseline.json'
+
+Repeated comparisons NEVER advance the checkpoint or acknowledge a video.
+The saved metadata checkpoint is not proof of a source-content SHA-256,
+privacy QA, semantic recognition or complete footage ingest. There is no
+new scheduled job, public GitHub media transfer, local ZBook media storage,
+Google Photos sync, private video rendering or publishing in this PR.
+
+**This two-step flow has not been run on the owner's real host or real
+OAuth credentials.** A connected ChatGPT Drive session cannot be silently
+reused as unattended worker OAuth. The owner must approve configuration
+before invoking it. Actual key backup/restore, continuous data acquisition,
+independent Drive readback of finished videos and iPhone playback remain HOLD.
+Third-party review is optional; objective real-world proof is mandatory.
