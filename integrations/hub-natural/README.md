@@ -333,3 +333,36 @@ is connected in this candidate PR. Public GitHub CI uses synthetic
 metadata only, with tests that assert **zero video downloads**.
 
 Drive API reference: https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list
+
+
+## Blinded metadata checkpoint candidate (2026-11-14; no automatic deployment)
+
+`drive_blinded_baseline.py` adds `observe_blinded(client, folder_id,
+key=owner_private_32_plus_random_bytes, baseline=optional_previous_checkpoint)`.
+It uses the existing **metadata-only** `observe()` function. There is no video
+download, local video storage, disk/network write, draft, post, or scheduler.
+
+- The returned checkpoint holds HMAC-SHA-256 tags for the folder, source IDs
+  and source metadata, plus an integrity HMAC. The public output report is
+  aggregate-only. Neither raw Drive IDs, original filenames nor provider MD5
+  enter the serialized checkpoint.
+- A stable, unpredictable owner-private **at least 32-byte** secret is
+  mandatory. It must never be committed, logged or stored alongside the
+  checkpoint in this Public repository. The key is provided by a separate,
+  owner-approved private secrets mechanism, **not** by this code.
+- A wrong key, wrong folder, malformed/tampered checkpoint, missing existing
+  source, or changed existing metadata fails closed. Validation of the
+  checkpoint happens **before** any Drive list request.
+- New items remain candidates on repeated observations against the same
+  baseline. **Never automatically advance the baseline in response to
+  observing a new item.** This is an inventory token, not a completed ingest,
+  SHA-256 proof, duplicate proof, edit approval or posting receipt.
+- This is **not** an encrypted media store or an automatic private state
+  persistence mechanism: approximate counts and schema remain visible, and a
+  key must be provided separately. Durable atomic checkpoint storage/restore
+  and owner-approved OAuth/host still need distinct implementation and
+  verification. In particular, it does **not** make ZBook a video host.
+
+Synthetic tests: `python -m unittest -v test_drive_blinded_baseline` from
+`integrations/hub-natural`; both Linux and Windows workflow jobs run them
+without any real private metadata, credentials, or media.
