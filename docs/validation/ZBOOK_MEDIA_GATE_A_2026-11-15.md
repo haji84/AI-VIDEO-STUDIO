@@ -127,3 +127,18 @@ service, remote access, account change or device-security change was performed.
 Product DoD remains **NOT MET**. The next blocked acceptance requires the missing
 ZIP source and access to actual Windows/owner devices, rather than another claim
 based on these synthetic results.
+
+
+## Follow-up: requested physical-device connection
+
+The owner authorized investigating and connecting an absent private-device path.
+Current managed-network status confirms the cloud Tailscale integration is disabled
+and unconfigured. This does not establish whether Tailscale is installed or logged
+in on ZBook. No existing external connection/SSH host configuration or remote-control
+tool was available. Actual device verification remains BLOCKED.
+A local Windows status/GUI-launch helper was prepared and its sanitization logic
+checked on Linux; Windows execution and initial owner login remain pending. The
+managed cloud VPN must also be enrolled through supported environment settings.
+No public exposure, alternative VPN installation, account creation, credential
+capture or device-security change was performed. No private endpoint or connection
+report is published here.

@@ -29,6 +29,27 @@ Evidence: `docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md` and matching JSON.
 Deferred minor: browser recovery acceptance needs explicit AIVS_PYTHON for its PATH
 simulation. Corrupt pending journals remain fail-closed and need separate recovery.
 
+### Connection bootstrap investigation — 2026-11-15 JST
+
+The owner asked to investigate existing device access and connect if absent.
+The managed network's live status reports Tailscale configured=false/state=disabled.
+No configured external identity/connection or SSH host configuration was available
+in this task. ZBook-side installation/login state remains unknown: it cannot be
+inferred from the cloud-side finding. No device endpoint was guessed or scanned.
+The available environment tools cannot enroll the managed VPN, and no desktop or
+existing remote-device control tool is attached. No alternate VPN client, public
+Funnel, port opening or Windows security-setting change was attempted.
+
+A standalone local Windows connection-check helper was prepared for owner execution
+and delivered in chat. It reads Tailscale status, can open the official local GUI or
+Windows download page for owner action, and filters the report to this device's
+state/private connection coordinates. It does not transmit media, raw logs, keys,
+accounts or peers. Linux checks verified report filtering, malformed/disconnected
+states and explicit WINDOWS_REQUIRED on the cloud machine. Windows GUI is NOT_RUN.
+The helper alone does not connect the cloud: initial owner login/device enrollment
+and managed cloud VPN binding remain external prerequisites for actual ZBook access.
+No secret, private host address or device report is stored in this public repository.
+
 ## Historical checkpoint (preserved)
 
 Updated: 2026-10-29 JST / 2026-10-29 UTC
