@@ -540,3 +540,72 @@ checkpoint and still detects an unprocessed new candidate across two restarts.
 This is not yet a successful owner-private backup retrieval, owner key recovery,
 independent real-host restore or unattended Google Drive ingestion; all of
 those remain HOLD until owner-approved host + OAuth + private key/backup exist.
+
+
+## MacBook M1: iPhone remote-control acceptance FIRST (2026-11-16, NOT DEPLOYED)
+
+Owner approved MacBook M1 **only for small metadata/checkpoint processing**,
+provided the Mac can be remotely controlled from an iPhone on a different
+network. ZBook is still excluded from video processing/storage. Do **not**
+transfer private footage to the Mac in this phase.
+
+### Candidate remote desktop: owner setup only
+
+- Google's Chrome Remote Desktop supports controlling a Mac from iPhone,
+  including from another network. Owner installation on the Mac:
+  https://remotedesktop.google.com/access
+  Google official iPhone setup:
+  https://support.google.com/chrome/answer/1649523?co=GENIE.Platform%3DiOS&hl=ja
+  The owner must install the host and explicitly grant the Mac permissions,
+  choose the PIN, protect the Google account, and test on iPhone. No PIN, host
+  credential, account email, recovery code or host configuration is entered
+  into GitHub, ChatGPT, or CI. **This PR makes no permission change.**
+- If Chrome Remote Desktop cannot remain online, do not treat it as a
+  successful setup. There have been macOS host STOPPED/registration reports:
+  https://issuetracker.google.com/issues/522541850
+  Do not copy third-party repair scripts or force-load privileged services
+  without explicit owner approval.
+- A fallback is RustDesk, whose official macOS and iOS clients can provide
+  iPhone-to-Mac control:
+  https://rustdesk.com/docs/en/client/
+  https://rustdesk.com/docs/en/client/mac/
+  The owner must separately approve any installation, host permissions,
+  unattended access configuration and associated service/data handling.
+
+### Owner's real acceptance test
+
+1. On the Mac, complete the chosen remote host's installation and OS
+   permissions **personally**. Keep remote desktop account/PIN private and
+   do not expose raw VNC/RDP ports to the internet.
+2. Using iPhone on **mobile data or a genuinely different Wi-Fi**, connect
+   to the Mac and show the actual desktop.
+3. Use the iPhone to click a harmless window, enter text and verify keyboard
+   control. Disconnect and reconnect from iPhone without returning to the
+   Mac. If an already-offline Mac cannot be reached, HOLD.
+4. With the Mac on AC power, check sleep/network-wake behavior and, if
+   applicable, lid-open/locked-screen access. Apple's sleep settings:
+   https://support.apple.com/en-tm/guide/mac-help/-mchle41a6ccd/mac
+   Remote operation cannot be promised when the Mac is powered off, offline,
+   asleep without supported wake, or stuck before a required local login.
+5. Only once the owner independently confirms the above should metadata-only
+   scheduling, owner-private key storage and read-only Drive OAuth be
+   connected with separate approval. This is a **manual real-device gate**.
+
+### Read-only host probe
+
+On the Mac, run (no installation or permission changes):
+
+    python3 integrations/hub-natural/mac_remote_readiness.py
+
+The JSON reveals only sanitized platform/launchd/Python capability indicators.
+It deliberately returns a HOLD status even on an M1 because a local script
+**cannot prove off-network control from a real iPhone**. It never requests a
+network connection, inspects secrets, downloads media or writes local state.
+Public CI can test the contract synthetically; passing CI is not an actual
+Mac/iPhone session.
+
+**Keep work split**: M1 is an approved candidate for tiny metadata history,
+owner-private keys (once separately approved) and future launchd scheduling.
+Video byte download, FFmpeg editing, rendering and large temporary files must
+stay on a different owner-approved environment with sufficient space.
+Posting is performed only by the owner, and all other production gates HOLD.
