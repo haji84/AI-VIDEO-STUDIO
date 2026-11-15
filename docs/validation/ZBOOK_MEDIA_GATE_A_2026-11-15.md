@@ -142,3 +142,12 @@ managed cloud VPN must also be enrolled through supported environment settings.
 No public exposure, alternative VPN installation, account creation, credential
 capture or device-security change was performed. No private endpoint or connection
 report is published here.
+
+
+Owner follow-up: the sanitized Windows helper report now shows Tailscale Running
+and selfOnline=true. No device address, account or key is recorded here. Cloud
+service requests were rejected with403, and the managed cloud VPN remains disabled.
+A single-device allowance was saved only to the private environment draft; runtime
+enrollment and publication are still pending. The owner confirmed a VPN/Tailscale
+settings section is present. This is connectivity preparation, not real-device
+application acceptance. No video was transferred to or from the physical device.

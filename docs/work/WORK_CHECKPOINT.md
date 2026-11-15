@@ -66,6 +66,26 @@ using the working directory. It does not change execution policy/security
 settings. Linux report-filtering and explicit WINDOWS_REQUIRED checks pass;
 actual Windows execution and private connectivity remain pending.
 
+### Owner-side private-network status confirmed — 2026-11-15 JST
+
+After verified helper delivery, the owner supplied its Windows report showing
+Tailscale detected, Running and selfOnline=true. This is owner-reported device VPN
+status only; no editing, ZIP repair or completed real-device MP4 acceptance follows.
+Private device coordinates were supplied in chat and are intentionally omitted
+from GitHub. The helper's Codex connectivity field remained NOT_TESTED.
+
+Read-only cloud requests to the owner-supplied HTTPS and editor endpoints were
+rejected (proxy CONNECT403 / HTTP403). Live managed-cloud status still showed VPN
+configured=false/state=disabled, so no target service response was established.
+An exact device-host HTTP allowance was saved/read back in the private environment
+draft (revision3), preserving existing package presets and install/start instructions.
+The running instance still uses its earlier policy: draft saving did not enroll VPN
+or publish/apply the changes. No credential requirement was fabricated or collected.
+The owner confirmed that the environment settings expose a VPN/Tailscale section.
+Next: owner configures that section for the same tailnet through the secure UI,
+saves/publishes the environment, then Codex verifies live enrollment and retries
+the actual device service. No secret value should be sent through chat or GitHub.
+
 ## Historical checkpoint (preserved)
 
 Updated: 2026-10-29 JST / 2026-10-29 UTC
