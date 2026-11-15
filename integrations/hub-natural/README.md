@@ -490,3 +490,53 @@ reused as unattended worker OAuth. The owner must approve configuration
 before invoking it. Actual key backup/restore, continuous data acquisition,
 independent Drive readback of finished videos and iPhone playback remain HOLD.
 Third-party review is optional; objective real-world proof is mandatory.
+
+
+## Owner-approved OFFLINE restore after losing a private host (opt-in, NOT production-proven)
+
+A new \`owner_checkpoint_restore.py\` implements a **separate, non-destructive**
+restore path for the blinded metadata baseline. It is NOT a source-media copy,
+Google Drive automatic downloader, key backup tool or scheduled worker.
+It makes **zero network calls** and does not interact with Instagram.
+
+For a restore after the original owner's private host/storage fails:
+
+1. Independently retrieve the original checkpoint payload **and its transfer
+   receipt** from the owner-approved private backup. Keep copies of both in a
+   private directory with access limited to the owner. The trusted SHA-256 pin
+   must already have been recorded **separately from that untrusted backup**
+   when first verified. A matching old payload + receipt can be replayed if
+   the pin was not kept independently; this mechanism is NOT a universal
+   anti-rollback guarantee.
+2. Retrieve the **same original owner HMAC key** from an independently backed-up
+   secret store. If it was lost, this restore cannot authenticate the old
+   checkpoint; never invent or silently rotate the key. Do not put any
+   private material in GitHub, ChatGPT, public CI or a ZBook media working area.
+3. On a specifically approved POSIX private host with owner-only directories
+   and private file permissions (0600), choose a **new, empty** checkpoint path.
+   Windows NTFS ACL and key management are still not approved by this code.
+4. Explicitly confirm the exact trusted SHA-256 pin and run locally:
+
+       python integrations/hub-natural/owner_checkpoint_restore.py \
+         --folder-id '<owner INBOX folder ID>' \
+         --key-file '/separate-owner-secret-store/hmac-key.bin' \
+         --checkpoint '/new-private-state/owner-baseline.json' \
+         --backup-payload '/private-backup/readback-checkpoint.json' \
+         --backup-receipt '/private-backup/receipt.json' \
+         --owner-pinned-sha256 '<separately owner-pinned SHA256>' \
+         --owner-confirms-restore
+
+The restore verifies folder/key HMAC, exact receipt size/SHA-256, independently
+pinned SHA-256, canonical JSON, POSIX private paths, and atomic no-overwrite
+publication. It then reads the saved bytes again through the existing secured
+checkpoint lock and authenticates them. A separate worker can next call the
+read-only \`owner_baseline_bootstrap.py compare\` command. **New arrivals remain
+unacknowledged**. Any mismatch or missing key is HOLD, never automatic
+rebaselining. The SHA-256 in this feature is for the *metadata checkpoint
+bytes*, NOT the original video content.
+
+Synthetic tests include a real separate Python process that reads the restored
+checkpoint and still detects an unprocessed new candidate across two restarts.
+This is not yet a successful owner-private backup retrieval, owner key recovery,
+independent real-host restore or unattended Google Drive ingestion; all of
+those remain HOLD until owner-approved host + OAuth + private key/backup exist.
