@@ -1,11 +1,28 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-10-29 JST / 2026-10-29 UTC
+Updated: 2026-11-15 JST
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
+
+## Current Issue #37 unit — 2026-11-15 JST
+
+Status: **TESTED_SYNTHETIC / physical ZBook and original ZIP BLOCKED**.
+Base main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`; implementation `f26002df4e5be8fe0d97dee56d36ceed1d85020b` on
+`fix/zbook-media-preflight-20261115`. Main's import/analysis/render tool discovery
+and JSON guards are aligned; completed failed imports persist and can be retried
+without resend. Shutdown drains mutations; unsupported-hard-link targets use a
+no-overwrite copy fallback. Node196/Python78 and four actual Linux browser paths
+passed, including two-upload recovery → reviewed numerical first-cut → Japanese
+caption/source-audio MP4 → replay/full decode/restart SHA readback.
+
+The exact v2.x ZIP and ZBook stack trace are absent, so their call site and physical
+repair remain unverified. Main's latest observed hosted run40811805222 was green;
+new branch/Windows CI is NOT_RUN. No main merge or remote/public deployment.
+Evidence and remaining Gates A–E:
+[validation](docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md).
 
 ## Integrated synthetic browser acceptance — PR24 (2026-10-29)
 

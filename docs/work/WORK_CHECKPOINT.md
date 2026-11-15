@@ -1,4 +1,36 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
+Updated: 2026-11-15 JST
+Status: IN_PROGRESS. Issue #37 bounded main-equivalent fix is TESTED_SYNTHETIC.
+Product DoD NOT MET. Exact ZIP, physical Windows/ZBook and remote device gates remain blocked/unverified.
+mainSHA observed at resume/final base check: `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`.
+Implementation: `f26002df4e5be8fe0d97dee56d36ceed1d85020b`, branch `fix/zbook-media-preflight-20261115`.
+
+### Verified current unit
+
+Shared configured media tools/Windows installation discovery; None/malformed probe
+response guards; completed upload retention and explicit no-resend retry; shutdown
+mutation drain and exclusive-copy fallback. Final regression: Node196, Python75
+engine +3 audio, zero failures/skips. Four real Chromium flows pass on this code.
+New two-input recovery output416,596bytes SHA256
+`9f80f38ca421538c0ccbc18316af5089cc4a3c11e4a6b5c5ab382947af0d7bcd` replays and fully decodes; independent restart
+readback matches. All media is generated synthetic and remains outside Git.
+
+### Next exact work
+
+Obtain the app ZIP named/hashed by Issue #37 / Draft #36 and a redacted ZBook stack
+location; review/adapt the bounded fixes to that separate source, then verify the
+actual Windows process and complete Gate A. Do not replace main with the ZIP.
+The manual CI has new checks but new hosted/Windows results are NOT_RUN; API calls
+are Forbidden in this environment. Preserve Draft26 and HUB NATURAL27–35,38–39.
+Chunked/resumable upload, unattended batches, Tailscale/phones on separate networks,
+Google Photos, ASR/TTS/semantics and one-hour/tens-of-GB remain open.
+
+Evidence: `docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md` and matching JSON.
+Deferred minor: browser recovery acceptance needs explicit AIVS_PYTHON for its PATH
+simulation. Corrupt pending journals remain fail-closed and need separate recovery.
+
+## Historical checkpoint (preserved)
+
 Updated: 2026-10-29 JST / 2026-10-29 UTC
 Status: IN_PROGRESS. At candidate freeze, PR24 is integrated and actual main verified; saved-cut visual-preview candidate awaits independent review/hosted browser acceptance. Subsequent exact-head/main acceptance is recorded in the carrying implementation PR and its receipts.
 Product DoD NOT MET. Physical/native/novice acceptance remains NOT_RUN/BLOCKED.

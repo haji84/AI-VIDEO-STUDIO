@@ -38,12 +38,12 @@ Do not merge or overwrite Draft #26 or the independent HUB NATURAL stack #27–#
 
 ## Task 3 — evidence and GitHub checkpoint
 
-- [ ] Run a real-browser two-video import/recovery → numerical first-cut review
+- [x] Run a real-browser two-video import/recovery → numerical first-cut review
   and apply → MP4 replay/download/full decode → restart/readback acceptance.
   Record only synthetic hashes, tool versions and outcomes.
-- [ ] Run Node/Python regressions, existing three browser acceptance scripts,
+- [x] Run Node/Python regressions, existing three browser acceptance scripts,
   and a fresh code review; fix confirmed issues with regression tests.
-- [ ] Update `PROJECT_STATE.md`, `ROADMAP.md`, `docs/work/WORK_CHECKPOINT.md` and
+- [x] Update `PROJECT_STATE.md`, `ROADMAP.md`, `docs/work/WORK_CHECKPOINT.md` and
   a validation record. Commit and push a dedicated implementation branch; link
   Issue #37 and PR #36. Never claim unavailable hosted CI ran.
 

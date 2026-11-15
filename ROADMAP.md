@@ -2,6 +2,21 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
+## Current Issue #37 Gate A — 2026-11-15 JST
+
+- [x] Reproduce main-equivalent missing ffprobe/invalid JSON failures; share tool discovery and bounded response validation.
+- [x] Retain completed validation-failed transfers; explicit authenticated retry after restart without re-upload, with integrity and duplicate/stale protections.
+- [x] Guard shutdown ownership and unsupported-hard-link storage targets (synthetic filesystem/process cases).
+- [x] Actual Linux browser two-upload recovery → numerical first-cut review/apply → Japanese-caption/source-audio MP4 → replay/decode/restart readback. Node196/Python78 + four browser scopes passed.
+- [ ] Obtain original v2.x app ZIP and redacted call-site evidence; adapt verified fixes to that source and independently verify ZBook/Windows launches.
+- [ ] Run new hosted/Windows CI; source checks were added but API dispatch is unavailable here.
+- [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.
+
+No product/native/remote completion follows from these synthetic checks. See
+[Gate A receipt and remaining gates](docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md).
+
+## Historical checkpoint — 2026-10-29
+
 Current checkpoint: 2026-10-29 JST / UTC. PR24 is integrated at main
 `c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`, tree `2175c9bde1a35ab6629c9d8cda95a939ee709dd5`.
 [Main run40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)
