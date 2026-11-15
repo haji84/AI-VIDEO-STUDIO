@@ -16,6 +16,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from . import core_v01 as core
+from .media_tools import MediaToolError, parse_probe_json
 
 INPUT_OPTIONS=['-protocol_whitelist','file,pipe','-format_whitelist','mov,matroska,webm']
 MAX_FINDINGS=256
@@ -37,11 +38,11 @@ def inspect_output(path:Path,expected:float|None=None,profile:dict|None=None,pla
     cp=core.command([core._which('ffprobe'),'-v','error',*INPUT_OPTIONS,'-show_format','-show_streams','-of','json',str(path)],timeout=120)
     if cp.returncode:raise core.StudioError('OUTPUT_QA_INVALID_STANDALONE_MEDIA')
     try:
-        metadata=json.loads(cp.stdout);duration=float(metadata['format']['duration'])
+        metadata=parse_probe_json(cp.stdout);duration=float(metadata['format']['duration'])
         video=next(s for s in metadata['streams'] if s['codec_type']=='video')
         if not math.isfinite(duration) or duration<=0:raise ValueError('duration')
         width,height=int(video['width']),int(video['height'])
-    except (ValueError,KeyError,StopIteration) as error:raise core.StudioError('OUTPUT_QA_INVALID_METADATA') from error
+    except (MediaToolError,ValueError,TypeError,KeyError,StopIteration) as error:raise core.StudioError('OUTPUT_QA_INVALID_METADATA') from error
     audio=any(s['codec_type']=='audio' for s in metadata['streams'])
     issues=[]
     if expected is not None and abs(duration-expected)>max(1,expected*.007):issues.append('出力時間が予定と違います')

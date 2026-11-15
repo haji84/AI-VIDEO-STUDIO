@@ -35,7 +35,7 @@ jobs:
       - name: Cloud mock tests
         run: cd cloud && node --test tests/*.test.mjs
       - name: FFmpeg engine tests
-        run: python -m unittest engine.test_manifest engine.test_caption_raster cloud.processor.test_r2_run -v
+        run: python -m unittest engine.test_media_tools engine.test_manifest engine.test_caption_raster cloud.processor.test_r2_run -v
       - name: Audio smoke (requires NumPy)
         run: |
           cd prototypes/audio && python -m unittest test_mix -v
@@ -115,9 +115,24 @@ jobs:
         run: timeout --signal=TERM --kill-after=10s 300s node apps/local-editor/browser-relink-acceptance.mjs
       - name: Saved-cut visual preview real-browser acceptance (synthetic media only)
         run: timeout --signal=TERM --kill-after=10s 300s node apps/local-editor/browser-preview-acceptance.mjs
+      - name: Retained upload recovery and first-cut export real-browser acceptance (synthetic media only)
+        run: timeout --signal=TERM --kill-after=10s 300s node apps/local-editor/browser-import-recovery-acceptance.mjs
       - name: Remove browser test temporary files
         if: always()
         run: |
           if [ -n "${TMPDIR:-}" ] && [[ "$TMPDIR" == "$RUNNER_TEMP"/aivs-browser-acceptance.* ]]; then
             rm -rf -- "$TMPDIR"
           fi
+
+  windows-tool-discovery-fixtures:
+    runs-on: windows-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Native Windows path discovery fixtures (not actual ZBook media acceptance)
+        run: python -m unittest engine.test_media_tools.WindowsDiscoveryTests -v

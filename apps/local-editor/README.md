@@ -44,6 +44,24 @@ node apps/local-editor/server.mjs --workspace "$HOME/AI_VIDEO_STUDIO_DATA"
 ポートが使用中なら起動時に `--port 8766` を追加。Pythonを別名で導入した場合は
 `AIVS_PYTHON` に、その実行ファイルを指定します。
 
+### ツール検出と送信済み素材の再試行（Issue #37）
+
+取り込み検査、数値による下書き解析、MP4描画は同じFFmpeg/ffprobeの組を使います。
+`AIVS_FFMPEG_DIR` を指定する場合は両方がある `bin` フォルダを選んでください。
+指定先が不完全なときは別の導入先へ黙って切り替えません。未指定なら同梱用フォルダ、
+PATH、Windowsの既知のWinGet導入先を確認します。複数候補が残れば明示指定が必要です。
+検出のために再インストール、ダウンロード、Smart App Controlの変更は行いません。
+Pythonは `AIVS_PYTHON` で選択できます。ZBookの別配布v2.x ZIPはこの実装とは別です。
+
+送信が完了した後に検査が失敗した素材は「送信済み・検査待ち」に残ります。
+起動設定を修正したら「再送せずに取り込みを再試行」で同じコピーを検査できます。
+アプリを正常終了して同じ保存先から再開しても残り、取り込み完了までは編集に加えません。
+再試行でサイズ・SHA-256を照合し、改変されていれば取り込みを止めます。
+途中までしか届いていない転送の分割再開には対応していません。検査待ちも100本の上限と
+保存容量を使います。無効な素材の保留コピーを自動削除することはありません。
+exFATなどハードリンクのない保存先では、上書き禁止のコピーで確定します。その場合は
+素材1本分と作業用余白の空き容量が追加で必要です。不足やコピー失敗では送信済みデータを残します。
+
 外部接続用のサーバーではありません。LANやインターネットには公開しません。
 元動画は変更せず、選んだ素材を同じPCの専用フォルダへコピーします。容量が
 不足する場合は読み込みを止めます。現在の上限は素材100本、1本16GiB/4時間、
@@ -207,7 +225,7 @@ OSや保存装置の応答が止まった場合、その処理の完了まで保
 
 ## 終了・復旧
 
-起動したターミナルでCtrl+C。通常のSIGTERMでも同じ終了処理を呼びます。進行中の書き出し・同期・下書き解析を待ってから終了します。保存済みカットの確認処理は停止を試みます。
+起動したターミナルでCtrl+C。通常のSIGTERMでも同じ終了処理を呼びます。新しい接続を止め、受信途中の転送を中断し、進行中の取り込み検査・再試行・書き出し・同期・下書き解析を待ってから保存先のロックを解放します。保存済みカットの確認処理は停止を試みます。
 異常終了後に `WORKSPACE_IN_USE` が出た場合は、同じ保存先のアプリが動いて
 いないことを確認してから、保存フォルダの `.editor.lock` を削除して再起動。
 処理中だった出力や解析は中断として表示し、新しいジョブで作り直します。
@@ -222,10 +240,11 @@ node --test apps/local-editor/*.test.mjs
 node apps/local-editor/browser-acceptance.mjs
 node apps/local-editor/browser-relink-acceptance.mjs
 node apps/local-editor/browser-preview-acceptance.mjs
+node apps/local-editor/browser-import-recovery-acceptance.mjs
 ```
 
 最初のコマンドはHTTP・実ファイル・FFmpeg・DOMスタブと編集・検査参照操作のテストです。
-後の3つはPlaywrightと実ブラウザを使います。H.264/AACの完成動画を再生できる
+後の4つはPlaywrightと実ブラウザを使います。H.264/AACの完成動画を再生できる
 既存Google Chromeの実在するパスを `AIVS_BROWSER_EXECUTABLE` に設定し、
 `AIVS_PYTHON` にPython 3.11以上・Pillow 13の実行ファイル、`AIVS_CAPTION_FONT` に
 日本語を表示できるフォントを指定します。ブラウザやPlaywrightがなければ `BLOCKED`、
@@ -241,6 +260,12 @@ node apps/local-editor/browser-preview-acceptance.mjs
 途中まで確認した素材の再起動後の再利用、明示的に「開く」を押すまでの編集保全、
 Undo/Redo・音量編集・再起動、完成動画の実再生とBGM成分も確認する試験です。
 ファイル選択・編集・保存・書き出しは実際の画面から行います。
+
+`browser-import-recovery-acceptance.mjs` は合成2本を実際の画面から送信し、検査を失敗させ、
+再起動後に再送なしで取り込みます。その後、同期位置の確認、数値的な下書きの生成・明示適用、
+日本語字幕、MP4再生・保存・全編デコード、元音声成分、再起動後の読戻しを検査します。
+この試験はPATHからPythonも一時的に外すため、実行前に `AIVS_PYTHON` の絶対パス指定が必要です。
+分割転送、無人バッチ、実技の意味理解、実機Windowsや遠隔スマホの成功は証明しません。
 
 既存 `manual-smoke.yml` の手動実行に、独立した `synthetic-browser-acceptance` ジョブを
 追加しています。標準Ubuntu runnerのChromeを利用し、Playwright1.64.1、Node24.22.1、

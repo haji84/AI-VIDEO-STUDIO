@@ -18,6 +18,7 @@ from pathlib import Path
 from . import core_v01 as core
 from .run_manifest import process_manifest, _check_source_identity, _assert_safe_destinations, ManifestError
 from .output_qa import inspect_output
+from .media_tools import MediaToolError, parse_probe_json
 from prototypes.audio.mix_audio import _volume_expr
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -27,20 +28,20 @@ INPUT_OPTIONS=['-protocol_whitelist','file,pipe','-format_whitelist','mov,matros
 
 
 def _probe_local(path:Path) -> dict:
-    result=subprocess.run(['ffprobe','-v','error',*INPUT_OPTIONS,'-show_format','-show_streams','-of','json',str(path)],
-                          capture_output=True,text=True,stdin=subprocess.DEVNULL,timeout=120)
+    result=core.command([core._which('ffprobe'),'-v','error',*INPUT_OPTIONS,'-show_format','-show_streams','-of','json',str(path)],timeout=120)
     if result.returncode:raise ManifestError('UNSUPPORTED_MEDIA_FORMAT_OR_INVALID_MEDIA')
-    return json.loads(result.stdout)
+    try:return parse_probe_json(result.stdout)
+    except MediaToolError as error:raise ManifestError(str(error)) from error
 
 
 def _run(args:list[str], timeout:int) -> None:
-    if Path(args[0]).name=='ffmpeg':
+    if Path(args[0]).name in ('ffmpeg','ffmpeg.exe'):
         gated=[]
         for arg in args:
             if arg=='-i':gated.extend(INPUT_OPTIONS)
             gated.append(arg)
-        args=gated
-    result=subprocess.run(args,capture_output=True,text=True,stdin=subprocess.DEVNULL,timeout=timeout)
+        args=[core._which('ffmpeg'),*gated[1:]]
+    result=core.command(args,timeout=timeout)
     if result.returncode:raise core.StudioError('LOCAL_RENDER_FAILED: '+result.stderr[-1200:])
 
 

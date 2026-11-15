@@ -4,7 +4,7 @@
 #saved-cut-preview [hidden]{display:none}
 </style><main><header><div><h1>AI VIDEO STUDIO</h1><div class="muted">ローカル編集・開発版</div></div><div class="row"><button id="undo">戻す</button><button id="redo">やり直す</button><button id="save-project">プロジェクト保存</button><label>開く<input id="open-project" type="file" accept=".json"></label></div></header>
 <button id="conflict-save" hidden>未保存の変更を保存</button><p id="notice" role="status" aria-live="polite">保存内容を読み込んでいます</p>
-<section id="source-relink" hidden></section>
+<section id="source-relink" hidden></section><section id="pending-imports" hidden></section>
 <section><div class="row"><label>動画を追加<input id="video-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm"></label><label>名前<input id="project-name" maxlength="160"></label></div><p class="muted">素材はこのPC内の専用フォルダに保存します。元ファイルは変更しません。</p></section>
 <div class="grid"><div><section><h2 id="source-preview-label">素材を確認</h2><div class="preview"><video id="preview" controls playsinline></video><div id="caption-preview" class="caption"></div></div><p class="muted">素材の簡易プレビューです。音量と仕上がりは完成動画で確認できます。</p><ol id="clips"></ol><div class="tools"><button id="add-clip">カット追加</button><button id="split">ここで分割</button><button id="move-left">前へ</button><button id="move-right">後ろへ</button></div></section><section id="saved-cut-preview"></section><section><h2>完成動画</h2><button id="render" class="primary">完成動画を作る</button><span id="render-state" class="muted"></span><video id="output" controls playsinline hidden></video><a id="download" hidden download="aivs-edited.mp4">MP4を保存</a></section></div>
 <div><section><h2>選んだカット</h2><label class="field">カメラ<select id="camera"></select></label><div class="row"><label>開始 秒<input id="trim-start" type="number" min="0" step="0.1"></label><label>使う長さ 秒<input id="duration" type="number" min="0.2" step="0.1"></label><label>速度<select id="speed"><option value="0.5">0.5倍</option><option value="1">1倍</option><option value="2">2倍</option><option value="4">4倍</option></select></label></div><label class="field">テロップ<textarea id="caption" maxlength="200" placeholder="表示する言葉"></textarea></label><button id="apply" class="primary">このカットを保存</button><hr><label>このカメラの同期位置 秒<input id="sync-offset" type="number" step="0.1"></label><label class="field"><input id="sync-confirm" type="checkbox">映像と音で同期位置を確認した</label><button id="apply-sync">同期位置を保存</button><p class="muted">追加カメラは同期確認後に使えます。音声の同期候補を下で調べられます。画面分割の操作は今後対応します。</p></section>
@@ -21,7 +21,7 @@ import {mountPreviewPanel} from '/preview-panel.mjs';
 const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll,outputView=0;
 const names={source:'元音声',narration:'ナレーション',bgm:'BGM',sfx:'効果音'};
 function notice(message){$('notice').textContent=message;}
-async function api(path,{method='GET',body,headers={}}={}){const r=await fetch(path,{method,body,headers:{'X-AIVS-Token':token,'X-AIVS-Revision':String(state?.session?.project?.revision??0),...headers}});const data=await r.json();if(!r.ok){const e=new Error(data.error||'処理に失敗しました');e.status=r.status;throw e;}return data;}
+async function api(path,{method='GET',body,headers={}}={}){const r=await fetch(path,{method,body,headers:{'X-AIVS-Token':token,'X-AIVS-Revision':String(state?.session?.project?.revision??0),...headers}});const data=await r.json();if(!r.ok){if(state&&Array.isArray(data.pendingImports)){state.pendingImports=data.pendingImports;showPendingImports();}const e=new Error(data.error||'処理に失敗しました');e.status=r.status;throw e;}return data;}
 function sourceUrl(asset){return '/media/'+asset+'?token='+token;}
 const audioContainer=document.createElement('div');audioContainer.id='audio-clips';$('buses').after(audioContainer);
 const audioPanel=mountAudioPanel({container:audioContainer,current:()=>state,commit:edit,act,mediaUrl:sourceUrl});
@@ -33,7 +33,17 @@ const relinkPanel=mountSourceRelink({container:$('source-relink'),fileInput:$('o
 const previewPanel=mountPreviewPanel({container:$('saved-cut-preview'),current:()=>state,selected:()=>selected,request:api,mediaURL:path=>path+'?token='+token,
  onJobChange:()=>{$('render').disabled=!state.session.project.timeline.length||state.job.status==='RUNNING'||state.sync?.status==='RUNNING'||state.firstCut?.status==='RUNNING'||state.preview?.status==='RUNNING';}});
 window.addEventListener('pagehide',()=>previewPanel.close(),{once:true});
+function showPendingImports(){
+ const panel=$('pending-imports'),pending=state.pendingImports??[];panel.replaceChildren();panel.hidden=!pending.length;if(!pending.length)return;
+ const heading=document.createElement('h2');heading.textContent='送信済み・検査待ち';
+ const message=document.createElement('p');message.textContent='動画の送信は完了しています。検査のエラーを解決してから、再送せずに取り込みを試せます。';panel.append(heading,message);
+ for(const item of pending){const row=document.createElement('p'),label=document.createElement('span'),button=document.createElement('button');
+  label.textContent=item.label+' ';button.textContent='再送せずに取り込みを再試行';button.dataset.uploadId=item.uploadId;
+  button.onclick=()=>act(async()=>{state=await api('/api/import/retry',{method:'POST',body:JSON.stringify({uploadId:item.uploadId})});});row.append(label,button);panel.append(row);
+ }
+}
 function show(){const p=state.session.project;selected=Math.min(selected,Math.max(0,p.timeline.length-1));$('project-name').value=p.name;
+ showPendingImports();
  $('undo').disabled=!state.session.undo.length;$('redo').disabled=!state.session.redo.length;
  $('clips').replaceChildren();p.timeline.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.textContent=(i+1)+' · '+(c.durationSec/c.speed).toFixed(1)+'秒';b.className=i===selected?'selected':'';b.onclick=()=>{selected=i;show();};li.append(b);$('clips').append(li);});
  $('camera').replaceChildren();for(const s of p.sourceRefs.filter(s=>s.mediaKind==='video')){const o=document.createElement('option');o.value=s.assetId;o.textContent=state.sources.find(x=>x.assetId===s.assetId)?.label||s.assetId;$('camera').append(o);}

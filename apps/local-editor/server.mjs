@@ -14,6 +14,7 @@ import {createFirstCutManager} from './first-cut-job.mjs';
 import {createOutputHistory,captureOutputReceipt,readLastOutputJob} from './output-history.mjs';
 import {createSourceRelinkManager} from './source-relink.mjs';
 import {createPreviewManager} from './preview-job.mjs';
+import {createPendingImports} from './pending-imports.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
 const mediaExtensions=new Set(['.mp4','.mov','.mkv','.webm','.wav','.mp3','.m4a','.aac','.flac','.ogg']);
 const fail=(message,status=400)=>{const e=new Error(message);e.status=status;throw e;};
@@ -25,8 +26,19 @@ async function atomicJson(file,object){
 }
 async function jsonBody(req){let bytes=0,parts=[];for await(const chunk of req){bytes+=chunk.length;if(bytes>4*1024**2)fail('編集データが大きすぎます',413);parts.push(chunk);}try{return JSON.parse(Buffer.concat(parts).toString());}catch{fail('編集データを読み込めません');}}
 async function probe(file){
-  const {stdout}=await exec('ffprobe',['-v','error','-protocol_whitelist','file,pipe','-format_whitelist','mov,matroska,webm,wav,mp3,aac,flac,ogg','-show_format','-show_streams','-of','json',file],{timeout:120000,maxBuffer:1024**2});
-  const m=JSON.parse(stdout),duration=Number(m.format?.duration);
+  const python=process.env.AIVS_PYTHON||(process.platform==='win32'?'python':'python3');
+  let tools;
+  try{tools=JSON.parse((await exec(python,['-m','engine.media_tools','--resolve'],{cwd:ROOT,timeout:15000,maxBuffer:64*1024})).stdout);}
+  catch(error){let detail;try{detail=JSON.parse(error.stderr).error;}catch{}
+    fail(typeof detail==='string'&&detail.startsWith('FFMPEG_TOOLCHAIN_')?detail:'MEDIA_TOOL_RESOLVE_FAILED: Python の起動設定を確認してください');}
+  if(!tools||typeof tools.ffprobe!=='string')fail('MEDIA_TOOL_RESOLVE_FAILED');
+  let stdout;
+  try{({stdout}=await exec(tools.ffprobe,['-v','error','-protocol_whitelist','file,pipe','-format_whitelist','mov,matroska,webm,wav,mp3,aac,flac,ogg','-show_format','-show_streams','-of','json',file],{timeout:120000,maxBuffer:1024**2}));}
+  catch(error){fail(error.code==='ENOENT'?'FFPROBE_START_FAILED: 検出した実行ファイルを起動できません。起動設定を確認してください':'FFPROBE_PROCESS_FAILED: 動画検査に失敗しました。素材と実行環境を確認してください');}
+  if(typeof stdout!=='string'||!stdout.trim())fail('FFPROBE_JSON_EMPTY: 動画検査の応答が空です');
+  let m;try{m=JSON.parse(stdout);}catch{fail('FFPROBE_JSON_INVALID: 動画検査の応答を読み取れません');}
+  if(!m||typeof m!=='object'||Array.isArray(m)||!m.format||typeof m.format!=='object'||!Array.isArray(m.streams)||m.streams.some(s=>!s||typeof s!=='object'||Array.isArray(s)))fail('FFPROBE_JSON_SCHEMA: 動画検査の応答形式が不正です');
+  const duration=Number(m.format.duration);
   if(!Number.isFinite(duration)||duration<=0||duration>14400)fail('この素材の長さには対応していません');
   return {durationSec:duration,hasAudio:m.streams.some(s=>s.codec_type==='audio'),hasVideo:m.streams.some(s=>s.codec_type==='video')};
 }
@@ -45,6 +57,7 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
   catch(e){if(e.code==='EEXIST')fail('WORKSPACE_IN_USE: この保存先は使用中です。異常終了後はアプリ終了を確認して .editor.lock を削除してください');throw e;}
   try{
   const assets=join(folder,'assets');await mkdir(assets,{recursive:true});
+  const pendingImports=await createPendingImports({folder,assets,atomicJson});
   const projectFile=join(folder,'project.aivs.json'),registryFile=join(folder,'media.json'),bindingFile=join(folder,'bindings.json');
   let registry=new Map();
   if(await exists(registryFile)){
@@ -68,8 +81,34 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
     await saveSession(projectFile,session,{protectedPaths:[...registry.values()].map(s=>s.path)});
   }
   await persist();
+  async function finishImport(uploadId){
+    const verified=await pendingImports.checked(uploadId),{record}=verified,{kind}=record;
+    if(kind!=='video'&&!session.current.timeline.length)fail('先に動画を追加してください');
+    const info=await probe(verified.file);
+    if(kind==='video'&&!info.hasVideo)fail('映像のある素材を選んでください');
+    if(kind!=='video'&&!info.hasAudio)fail('音声のある素材を選んでください');
+    const local=await pendingImports.materialize(verified),known=registry.get(uploadId);
+    if(known&&known.source.sha256!==record.sha256)fail('IMPORT_SOURCE_CONFLICT');
+    if(session.current.sourceRefs.some(source=>source.assetId===uploadId)){
+      if(!known)fail('IMPORT_SOURCE_CONFLICT');await pendingImports.forget(uploadId);return;
+    }
+    const p=session.current,source={assetId:uploadId,sha256:record.sha256,mediaKind:kind==='video'?'video':'audio',
+      durationSec:info.durationSec,hasAudio:info.hasAudio,offsetSec:0,driftPpm:0,syncStatus:p.sourceRefs.length===0?'master':'unverified'};
+    registry.set(uploadId,{assetId:uploadId,file:record.file,path:local,label:record.label,source});
+    try{await transaction(()=>{
+      p.sourceRefs.push(source);
+      if(kind==='video'&&!p.timeline.length){const clipId='clip_'+randomUUID().replaceAll('-','');p.timeline.push({clipId,sourceId:uploadId,sourceInSec:0,durationSec:info.durationSec,startSec:0,speed:1,layout:'single',effects:[]});
+        if(info.hasAudio)p.audioClips.push({id:'audio_'+clipId,assetId:uploadId,bus:'source',startSec:0,endSec:info.durationSec,trimInSec:0,speed:1,gainDb:0,loop:false,fadeInSec:0,fadeOutSec:0});
+      }else if(kind!=='video'){
+        const end=buildRenderPlan(p).durationSec;
+        p.audioClips.push({id:'audio_'+kind+'_'+randomUUID().replaceAll('-',''),assetId:uploadId,bus:kind,startSec:0,endSec:kind==='bgm'?end:Math.min(end,info.durationSec),trimInSec:0,speed:1,gainDb:kind==='bgm'?-19:0,loop:kind==='bgm',fadeInSec:0,fadeOutSec:0});
+      }
+      session.apply(p);
+    });}catch(error){if(known)registry.set(uploadId,known);else registry.delete(uploadId);throw error;}
+    await pendingImports.forget(uploadId);
+  }
   const token=randomBytes(32).toString('hex'),nonce=randomBytes(24).toString('hex');
-  let mutation=false,job={status:'NOT_RUN'},jobPromise=Promise.resolve();
+  let mutation=false,closing=false,mutationDone=Promise.resolve(),closePromise,job={status:'NOT_RUN'},jobPromise=Promise.resolve();
   const jobFile=join(folder,'last-job.json'),history=await createOutputHistory({folder,atomicJson});let latestReceipt;
   async function rememberOutput(receipt){try{await history.record(receipt);return undefined;}catch{return '完成動画の履歴を保存できませんでした。最新の出力記録は保持しています。';}}
   async function checkedOutput(id){
@@ -91,7 +130,7 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
   const firstCutManager=await createFirstCutManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
   const previewManager=await createPreviewManager({...previewOptions,folder,root:ROOT,getSession:()=>session,getBindings:bindings});
   const html=(await readFile(join(HERE,'index.html'),'utf8')).replaceAll('__TOKEN__',token).replaceAll('__NONCE__',nonce);
-  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),job,sync:syncManager.state(),firstCut:firstCutManager.state(),preview:previewManager.state()};}
+  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),pendingImports:pendingImports.views(),job,sync:syncManager.state(),firstCut:firstCutManager.state(),preview:previewManager.state()};}
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
   const relink=await createSourceRelinkManager({folder,getSession:()=>session,getRegistry:()=>registry,probe,
     commitRegistry:async next=>{await atomicJson(registryFile,[...next.values()].map(({path,...rest})=>rest));registry=next;},
@@ -114,7 +153,9 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
     }finally{if(checked&&!input)await checked.handle.close();}
   }
   const server=http.createServer(async(req,res)=>{
+    let canReadState=false;
     try{
+      if(closing)fail('EDITOR_CLOSING: 終了処理中です',503);
       const address=server.address(),host=`127.0.0.1:${address.port}`,origin=`http://${host}`;
       if(req.headers.host!==host||(req.headers.origin&&req.headers.origin!==origin))fail('外部ページからのアクセスは許可されていません',403);
       res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
@@ -136,6 +177,7 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
         res.end(await readFile(modules[path]));return;
       }
       if(!authorized(req.headers['x-aivs-token'])&&!authorized(url.searchParams.get('token')))fail('画面を開き直してください',403);
+      canReadState=true;
       if(req.method==='GET'&&path==='/api/state'){send(res,200,state());return;}
       if(req.method==='GET'&&path==='/api/job'){send(res,200,job);return;}
       if(req.method==='GET'&&path==='/api/preview'){send(res,200,previewManager.state());return;}
@@ -154,8 +196,9 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
       }
       if(req.method==='GET'&&path.startsWith('/media/')){const source=registry.get(path.slice(7));if(!source)fail('素材がありません',404);await stream(res,req,source.path,source.source.mediaKind==='video'?'video/mp4':'audio/wav');return;}
       if(req.method==='GET'&&path.startsWith('/exports/')){const checked=await checkedOutput(path.slice(9));await stream(res,req,null,'video/mp4',checked);return;}
-      if(req.method!=='POST'||!['/api/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/preview','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
+      if(req.method!=='POST'||!['/api/import','/api/import/retry','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/preview','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
       if(mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy()||previewManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
+      let finishMutation;mutationDone=new Promise(done=>{finishMutation=done;});
       try{
         if(req.headers['x-aivs-revision']!==String(session.current.revision))fail('REVISION_CONFLICT: 別の画面で更新されています',409);
         if(path==='/api/preview'){
@@ -169,35 +212,29 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
           const body=await jsonBody(req);
           if(!body||Array.isArray(body)||typeof body.planId!=='string'||Object.keys(body).some(k=>k!=='planId'))fail('再接続するプロジェクトの確認形式が不正です');
           send(res,200,await (path.endsWith('/open')?relink.open(body.planId):relink.cancel(body.planId)));return;
+        }else if(path==='/api/import/retry'){
+          const body=await jsonBody(req);
+          if(!body||Array.isArray(body)||typeof body.uploadId!=='string'||Object.keys(body).some(k=>k!=='uploadId')||!/^asset_[a-f0-9]{32}$/.test(body.uploadId))fail('IMPORT_ID_INVALID');
+          if(!pendingImports.get(body.uploadId)){
+            if(!registry.has(body.uploadId)||!session.current.sourceRefs.some(s=>s.assetId===body.uploadId))fail('IMPORT_NOT_PENDING');
+          }else await finishImport(body.uploadId);
         }else if(path==='/api/import'){
           const kind=url.searchParams.get('kind');if(!['video','bgm','narration','sfx'].includes(kind))fail('素材の種類が不正です');
           if(kind!=='video'&&!session.current.timeline.length)fail('先に動画を追加してください');
-          if(registry.size>=100)fail('素材数の上限は100本です');
+          if(registry.size+pendingImports.size()>=100)fail('素材数の上限は100本です（検査待ちを含む）');
           const label=decodeURIComponent(String(req.headers['x-file-name']??'')),extension=extname(label).toLowerCase();
           if(!mediaExtensions.has(extension))fail('MP4/MOVなどへ変換した素材を選んでください');
           const length=Number(req.headers['content-length']);
           if(!Number.isSafeInteger(length)||length<=0||length>16*1024**3)fail('素材のサイズに対応していません',413);
           const disk=await statfs(folder);if(Number(disk.bavail)*Number(disk.bsize)<length+600*1024**2)fail('保存先の空き容量が不足しています');
-          const assetId='asset_'+randomUUID().replaceAll('-',''),file=assetId+extension,local=join(assets,file),staged=local+'.tmp';
-          let received=0;
+          const assetId='asset_'+randomUUID().replaceAll('-',''),file=assetId+extension,staged=join(assets,file)+'.tmp';
+          let received=0,complete=false;
           try{
             const handle=await open(staged,'wx',0o600);try{for await(const chunk of req){received+=chunk.length;if(received>length)fail('素材サイズが一致しません');await handle.write(chunk);}await handle.sync();}finally{await handle.close();}
-            if(received!==length)fail('素材の読み込みが中断されました');
-            const info=await probe(staged);if(kind==='video'&&!info.hasVideo)fail('映像のある素材を選んでください');if(kind!=='video'&&!info.hasAudio)fail('音声のある素材を選んでください');
-            const p=session.current,source={assetId,sha256:await hashFile(staged),mediaKind:kind==='video'?'video':'audio',
-              durationSec:info.durationSec,hasAudio:info.hasAudio,offsetSec:0,driftPpm:0,syncStatus:p.sourceRefs.length===0?'master':'unverified'};
-            await rename(staged,local);registry.set(assetId,{assetId,file,path:local,label:label.slice(0,160),source});
-            await transaction(()=>{
-              p.sourceRefs.push(source);
-              if(kind==='video'&&!p.timeline.length){const clipId='clip_'+randomUUID().replaceAll('-','');p.timeline.push({clipId,sourceId:assetId,sourceInSec:0,durationSec:info.durationSec,startSec:0,speed:1,layout:'single',effects:[]});
-                if(info.hasAudio)p.audioClips.push({id:'audio_'+clipId,assetId,bus:'source',startSec:0,endSec:info.durationSec,trimInSec:0,speed:1,gainDb:0,loop:false,fadeInSec:0,fadeOutSec:0});
-              }else if(kind!=='video'){
-                const end=buildRenderPlan(p).durationSec;
-                p.audioClips.push({id:'audio_'+kind+'_'+randomUUID().replaceAll('-',''),assetId,bus:kind,startSec:0,endSec:kind==='bgm'?end:Math.min(end,info.durationSec),trimInSec:0,speed:1,gainDb:kind==='bgm'?-19:0,loop:kind==='bgm',fadeInSec:0,fadeOutSec:0});
-              }
-              session.apply(p);
-            });
-          }finally{await unlink(staged).catch(e=>{if(e.code!=='ENOENT')throw e;});}
+            if(received!==length)fail('素材の読み込みが中断されました');complete=true;
+            await pendingImports.record({uploadId:assetId,kind,label:label.slice(0,160),file,bytes:length,sha256:await hashFile(staged)});
+            await finishImport(assetId);
+          }finally{if(!complete)await unlink(staged).catch(e=>{if(e.code!=='ENOENT')throw e;});}
         }else if(path==='/api/first-cut'){
           const started=await firstCutManager.start(await jsonBody(req));send(res,202,started);return;
         }else if(path==='/api/first-cut/apply'){
@@ -238,12 +275,21 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
           send(res,202,job);return;
         }
         send(res,200,state());
-      }finally{mutation=false;}
-    }catch(error){if(!res.headersSent)send(res,error.status??(error.message==='RELINK_STALE'?409:400),{error:error.message});else res.destroy();}
+      }finally{mutation=false;finishMutation();}
+    }catch(error){if(!res.headersSent)send(res,error.status??(error.message==='RELINK_STALE'?409:400),{error:error.message,...(canReadState?{pendingImports:pendingImports.views()}:{})});else res.destroy();}
   });
   await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});
   return {url:`http://127.0.0.1:${server.address().port}`,token,
-    close:async()=>{await previewManager.close();await Promise.all([jobPromise,syncManager.wait(),firstCutManager.wait()]);server.closeAllConnections();await new Promise((done,reject)=>server.close(error=>error?reject(error):done()));if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);}};
+    close:()=>{
+      if(closePromise)return closePromise;closing=true;
+      const stopped=new Promise((done,reject)=>server.close(error=>error?reject(error):done()));server.closeAllConnections();
+      closePromise=(async()=>{
+        // A completed probe/import may still persist after the HTTP socket closes.
+        // Keep ownership until it finishes; incomplete request bodies are aborted.
+        await mutationDone;await previewManager.close();await Promise.all([jobPromise,syncManager.wait(),firstCutManager.wait()]);await stopped;
+        if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);
+      })();return closePromise;
+    }};
   }catch(error){if(await readFile(lockFile,'utf8').catch(()=>null)===lockToken)await unlink(lockFile);throw error;}
 }
 
