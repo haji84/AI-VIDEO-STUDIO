@@ -50,6 +50,22 @@ The helper alone does not connect the cloud: initial owner login/device enrollme
 and managed cloud VPN binding remain external prerequisites for actual ZBook access.
 No secret, private host address or device report is stored in this public repository.
 
+### Device helper delivery failure — 2026-11-15 JST
+
+Owner terminal output establishes the immediate failure: Python started but could
+not open the helper at the suggested Downloads location (file not found). No
+Windows username/path is retained here. The helper itself had not executed, so
+this is not evidence of a Python/Tkinter, Tailscale or product failure.
+
+Published the already prepared helper as `tools/zbook_connection_check.py` for
+reproducible delivery. Its SHA-256 is
+`b5dc07f469863a4abc903078f605b75ae322c5ce08859bd3b3c474c5e470b815`.
+A commit-pinned HTTPS download plus SHA-256 check can execute its existing
+`--check` mode from a unique user temporary path without assuming Downloads or
+using the working directory. It does not change execution policy/security
+settings. Linux report-filtering and explicit WINDOWS_REQUIRED checks pass;
+actual Windows execution and private connectivity remain pending.
+
 ## Historical checkpoint (preserved)
 
 Updated: 2026-10-29 JST / 2026-10-29 UTC
