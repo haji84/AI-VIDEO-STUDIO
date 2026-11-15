@@ -103,3 +103,40 @@ ZIP内で確認した主なファイル: app.py、engine.py、uploads.py、batch
 
 ## 7. すぐに再開するための短い指示
 Codexは本Issue/本書、GOAL.md、AGENTS.mdを読み、まず **Windowsの編集開始前 JSON None と送信後 ffprobe 未検出** を、それぞれ再現できる失敗テストとして固定する。mainの既存機能を優先して、無変更の実装をZIPで上書きしない。修復後に合成2本で「アップロード→SHA確定→自動編集→実MP4→全編再生検証→再起動読戻し」を証明する。次にTailscaleの非公開遠隔接続とスマホ別回線の実機検証へ進む。記録・コード・テスト・未完了の理由をGitHubに継続保存する。完成の水増し禁止。
+
+---
+
+## 8. Codex実行追記 — 2026-11-15 JST（Gate Aのmain相当経路）
+
+Issue #37と本書を読んで実装・検証を実行した。mainは引継ぎ時と同じ
+`e1bf222dfe0043e307e3fc3c122e2fe52423dac8`。別配布v2.x ZIP本体とZBookの
+スタックトレースは未入手のため、元ZIPの呼出し箇所・実機修復は未確認である。
+
+- 修正コード: [f26002d](https://github.com/haji84/AI-VIDEO-STUDIO/commit/f26002df4e5be8fe0d97dee56d36ceed1d85020b)
+- 修正・検証ブランチ: [fix/zbook-media-preflight-20261115](https://github.com/haji84/AI-VIDEO-STUDIO/tree/fix/zbook-media-preflight-20261115)
+- 検証全文と残ゲート: [Gate A記録](https://github.com/haji84/AI-VIDEO-STUDIO/blob/fix/zbook-media-preflight-20261115/docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md)
+- 再開チェックポイント: [WORK_CHECKPOINT](https://github.com/haji84/AI-VIDEO-STUDIO/blob/fix/zbook-media-preflight-20261115/docs/work/WORK_CHECKPOINT.md)
+
+main相当経路で、描画の指定先を取り込み/解析が使わない不整合とNone/不正JSONの
+未変換例外を失敗テストに固定し、共通検出・応答検証を修正。受信完了素材の
+検査失敗時保管、再起動後の明示的な再送なし再試行、整合性/重複/古い操作の保護、
+終了中の書込み待機、ハードリンク非対応保存先の確定方法も実装した。
+独立レビュー3指摘は再現テストから修正し、Node196/Python78を失敗・skipなしで確認。
+
+Linuxの実Chromiumで4経路がPASS。新経路では合成2本の送信→検査失敗→再起動→
+再送せず再試行→数値的下書き生成・明示適用→日本語字幕/元音声MP4→実再生・全編
+デコード→再起動後の独立読戻しが成功。完成MP4は416,596bytes、SHA-256は
+`9f80f38ca421538c0ccbc18316af5089cc4a3c11e4a6b5c5ab382947af0d7bcd`。
+実動画・MP4・スクリーンショット・認証情報はGitHubへ保存していない。
+
+判定は **TESTED_SYNTHETIC**。ZBook/Windows実機、FFmpeg9、分割・中断再開転送、
+無人バッチ、Tailscaleの別回線スマホ、Googleフォト、意味理解/ASR/TTS、1時間/数十GB、
+4端末受入は未完了。新しいWindows/ホストCIは未実行。mainの最新観測CI
+[40811805222](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40811805222)は成功。
+ブラウザ復旧試験のPATH模擬にはAIVS_PYTHONの絶対指定が必要。不正な保留台帳は
+推測復元せず停止する。製品DoDは未達のまま。
+
+GitHub APIはこのクラウド環境の通信制限でForbiddenとなる。native Gitで上記コードと
+追跡文書を保存したが、Issue直接コメント・新規実装PR作成・CI dispatchは保留。
+[実装PR作成用リンク](https://github.com/haji84/AI-VIDEO-STUDIO/pull/new/fix/zbook-media-preflight-20261115)。
+本PR36へのこの追記は文書のみであり、実装コードのmain統合ではない。
