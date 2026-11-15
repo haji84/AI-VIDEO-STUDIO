@@ -194,7 +194,7 @@ print(json.dumps(out, sort_keys=True))
 
     @unittest.skipUnless(os.name == "posix", "Owner host CLI only on POSIX")
     def test_cli_complete_offline_restore_and_external_restart(self):
-        with mock.patch("owner_checkpoint_restore.print") as output:
+        with mock.patch("builtins.print") as output:
             rc = main(self.cli())
         self.assertEqual(rc, 0)
         report = json.loads(output.call_args.args[0])
@@ -205,7 +205,7 @@ print(json.dumps(out, sort_keys=True))
     def test_cli_without_approval_does_not_touch_private_data(self):
         with mock.patch("owner_checkpoint_restore.read_owner_key",
                         side_effect=AssertionError("MUST_NOT_READ_KEY")):
-            with mock.patch("owner_checkpoint_restore.print") as output:
+            with mock.patch("builtins.print") as output:
                 rc = main(self.cli(no_confirmation=True))
         self.assertEqual(rc, 2)
         self.assertEqual(json.loads(output.call_args.args[0])["status"], "HOLD")
@@ -213,7 +213,7 @@ print(json.dumps(out, sort_keys=True))
 
     def test_cli_missing_key_fails_closed_and_masks_path(self):
         args = self.cli(**{"--key-file": str(self.keydir / "missing.bin")})
-        with mock.patch("owner_checkpoint_restore.print") as output:
+        with mock.patch("builtins.print") as output:
             rc = main(args)
         self.assertEqual(rc, 2)
         result = output.call_args.args[0]
@@ -224,7 +224,7 @@ print(json.dumps(out, sort_keys=True))
     @unittest.skipUnless(os.name == "posix", "Owner backup file contract on POSIX")
     def test_duplicate_receipt_json_keys_rejected(self):
         self.receipt_path.write_text('{"schema":"a","schema":"b"}')
-        with mock.patch("owner_checkpoint_restore.print") as output:
+        with mock.patch("builtins.print") as output:
             rc = main(self.cli())
         self.assertEqual(rc, 2)
         self.assertEqual(json.loads(output.call_args.args[0])["reason"],
