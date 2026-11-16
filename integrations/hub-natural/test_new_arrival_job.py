@@ -14,10 +14,11 @@ FOLDER='SyntheticInboxFake0000001'
 
 class Client:
     def __init__(self, data):
-        self.data=data;self.calls=0;self.meta={'id':'syntheticFile00000001','mimeType':'video/mp4',
+        self.data=data;self.calls=0;self.list_calls=0;self.meta={'id':'syntheticFile00000001','mimeType':'video/mp4',
         'md5Checksum':hashlib.md5(data).hexdigest(),'size':str(len(data)),
         'version':'1','modifiedTime':'2026-01-01T00:00:00Z','trashed':False,'parents':[FOLDER]}
     def list_files(self, folder):
+        self.list_calls += 1
         if folder!=FOLDER:raise AssertionError
         return [self.meta.copy()]
     def file_metadata(self, file_id):
@@ -266,6 +267,73 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
                 self.run_job()
         self.assertEqual(self.queue.read_bytes(), before)
         self.assertEqual(self.client.calls, 1)
+    def test_invalid_saved_queue_never_reaches_drive_or_mutates_private_state(self):
+        """An existing invalid queue must be checked before Drive list/media."""
+        from unittest import mock
+        self.run_job()
+        original = json.loads(self.queue.read_text(encoding='utf-8'))
+        original_state = self.state.read_bytes()
+
+        def changed(fn):
+            obj = json.loads(json.dumps(original))
+            fn(obj)
+            return json.dumps(obj).encode('utf-8')
+
+        cases = {
+            'truncated_json': b'{"schema":',
+            'not_an_object': b'[]',
+            'wrong_schema': changed(lambda d: d.update(schema='forged-v2')),
+            'missing_assets': changed(lambda d: d.pop('assets')),
+            'missing_summary': changed(lambda d: d.pop('sourceCount')),
+            'duplicate_source_sha': changed(lambda d: d['assets'].append(
+                dict(d['assets'][0]))),
+            'invalid_sha': changed(lambda d: d['assets'][0].update(sha256='g'*64)),
+            'forged_asset_id': changed(lambda d: d['assets'][0].update(assetId='asset_forged')),
+            'traversal_name': changed(lambda d: d['assets'][0].update(local='../private.mp4')),
+            'unverified_privacy': changed(lambda d: d['assets'][0].update(privacyCheck='PASS')),
+            'unexpected_publication': changed(lambda d: d.update(publishing='PERFORMED')),
+            'duplicate_json_property': b'{"schema":"first","schema":"second"}',
+            'nonfinite_json': changed(lambda d: d.update(scanHolds=float('nan'))),
+        }
+        for label, bad in cases.items():
+            with self.subTest(label=label):
+                self.queue.write_bytes(bad)
+                self.client.list_calls = 0
+                self.client.calls = 0
+                with mock.patch('new_arrival_job.pipeline.scan',
+                                side_effect=AssertionError('SCAN_BEFORE_PREFLIGHT')):
+                    with self.assertRaises(Hold):
+                        self.run_job()
+                self.assertEqual(self.client.list_calls, 0)
+                self.assertEqual(self.client.calls, 0)
+                self.assertEqual(self.state.read_bytes(), original_state)
+                self.assertEqual(self.queue.read_bytes(), bad)
+
+    def test_invalid_queue_blocks_oauth_refresh_before_drive_client_creation(self):
+        from unittest import mock
+        self.queue.parent.mkdir(parents=True, exist_ok=True)
+        self.queue.write_text('{"broken":', encoding='utf-8')
+        self.queue.chmod(0o600)
+        with mock.patch('new_arrival_job.oauth_token_from_env',
+                        side_effect=AssertionError('OAUTH_REFRESH_BEFORE_PREFLIGHT')):
+            with mock.patch('new_arrival_job.DriveHTTP',
+                            side_effect=AssertionError('CLIENT_BEFORE_PREFLIGHT')):
+                with self.assertRaisesRegex(Hold, 'PREVIOUS_REVIEW_QUEUE_UNREADABLE'):
+                    run_once(None, FOLDER, self.inbox, self.state, self.cat, self.queue)
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.inbox.exists())
+
+    @unittest.skipIf(__import__('os').name == 'nt', 'Windows symlink privilege unavailable')
+    def test_queue_symlink_is_rejected_before_drive(self):
+        good = Path(self.t.name)/'external.json'
+        good.write_text('{"broken":', encoding='utf-8')
+        self.queue.parent.mkdir(parents=True, exist_ok=True)
+        self.queue.symlink_to(good)
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_REVIEW_QUEUE_UNSAFE'):
+            self.run_job()
+        self.assertEqual(self.client.list_calls, 0)
+        self.assertEqual(self.client.calls, 0)
+
     def test_no_report_or_state_inside_source_inbox(self):
         with self.assertRaisesRegex(Hold,'REPORTS_MUST_BE_OUTSIDE_MEDIA_INBOX'):
             run_once(self.client,FOLDER,self.inbox,self.state,self.inbox/'catalog.json',self.queue)
