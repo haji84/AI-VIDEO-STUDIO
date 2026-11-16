@@ -22,8 +22,8 @@ import pipeline
 
 SCHEMA="hub-natural-private-review-queue-v1"
 _MAX_QUEUE_BYTES = 4 * 1024 * 1024
-_SHA256 = re.compile(r"[0-9a-f]{64}\\Z")
-_LOCAL = re.compile(r"owner_[0-9a-f]{24}\\.(?:mp4|mov|m4v|mkv)\\Z")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+_LOCAL = re.compile(r"owner_[0-9a-f]{24}[.](?:mp4|mov|m4v|mkv)")
 _COUNTS = {"imported", "already_present", "duplicate", "unsupported", "hold"}
 _RECORD_FIELDS = {
     "assetId", "sha256", "local", "seconds", "width", "height",
