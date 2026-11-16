@@ -230,14 +230,42 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
         with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUE_SOURCE_OR_STATUS_CHANGED'):
             self.run_job()
 
-    def test_corrupted_existing_original_cannot_be_treated_as_new_safe_media(self):
+    def test_corrupted_existing_original_cannot_erase_pending_review(self):
         self.run_job()
-        source=next(self.inbox.glob('owner_*.mp4'))
+        before = self.queue.read_bytes()
+        source = next(self.inbox.glob('owner_*.mp4'))
         source.write_bytes(b'corruption')
-        again=self.run_job()
-        self.assertGreaterEqual(again['held'],1)  # intake and scan may flag same damaged source independently
-        self.assertGreaterEqual(again['queuePending'],0)
-        self.assertEqual(self.client.calls,1)
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE'):
+            self.run_job()
+        self.assertEqual(self.queue.read_bytes(), before)
+        self.assertEqual(self.client.calls, 1)
+        # Restoring the exact synthetic original must resume without
+        # downloading again or inventing a second review item.
+        source.write_bytes(self.bytes)
+        recovered = self.run_job()
+        self.assertEqual(recovered['newlyQueued'], 0)
+        self.assertEqual(recovered['queuePending'], 1)
+        self.assertEqual(self.client.calls, 1)
+
+    def test_deleted_original_cannot_silently_clear_existing_queue(self):
+        self.run_job()
+        before = self.queue.read_bytes()
+        source = next(self.inbox.glob('owner_*.mp4'))
+        source.unlink()
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE'):
+            self.run_job()
+        self.assertEqual(self.queue.read_bytes(), before)
+        self.assertEqual(self.client.calls, 1)
+
+    def test_partial_scan_cannot_prune_pending_queue(self):
+        from unittest import mock
+        self.run_job()
+        before = self.queue.read_bytes()
+        with mock.patch('new_arrival_job.pipeline.scan', return_value=[]):
+            with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE'):
+                self.run_job()
+        self.assertEqual(self.queue.read_bytes(), before)
+        self.assertEqual(self.client.calls, 1)
     def test_no_report_or_state_inside_source_inbox(self):
         with self.assertRaisesRegex(Hold,'REPORTS_MUST_BE_OUTSIDE_MEDIA_INBOX'):
             run_once(self.client,FOLDER,self.inbox,self.state,self.inbox/'catalog.json',self.queue)
