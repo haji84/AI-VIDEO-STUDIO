@@ -554,8 +554,13 @@ transfer private footage to the Mac in this phase.
 - Google's Chrome Remote Desktop supports controlling a Mac from iPhone,
   including from another network. Owner installation on the Mac:
   https://remotedesktop.google.com/access
-  Google official iPhone setup:
+  Google official iPhone instructions:
   https://support.google.com/chrome/answer/1649523?co=GENIE.Platform%3DiOS&hl=ja
+  **Important 2026 iOS correction:** Google deprecated its old native iPhone
+  app; use Safari at https://remotedesktop.google.com/access (web client)
+  instead of searching the App Store for the discontinued app. Safari's
+  Share > Add to Home Screen is optional. Google Chrome support confirmation:
+  https://support.google.com/chrome/thread/366984203
   The owner must install the host and explicitly grant the Mac permissions,
   choose the PIN, protect the Google account, and test on iPhone. No PIN, host
   credential, account email, recovery code or host configuration is entered
@@ -577,11 +582,14 @@ transfer private footage to the Mac in this phase.
 1. On the Mac, complete the chosen remote host's installation and OS
    permissions **personally**. Keep remote desktop account/PIN private and
    do not expose raw VNC/RDP ports to the internet.
-2. Using iPhone on **mobile data or a genuinely different Wi-Fi**, connect
-   to the Mac and show the actual desktop.
-3. Use the iPhone to click a harmless window, enter text and verify keyboard
-   control. Disconnect and reconnect from iPhone without returning to the
-   Mac. If an already-offline Mac cannot be reached, HOLD.
+2. On the iPhone, disable Wi-Fi and confirm mobile data works (or use a
+   genuinely separate network). Open **Safari**, visit
+   https://remotedesktop.google.com/access, sign into the same owner account,
+   select the registered Mac and enter its PIN **only in Google's page**.
+   Confirm the actual Mac desktop appears. Do not use the deprecated iOS app.
+3. From the iPhone, click a harmless window and type a disposable test word
+   (not a secret). Disconnect, then reconnect **without walking back to or
+   touching the Mac**. If the Mac cannot be reached, HOLD.
 4. With the Mac on AC power, check sleep/network-wake behavior and, if
    applicable, lid-open/locked-screen access. Apple's sleep settings:
    https://support.apple.com/en-tm/guide/mac-help/-mchle41a6ccd/mac
@@ -590,6 +598,22 @@ transfer private footage to the Mac in this phase.
 5. Only once the owner independently confirms the above should metadata-only
    scheduling, owner-private key storage and read-only Drive OAuth be
    connected with separate approval. This is a **manual real-device gate**.
+
+#### Owner's non-secret evidence checklist (real-device only)
+
+Record **JST date/time and PASS/FAIL/HOLD** for each item, without screenshots
+containing private content: (a) iPhone on mobile data or distinct Wi-Fi,
+(b) Mac screen visible, (c) remote click, (d) non-secret text entry,
+(e) disconnect and fresh reconnect, (f) locked-screen reconnection,
+(g) temporary network interruption/reconnection, and (h) lid-open AC-powered
+sleep/wake behavior checked separately. A manual statement by the owner is an
+owner-reported result, not an independently automated verification.
+Never include Google ID/email, PIN, IP, device identifier, screen contents,
+host logs with private data or any media in a Public GitHub comment. If only
+some steps pass, mark the gate **PARTIAL/HOLD**, not PASS. CI cannot verify
+any of these real-iPhone observations. Installing host or granting macOS
+remote-control permissions requires owner action/approval; this PR performs
+none of it.
 
 ### Read-only host probe
 
