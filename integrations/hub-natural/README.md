@@ -604,6 +604,30 @@ network connection, inspects secrets, downloads media or writes local state.
 Public CI can test the contract synthetically; passing CI is not an actual
 Mac/iPhone session.
 
+
+### Read-only candidate for small M1 metadata history (not an authorization)
+
+Once the iPhone off-network remote-control acceptance is independently complete,
+the owner can create an **existing** local, owner-only private directory on the Mac
+outside Git, iCloud shared folders and any public checkout. For example, choose
+a private directory under the owner's home directory with mode 0700.
+Never pass its actual path in a public CI or support screenshot.
+
+Run locally (replace the placeholder on the real Mac):
+
+    python3 integrations/hub-natural/mac_remote_readiness.py \\
+      --metadata-root '/owner-private-existing/HUB_NATURAL_STATE'
+
+The optional root check is read-only: it checks absolute path, symlinks,
+Git ancestry, existence, POSIX owner/mode 0700 and basic access. It does
+**not** create the directory, write a byte, import/store any footage,
+connect to OAuth, store HMAC keys, install launchd, validate durability,
+prove full Mac filesystem ACL security, or grant remote access. It prints
+only a sanitized status code, never the private directory name/path.
+On a non-POSIX host, owner ACL remains unverifiable. A candidate result
+**does not activate metadata jobs**, override the required iPhone manual
+cross-network test, or turn the overall HOLD into PASS.
+
 **Keep work split**: M1 is an approved candidate for tiny metadata history,
 owner-private keys (once separately approved) and future launchd scheduling.
 Video byte download, FFmpeg editing, rendering and large temporary files must
