@@ -84,6 +84,11 @@ def _run_once_locked(client, folder_id, inbox, state, catalog, queue, *, max_byt
                     'editorialQuality':'NOT_EVALUATED',
                     'privacyCheck':'NOT_PERFORMED'}
         entries.append(item)
+    # A partial scan, vanished original, or newly unreadable/corrupt source
+    # MUST NOT silently erase an already pending review item on replay.
+    # Clearing a queued original requires a separate owner-audited action.
+    if set(previous) - {item['sha256'] for item in entries}:
+        raise Hold('PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE')
     entries.sort(key=lambda x:x['assetId'])
     record={'schema':SCHEMA,'status':'HOLD_REVIEW_REQUIRED',
             'assets':entries,'sourceCount':len(entries),
