@@ -157,6 +157,19 @@ host ACL audit, verified content SHA of remote bytes, or proof of live polling.
 Only an authorized private host with separate owner-managed credentials may
 run a real cycle; Mac/iPhone remote control remains HOLD.
 
+**Queued source SHA preflight (2026-11-17, stacked Draft PR):** In addition
+to queue JSON validation, the job now reads every already-pending local
+original from a descriptor, rejects symlinks, non-regular or non-owner-private
+files (on POSIX), and recomputes its full SHA-256 **before OAuth refresh, Drive
+listing/media or FFprobe scan**. Missing, truncated or changed bytes HOLD
+without mutating queue, state, catalog or video. After a trusted owner
+restores the *exact* source bytes with private permissions, replay continues
+idempotently. This is cryptographic *content checksum verification* against the
+queue record, not a keyed HMAC or independent authenticated checkpoint:
+someone who can replace both saved queue and original can defeat it. Do not
+silently repair, delete, redownload or label a damaged queued original. No
+persistent-host or real media production proof is claimed.
+
 Example on an **owner-approved private persistent host**, not a public runner:
 
 ```sh
