@@ -279,6 +279,7 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
 
         # Exact restoration resumes without re-downloading or queue expansion.
         source.write_bytes(self.bytes)
+        source.chmod(0o600)
         self.client.calls = 0
         self.client.list_calls = 0
         recovered = self.run_job()
@@ -305,6 +306,7 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
         self.assertTrue(source.is_symlink())
         source.unlink()
         source.write_bytes(original)
+        source.chmod(0o600)
         self.assertEqual(self.run_job()['newlyQueued'], 0)
 
     def test_deleted_original_cannot_silently_clear_existing_queue(self):
