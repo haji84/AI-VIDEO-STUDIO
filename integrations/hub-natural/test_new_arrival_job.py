@@ -236,7 +236,7 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
         before = self.queue.read_bytes()
         source = next(self.inbox.glob('owner_*.mp4'))
         source.write_bytes(b'corruption')
-        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE'):
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED'):
             self.run_job()
         self.assertEqual(self.queue.read_bytes(), before)
         self.assertEqual(self.client.calls, 1)
@@ -248,12 +248,71 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
         self.assertEqual(recovered['queuePending'], 1)
         self.assertEqual(self.client.calls, 1)
 
+    def test_queue_source_sha_is_verified_before_any_drive_or_scan(self):
+        """A queued original changing on disk must block network and all writes."""
+        from unittest import mock
+        self.run_job()
+        source = next(self.inbox.glob('owner_*.mp4'))
+        before_queue = self.queue.read_bytes()
+        before_state = self.state.read_bytes()
+        before_catalog = self.cat.read_bytes()
+
+        for label, replacement in [('changed_bytes', b'tampered-original'),
+                                   ('truncated', self.bytes[:32]),
+                                   ('missing', None)]:
+            with self.subTest(label=label):
+                if replacement is None:
+                    source.unlink(missing_ok=True)
+                else:
+                    source.write_bytes(replacement)
+                self.client.calls = 0
+                self.client.list_calls = 0
+                with mock.patch('new_arrival_job.pipeline.scan',
+                                side_effect=AssertionError('SCAN_BEFORE_SOURCE_PREFLIGHT')):
+                    with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED'):
+                        self.run_job()
+                self.assertEqual(self.client.list_calls, 0)
+                self.assertEqual(self.client.calls, 0)
+                self.assertEqual(self.queue.read_bytes(), before_queue)
+                self.assertEqual(self.state.read_bytes(), before_state)
+                self.assertEqual(self.cat.read_bytes(), before_catalog)
+
+        # Exact restoration resumes without re-downloading or queue expansion.
+        source.write_bytes(self.bytes)
+        self.client.calls = 0
+        self.client.list_calls = 0
+        recovered = self.run_job()
+        self.assertEqual(recovered['newlyQueued'], 0)
+        self.assertEqual(recovered['queuePending'], 1)
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.client.list_calls, 1)
+
+    @unittest.skipIf(__import__('os').name == 'nt', 'Symlink creation is privilege-dependent on Windows')
+    def test_queue_source_symlink_is_refused_before_drive(self):
+        self.run_job()
+        source = next(self.inbox.glob('owner_*.mp4'))
+        outside = Path(self.t.name) / 'elsewhere.mp4'
+        outside.write_bytes(source.read_bytes())
+        original = source.read_bytes()
+        source.unlink()
+        source.symlink_to(outside)
+        self.client.calls = 0
+        self.client.list_calls = 0
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED'):
+            self.run_job()
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.client.list_calls, 0)
+        self.assertTrue(source.is_symlink())
+        source.unlink()
+        source.write_bytes(original)
+        self.assertEqual(self.run_job()['newlyQueued'], 0)
+
     def test_deleted_original_cannot_silently_clear_existing_queue(self):
         self.run_job()
         before = self.queue.read_bytes()
         source = next(self.inbox.glob('owner_*.mp4'))
         source.unlink()
-        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE'):
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED'):
             self.run_job()
         self.assertEqual(self.queue.read_bytes(), before)
         self.assertEqual(self.client.calls, 1)
