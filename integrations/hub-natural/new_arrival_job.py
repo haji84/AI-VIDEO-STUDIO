@@ -8,6 +8,7 @@ stops at a review queue, rather than inventing a snake event or exporting footag
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -131,6 +132,42 @@ def _load_previous_queue(queue):
     return previous
 
 
+def _verify_queued_sources(inbox, previous):
+    """Hash each pending original locally before OAuth, Drive or catalog writes.
+
+    The queue SHA belongs to a real owner-private source file. Using a file
+    descriptor and O_NOFOLLOW where available avoids hashing a redirected path.
+    This guards accidental corruption, not an attacker who can forge both the
+    queue and the original. Existing intake/scan checks remain in force too.
+    """
+    for record in previous.values():
+        source = inbox / record["local"]  # strict basename checked in queue loader
+        if source.is_symlink():
+            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+        try:
+            fd = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        except OSError as exc:
+            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED") from exc
+        try:
+            with os.fdopen(fd, "rb") as stream:
+                before = os.fstat(stream.fileno())
+                if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                        or (os.name == "posix" and
+                            (before.st_uid != os.getuid() or before.st_mode & 0o077))):
+                    raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+                hasher = hashlib.sha256()
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    hasher.update(chunk)
+                after = os.fstat(stream.fileno())
+                if (hasher.hexdigest() != record["sha256"]
+                        or before.st_size != after.st_size
+                        or before.st_mtime_ns != after.st_mtime_ns
+                        or before.st_ctime_ns != after.st_ctime_ns):
+                    raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+        except OSError as exc:
+            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED") from exc
+
+
 def _assert_paths(inbox, state, catalog, queue):
     paths=list(map(_assert_private,(inbox, state, catalog, queue)))
     if len(set(paths))!=len(paths):
@@ -158,6 +195,7 @@ def _run_once_locked(client, folder_id, inbox, state, catalog, queue, *, max_byt
     # Validate locally persisted queue first, before listing Drive, downloading
     # video, or even refreshing an owner OAuth token.
     previous = _load_previous_queue(queue)
+    _verify_queued_sources(inbox, previous)
     if client is None:
         client = DriveHTTP(oauth_token_from_env())
     options={"max_bytes":max_bytes} if max_bytes is not None else {}
