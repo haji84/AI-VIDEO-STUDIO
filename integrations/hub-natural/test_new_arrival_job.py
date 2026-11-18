@@ -353,6 +353,10 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
             'changed_path': corrupt(lambda d: d['assets'][file_id].update(local='../forged.mp4')),
             'wrong_import_status': corrupt(lambda d: d['assets'][file_id].update(status='DUPLICATE')),
             'changed_media_size': corrupt(lambda d: d['assets'][file_id].update(bytes=1)),
+            'changed_md5_with_valid_shape': corrupt(
+                lambda d: d['assets'][file_id].update(md5='f'*32)),
+            'unhashable_mimetype': corrupt(
+                lambda d: d['assets'][file_id].update(mimeType=['video/mp4'])),
             'forged_remote_id': corrupt(lambda d: d['assets'][file_id].update(id='wrong')),
             'duplicated_json_key': b'{"schema":"one","schema":"two"}',
             'not_finite': corrupt(lambda d: d.update(lastSuccessfulCheckUnix=float('nan'))),
