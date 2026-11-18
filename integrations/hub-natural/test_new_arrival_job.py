@@ -383,6 +383,7 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
                 else:
                     self.assertEqual(self.state.read_bytes(), bad)
         self.state.write_bytes(state_original_bytes)
+        self.state.chmod(0o600)  # recreated missing state needs private mode
         self.assertEqual(self.run_job()['newlyQueued'], 0)
         self.assertEqual(self.client.calls, 0)
 
