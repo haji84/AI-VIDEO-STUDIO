@@ -158,7 +158,7 @@ def _preflight_intake_state(state_path, folder_id, previous):
     except FileNotFoundError:
         if previous:
             raise Hold("PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH")
-        return
+        return {}
     except OSError as exc:
         raise Hold("PREVIOUS_INTAKE_STATE_UNSAFE") from exc
     try:
@@ -213,6 +213,7 @@ def _preflight_intake_state(state_path, folder_id, previous):
                 or item["id"] != remote_id
                 or type(item["bytes"]) is not int or not 0 <= item["bytes"] <= 4*1024**3
                 or not isinstance(item["md5"], str) or not _MD5.fullmatch(item["md5"])
+                or not isinstance(item["mimeType"], str)
                 or item["mimeType"] not in MIME_TO_EXT
                 or not isinstance(item["version"], str)
                 or not (isinstance(item["modifiedTime"], str)
@@ -230,17 +231,22 @@ def _preflight_intake_state(state_path, folder_id, previous):
         else:
             duplicates.append(item)
     for item in duplicates:
+        if not isinstance(item["duplicateOf"], str):
+            raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
         original = imported_by_local.get(item["duplicateOf"])
         if (original is None or original["sha256"] != item["sha256"]
                 or original["bytes"] != item["bytes"]):
             raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+    receipts = {}
     for sha, queued in previous.items():
         original = imported_by_sha.get(sha)
         if (original is None or original["local"] != queued["local"]):
             raise Hold("PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH")
+        receipts[sha] = original
+    return receipts
 
 
-def _verify_queued_sources(inbox, previous):
+def _verify_queued_sources(inbox, previous, receipts):
     """Hash each pending original locally before OAuth, Drive or catalog writes.
 
     The queue SHA belongs to a real owner-private source file. Using a file
@@ -264,10 +270,15 @@ def _verify_queued_sources(inbox, previous):
                             (before.st_uid != os.getuid() or before.st_mode & 0o077))):
                     raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
                 hasher = hashlib.sha256()
+                md5 = hashlib.md5()
                 for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                     hasher.update(chunk)
+                    md5.update(chunk)
                 after = os.fstat(stream.fileno())
+                receipt = receipts[record["sha256"]]
                 if (hasher.hexdigest() != record["sha256"]
+                        or md5.hexdigest() != receipt["md5"]
+                        or after.st_size != receipt["bytes"]
                         or before.st_size != after.st_size
                         or before.st_mtime_ns != after.st_mtime_ns
                         or before.st_ctime_ns != after.st_ctime_ns):
@@ -305,8 +316,8 @@ def _run_once_locked(client, folder_id, inbox, state, catalog, queue, *, max_byt
     # Validate locally persisted queue first, before listing Drive, downloading
     # video, or even refreshing an owner OAuth token.
     previous = _load_previous_queue(queue)
-    _preflight_intake_state(state, folder_id, previous)
-    _verify_queued_sources(inbox, previous)
+    receipts = _preflight_intake_state(state, folder_id, previous)
+    _verify_queued_sources(inbox, previous, receipts)
     if client is None:
         client = DriveHTTP(oauth_token_from_env())
     options={"max_bytes":max_bytes} if max_bytes is not None else {}
