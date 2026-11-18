@@ -1,0 +1,149 @@
+"""Offline-only contract tests for the opt-in bounded INBOX poller.
+
+These tests never call real Drive, real OAuth, a Mac, Instagram or media.
+"""
+import unittest
+from unittest import mock
+
+from drive_intake import Hold
+from bounded_intake_poll import run_cycles, main
+
+FOLDER = "SyntheticInboxFake0000001"
+
+
+def outcome(*, new=0, queued=0, pending=0, held=0):
+    return {
+        "status": "HOLD_REVIEW_REQUIRED",
+        "newImports": new, "alreadyPresent": 0, "held": held,
+        "queuePending": pending, "newlyQueued": queued,
+        "draftsMade": 0, "publishing": "NOT_PERFORMED",
+    }
+
+
+class PollerTests(unittest.TestCase):
+    def test_two_successful_cycles_count_new_arrivals_once(self):
+        calls = []
+        sleeps = []
+        data = [outcome(new=1, queued=1, pending=1),
+                outcome(new=0, queued=0, pending=1)]
+
+        def next_cycle():
+            calls.append("called")
+            return data[len(calls) - 1]
+
+        report = run_cycles(next_cycle, cycles=2, interval_seconds=60,
+                            sleep_fn=sleeps.append)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(sleeps, [60])
+        self.assertEqual(report["checks"], 2)
+        self.assertEqual(report["newImports"], 1)
+        self.assertEqual(report["newlyQueued"], 1)
+        self.assertEqual(report["lastQueuePending"], 1)
+        self.assertEqual(report["publishing"], "NOT_PERFORMED")
+        self.assertEqual(report["semanticRecognition"], "NOT_PERFORMED")
+        self.assertEqual(report["status"], "INTAKE_ONLY_REVIEW_REQUIRED")
+        self.assertNotIn("file", str(report).lower())
+        self.assertNotIn(FOLDER, str(report))
+
+    def test_default_one_cycle_does_not_sleep_or_post(self):
+        sleeps = []
+        report = run_cycles(lambda: outcome(), cycles=1,
+                            interval_seconds=60, sleep_fn=sleeps.append)
+        self.assertEqual(report["checks"], 1)
+        self.assertEqual(sleeps, [])
+        self.assertEqual(report["publishing"], "NOT_PERFORMED")
+
+    def test_hold_stops_immediately_without_retries_or_sleep(self):
+        calls = []
+        sleeps = []
+
+        def failed_cycle():
+            calls.append(1)
+            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+
+        with self.assertRaisesRegex(Hold, "PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED"):
+            run_cycles(failed_cycle, cycles=4, interval_seconds=60,
+                       sleep_fn=sleeps.append)
+        self.assertEqual(calls, [1])
+        self.assertEqual(sleeps, [])
+
+    def test_held_import_does_not_continue_past_first_cycle(self):
+        calls = []
+        sleeps = []
+
+        def held_cycle():
+            calls.append(1)
+            return outcome(held=1)
+
+        with self.assertRaisesRegex(Hold, "POLL_CYCLE_HELD_INPUTS"):
+            run_cycles(held_cycle, cycles=3, interval_seconds=60,
+                       sleep_fn=sleeps.append)
+        self.assertEqual(calls, [1])
+        self.assertEqual(sleeps, [])
+
+    def test_bad_result_and_false_publication_rejected(self):
+        bad_cases = [
+            None, {}, [], "OK",
+            {**outcome(), "status": "COMPLETE"},
+            {**outcome(), "publishing": "POSTED"},
+            {**outcome(), "draftsMade": 1},
+            {**outcome(), "queuePending": -1},
+            {**outcome(), "newImports": True},
+            {**outcome(new=1, queued=2, pending=1)},
+        ]
+        for value in bad_cases:
+            with self.subTest(value=str(value)[:70]):
+                with self.assertRaisesRegex(Hold, "POLL_CYCLE_RESULT_INVALID"):
+                    run_cycles(lambda: value, cycles=1, interval_seconds=60,
+                               sleep_fn=lambda _: self.fail("must not sleep"))
+
+    def test_bad_limits_rejected_before_any_cycle(self):
+        values = ((0, 60), (25, 60), (True, 60), (1.1, 60),
+                  (1, 0), (1, 59), (1, 3601), (1, True),
+                  (1, "60"), (-5, 60))
+        for cycles, pause in values:
+            with self.subTest(cycles=cycles, pause=pause):
+                with self.assertRaises(Hold):
+                    run_cycles(lambda: self.fail("ran before validation"),
+                               cycles=cycles, interval_seconds=pause,
+                               sleep_fn=lambda _: self.fail("slept"))
+
+    def test_cli_does_not_start_drive_without_explicit_owner_credentials(self):
+        """The new CLI delegates to the existing preflight and OAuth gate."""
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+        ]
+        with mock.patch("bounded_intake_poll.run_once",
+                        side_effect=Hold("OWNER_OAUTH_OFFLINE_AUTH_REQUIRED")) as run:
+            with mock.patch("builtins.print") as printed:
+                self.assertEqual(main(args), 2)
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(printed.call_count, 1)
+        value = printed.call_args.args[0]
+        self.assertIn("OWNER_OAUTH_OFFLINE_AUTH_REQUIRED", value)
+        self.assertNotIn(FOLDER, value)
+        self.assertNotIn("/fake/private", value)
+
+    def test_cli_sanitizes_untrusted_error_messages(self):
+        """Never print tokens/paths even if upstream throws an unsafe message."""
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+        ]
+        with mock.patch("bounded_intake_poll.run_once",
+                        side_effect=Hold("SECRET:/private/hidden.mp4")):
+            with mock.patch("builtins.print") as printed:
+                self.assertEqual(main(args), 2)
+        msg = printed.call_args.args[0]
+        self.assertIn("POLL_CYCLE_FAILED", msg)
+        self.assertNotIn("SECRET", msg)
+        self.assertNotIn("/private", msg)
+
+
+if __name__ == "__main__":
+    unittest.main()
