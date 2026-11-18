@@ -218,6 +218,45 @@ restricted OAuth credentials, persistent private state, owner-approved cloud
 host/retention boundaries, success/failure monitoring, and real unattended
 new-file proof are still required before production.
 
+### Bounded opt-in repeat checks (2026-11-19; not deployed)
+
+`bounded_intake_poll.py` reuses the one-shot `new_arrival_job.run_once`
+without bypassing queue/state/source checks. It accepts **1–24 cycles**
+(default **1**) separated by **60–3600 seconds** (default **60**);
+it is deliberately not a daemon, background service, timer or scheduled job.
+It exits on the first HOLD, refused media, malformed result or OAuth failure
+rather than silently retrying a damaged original. There is no automatic
+posting, Instagram access, semantic classification, owner-device enrollment,
+permission change, video upload or new billing.
+
+On an **explicitly owner-approved private MEDIA-CAPABLE host** only, after
+Google Drive OAuth, non-public state and local FFmpeg are separately configured:
+
+```sh
+python integrations/hub-natural/bounded_intake_poll.py \
+  --folder-id '<private INBOX ID>' \
+  --inbox /owner-private/media \
+  --state /owner-private/state/intake.json \
+  --catalog /owner-private/state/catalog.json \
+  --review-queue /owner-private/state/queue.json \
+  --cycles 3 --interval-seconds 60
+```
+
+No new OAuth permission is requested or granted by this example. Credentials
+are obtained by the existing one-shot worker **only after local preflight**,
+on every cycle. In all outputs, the poller emits aggregate counts and
+`INTAKE_ONLY_REVIEW_REQUIRED`; it must not be interpreted as semantic review,
+finished editing, a genuine owner-host deployment, a real new-arrival result,
+or independent content verification. The `realHostVerified` flag remains false
+because code cannot self-certify owner acceptance. For Mac M1 the current
+approved role is small metadata/checkpoint management **only**. Do not use
+the space-constrained ZBook or M1 as video intake/editing hosts.
+
+Adding a recurring launchd/Task Scheduler job, storing OAuth refresh tokens,
+creating a private render host or allowing unattended public media handling
+requires the owner's separate approval and a real-device acceptance. CI uses
+synthetic data and must not load the owner's credentials or private footage.
+
 ### Local restart/crash consistency (synthetic CI only)
 
 - Intake uses a process-owned **private file lock** instead of a removable
