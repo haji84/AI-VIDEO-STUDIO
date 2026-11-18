@@ -390,6 +390,40 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
                     run_once(None, FOLDER, self.inbox, self.state, self.cat, self.queue)
         self.assertEqual(self.client.list_calls, 0)
 
+    def test_extra_unqueued_state_receipt_is_checked_while_old_queue_survives(self):
+        """State may contain a newer import even if an older queue exists."""
+        from unittest import mock
+        self.run_job()
+        old_queue = self.queue.read_bytes()
+        state = json.loads(self.state.read_text(encoding='utf-8'))
+        remote_id = 'syntheticFile00000002'
+        payload = b'only-a-synthetic-unqueued-source'
+        new_sha = hashlib.sha256(payload).hexdigest()
+        local = 'owner_' + hashlib.sha256(remote_id.encode()).hexdigest()[:24] + '.mp4'
+        state['assets'][remote_id] = {
+            'id': remote_id, 'bytes': len(payload),
+            'md5': hashlib.md5(payload).hexdigest(),
+            'mimeType': 'video/mp4', 'version': '1',
+            'modifiedTime': '2026-01-01T00:00:00Z',
+            'local': local, 'sha256': new_sha, 'status': 'IMPORTED',
+        }
+        self.state.write_text(json.dumps(state), encoding='utf-8')
+        newer = self.inbox / local
+        newer.write_bytes(b'tampered-not-the-synthetic-receipt')
+        newer.chmod(0o600)
+        saved_state = self.state.read_bytes()
+        self.client.list_calls = 0
+        self.client.calls = 0
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=AssertionError('SCAN_BEFORE_EXTRA_IMPORT_PREFLIGHT')):
+            with self.assertRaisesRegex(
+                    Hold, 'PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED'):
+                self.run_job()
+        self.assertEqual(self.client.list_calls, 0)
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.queue.read_bytes(), old_queue)
+        self.assertEqual(self.state.read_bytes(), saved_state)
+
     def test_saved_state_and_queue_mismatch_holds_before_drive_or_oauth(self):
         """Queue items cannot outlive, diverge from or forge their intake receipts."""
         from unittest import mock
