@@ -328,6 +328,68 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
                 self.run_job()
         self.assertEqual(self.queue.read_bytes(), before)
         self.assertEqual(self.client.calls, 1)
+    def test_unqueued_imported_original_blocks_drive_after_prequeue_crash(self):
+        """An intake receipt may exist while queue commit is still pending."""
+        from unittest import mock
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=RuntimeError('synthetic_stop_after_intake')):
+            with self.assertRaisesRegex(RuntimeError, 'synthetic_stop_after_intake'):
+                self.run_job()
+        self.assertTrue(self.state.exists())
+        self.assertFalse(self.queue.exists())
+        source = next(self.inbox.glob('owner_*.mp4'))
+        saved_state = self.state.read_bytes()
+        self.assertEqual(self.client.calls, 1)
+
+        for label, damaged in (('changed_same_length', b'X' * len(self.bytes)),
+                               ('truncated', self.bytes[:20]), ('missing', None)):
+            with self.subTest(label=label):
+                if damaged is None:
+                    source.unlink(missing_ok=True)
+                else:
+                    source.write_bytes(damaged)
+                self.client.list_calls = 0
+                self.client.calls = 0
+                with mock.patch('new_arrival_job.pipeline.scan',
+                                side_effect=AssertionError('SCAN_BEFORE_LOCAL_PREFLIGHT')):
+                    with self.assertRaisesRegex(
+                            Hold, 'PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED'):
+                        self.run_job()
+                self.assertEqual(self.client.list_calls, 0)
+                self.assertEqual(self.client.calls, 0)
+                self.assertEqual(self.state.read_bytes(), saved_state)
+                self.assertFalse(self.queue.exists())
+
+        # Owner restores exact approved original bytes: interrupted queue
+        # commit resumes without another Drive media download.
+        source.write_bytes(self.bytes)
+        source.chmod(0o600)
+        resumed = self.run_job()
+        self.assertEqual(resumed['newImports'], 0)
+        self.assertEqual(resumed['newlyQueued'], 1)
+        self.assertEqual(resumed['queuePending'], 1)
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.run_job()['newlyQueued'], 0)
+
+    def test_unqueued_corrupt_original_blocks_oauth_refresh(self):
+        from unittest import mock
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=RuntimeError('synthetic_stop_after_intake')):
+            with self.assertRaisesRegex(RuntimeError, 'synthetic_stop_after_intake'):
+                self.run_job()
+        self.assertFalse(self.queue.exists())
+        source = next(self.inbox.glob('owner_*.mp4'))
+        source.write_bytes(b'changed')
+        self.client.list_calls = 0
+        with mock.patch('new_arrival_job.oauth_token_from_env',
+                        side_effect=AssertionError('OAUTH_REFRESH_BEFORE_LOCAL_PREFLIGHT')):
+            with mock.patch('new_arrival_job.DriveHTTP',
+                            side_effect=AssertionError('DRIVE_CLIENT_BEFORE_LOCAL_PREFLIGHT')):
+                with self.assertRaisesRegex(
+                        Hold, 'PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED'):
+                    run_once(None, FOLDER, self.inbox, self.state, self.cat, self.queue)
+        self.assertEqual(self.client.list_calls, 0)
+
     def test_saved_state_and_queue_mismatch_holds_before_drive_or_oauth(self):
         """Queue items cannot outlive, diverge from or forge their intake receipts."""
         from unittest import mock
