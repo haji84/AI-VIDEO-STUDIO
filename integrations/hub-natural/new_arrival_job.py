@@ -237,54 +237,56 @@ def _preflight_intake_state(state_path, folder_id, previous):
         if (original is None or original["sha256"] != item["sha256"]
                 or original["bytes"] != item["bytes"]):
             raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
-    receipts = {}
     for sha, queued in previous.items():
         original = imported_by_sha.get(sha)
         if (original is None or original["local"] != queued["local"]):
             raise Hold("PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH")
-        receipts[sha] = original
-    return receipts
+    # The intake state can commit before the review queue. Return ALL
+    # imported receipts, including originals not yet enqueued after a crash.
+    return imported_by_sha
 
 
 def _verify_queued_sources(inbox, previous, receipts):
-    """Hash each pending original locally before OAuth, Drive or catalog writes.
+    """Verify all committed IMPORTED originals before OAuth/Drive access.
 
-    The queue SHA belongs to a real owner-private source file. Using a file
-    descriptor and O_NOFOLLOW where available avoids hashing a redirected path.
-    This guards accidental corruption, not an attacker who can forge both the
-    queue and the original. Existing intake/scan checks remain in force too.
+    Queue entries are a subset of the persisted intake receipts. The missing
+    queue is a permitted crash/restart state, not permission to skip source
+    integrity checks. Hash the exact local bytes, including unqueued imports.
+    This is not independent HMAC/anti-rollback protection.
     """
-    for record in previous.values():
-        source = inbox / record["local"]  # strict basename checked in queue loader
+    for sha, receipt in receipts.items():
+        reason = ("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED" if sha in previous
+                  else "PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED")
+        # This basename was derived from the validated remote ID in the state.
+        source = inbox / receipt["local"]
         if source.is_symlink():
-            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+            raise Hold(reason)
         try:
             fd = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         except OSError as exc:
-            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED") from exc
+            raise Hold(reason) from exc
         try:
             with os.fdopen(fd, "rb") as stream:
                 before = os.fstat(stream.fileno())
                 if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
                         or (os.name == "posix" and
                             (before.st_uid != os.getuid() or before.st_mode & 0o077))):
-                    raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+                    raise Hold(reason)
                 hasher = hashlib.sha256()
                 md5 = hashlib.md5()
                 for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                     hasher.update(chunk)
                     md5.update(chunk)
                 after = os.fstat(stream.fileno())
-                receipt = receipts[record["sha256"]]
-                if (hasher.hexdigest() != record["sha256"]
+                if (hasher.hexdigest() != sha
                         or md5.hexdigest() != receipt["md5"]
                         or after.st_size != receipt["bytes"]
                         or before.st_size != after.st_size
                         or before.st_mtime_ns != after.st_mtime_ns
                         or before.st_ctime_ns != after.st_ctime_ns):
-                    raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+                    raise Hold(reason)
         except OSError as exc:
-            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED") from exc
+            raise Hold(reason) from exc
 
 
 def _assert_paths(inbox, state, catalog, queue):
