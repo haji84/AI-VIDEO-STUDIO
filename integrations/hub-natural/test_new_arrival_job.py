@@ -328,6 +328,190 @@ print(json.dumps({"result": result, "downloads": client.downloads}))
                 self.run_job()
         self.assertEqual(self.queue.read_bytes(), before)
         self.assertEqual(self.client.calls, 1)
+    def test_unqueued_imported_original_blocks_drive_after_prequeue_crash(self):
+        """An intake receipt may exist while queue commit is still pending."""
+        from unittest import mock
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=RuntimeError('synthetic_stop_after_intake')):
+            with self.assertRaisesRegex(RuntimeError, 'synthetic_stop_after_intake'):
+                self.run_job()
+        self.assertTrue(self.state.exists())
+        self.assertFalse(self.queue.exists())
+        source = next(self.inbox.glob('owner_*.mp4'))
+        saved_state = self.state.read_bytes()
+        self.assertEqual(self.client.calls, 1)
+
+        for label, damaged in (('changed_same_length', b'X' * len(self.bytes)),
+                               ('truncated', self.bytes[:20]), ('missing', None)):
+            with self.subTest(label=label):
+                if damaged is None:
+                    source.unlink(missing_ok=True)
+                else:
+                    source.write_bytes(damaged)
+                self.client.list_calls = 0
+                self.client.calls = 0
+                with mock.patch('new_arrival_job.pipeline.scan',
+                                side_effect=AssertionError('SCAN_BEFORE_LOCAL_PREFLIGHT')):
+                    with self.assertRaisesRegex(
+                            Hold, 'PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED'):
+                        self.run_job()
+                self.assertEqual(self.client.list_calls, 0)
+                self.assertEqual(self.client.calls, 0)
+                self.assertEqual(self.state.read_bytes(), saved_state)
+                self.assertFalse(self.queue.exists())
+
+        # Owner restores exact approved original bytes: interrupted queue
+        # commit resumes without another Drive media download.
+        source.write_bytes(self.bytes)
+        source.chmod(0o600)
+        resumed = self.run_job()
+        self.assertEqual(resumed['newImports'], 0)
+        self.assertEqual(resumed['newlyQueued'], 1)
+        self.assertEqual(resumed['queuePending'], 1)
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.run_job()['newlyQueued'], 0)
+
+    def test_unqueued_corrupt_original_blocks_oauth_refresh(self):
+        from unittest import mock
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=RuntimeError('synthetic_stop_after_intake')):
+            with self.assertRaisesRegex(RuntimeError, 'synthetic_stop_after_intake'):
+                self.run_job()
+        self.assertFalse(self.queue.exists())
+        source = next(self.inbox.glob('owner_*.mp4'))
+        source.write_bytes(b'changed')
+        self.client.list_calls = 0
+        with mock.patch('new_arrival_job.oauth_token_from_env',
+                        side_effect=AssertionError('OAUTH_REFRESH_BEFORE_LOCAL_PREFLIGHT')):
+            with mock.patch('new_arrival_job.DriveHTTP',
+                            side_effect=AssertionError('DRIVE_CLIENT_BEFORE_LOCAL_PREFLIGHT')):
+                with self.assertRaisesRegex(
+                        Hold, 'PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED'):
+                    run_once(None, FOLDER, self.inbox, self.state, self.cat, self.queue)
+        self.assertEqual(self.client.list_calls, 0)
+
+    def test_extra_unqueued_state_receipt_is_checked_while_old_queue_survives(self):
+        """State may contain a newer import even if an older queue exists."""
+        from unittest import mock
+        self.run_job()
+        old_queue = self.queue.read_bytes()
+        state = json.loads(self.state.read_text(encoding='utf-8'))
+        remote_id = 'syntheticFile00000002'
+        payload = b'only-a-synthetic-unqueued-source'
+        new_sha = hashlib.sha256(payload).hexdigest()
+        local = 'owner_' + hashlib.sha256(remote_id.encode()).hexdigest()[:24] + '.mp4'
+        state['assets'][remote_id] = {
+            'id': remote_id, 'bytes': len(payload),
+            'md5': hashlib.md5(payload).hexdigest(),
+            'mimeType': 'video/mp4', 'version': '1',
+            'modifiedTime': '2026-01-01T00:00:00Z',
+            'local': local, 'sha256': new_sha, 'status': 'IMPORTED',
+        }
+        self.state.write_text(json.dumps(state), encoding='utf-8')
+        newer = self.inbox / local
+        newer.write_bytes(b'tampered-not-the-synthetic-receipt')
+        newer.chmod(0o600)
+        saved_state = self.state.read_bytes()
+        self.client.list_calls = 0
+        self.client.calls = 0
+        with mock.patch('new_arrival_job.pipeline.scan',
+                        side_effect=AssertionError('SCAN_BEFORE_EXTRA_IMPORT_PREFLIGHT')):
+            with self.assertRaisesRegex(
+                    Hold, 'PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED'):
+                self.run_job()
+        self.assertEqual(self.client.list_calls, 0)
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.queue.read_bytes(), old_queue)
+        self.assertEqual(self.state.read_bytes(), saved_state)
+
+    def test_saved_state_and_queue_mismatch_holds_before_drive_or_oauth(self):
+        """Queue items cannot outlive, diverge from or forge their intake receipts."""
+        from unittest import mock
+        self.run_job()
+        original = json.loads(self.state.read_text(encoding='utf-8'))
+        queue_before = self.queue.read_bytes()
+        catalog_before = self.cat.read_bytes()
+        state_original_bytes = self.state.read_bytes()
+        file_id = next(iter(original['assets']))
+
+        def corrupt(change):
+            doc = json.loads(json.dumps(original))
+            change(doc)
+            return json.dumps(doc).encode('utf-8')
+
+        cases = {
+            'invalid_json': b'{"schema":',
+            'wrong_json_type': b'[]',
+            'wrong_schema': corrupt(lambda d: d.update(schema='forged')),
+            'wrong_folder': corrupt(lambda d: d.update(folder='wrong')),
+            'no_asset_receipt': corrupt(lambda d: d['assets'].clear()),
+            'changed_sha': corrupt(lambda d: d['assets'][file_id].update(sha256='a'*64)),
+            'changed_path': corrupt(lambda d: d['assets'][file_id].update(local='../forged.mp4')),
+            'wrong_import_status': corrupt(lambda d: d['assets'][file_id].update(status='DUPLICATE')),
+            'changed_media_size': corrupt(lambda d: d['assets'][file_id].update(bytes=1)),
+            'changed_md5_with_valid_shape': corrupt(
+                lambda d: d['assets'][file_id].update(md5='f'*32)),
+            'unhashable_mimetype': corrupt(
+                lambda d: d['assets'][file_id].update(mimeType=['video/mp4'])),
+            'forged_remote_id': corrupt(lambda d: d['assets'][file_id].update(id='wrong')),
+            'duplicated_json_key': b'{"schema":"one","schema":"two"}',
+            'not_finite': corrupt(lambda d: d.update(lastSuccessfulCheckUnix=float('nan'))),
+            'missing_state': None,
+        }
+        for label, bad in cases.items():
+            with self.subTest(label=label):
+                if bad is None:
+                    self.state.unlink()
+                else:
+                    self.state.write_bytes(bad)
+                self.client.calls = 0
+                self.client.list_calls = 0
+                with mock.patch('new_arrival_job.pipeline.scan',
+                                side_effect=AssertionError('SCAN_BEFORE_STATE_PREFLIGHT')):
+                    with self.assertRaises(Hold):
+                        self.run_job()
+                self.assertEqual(self.client.list_calls, 0)
+                self.assertEqual(self.client.calls, 0)
+                self.assertEqual(self.queue.read_bytes(), queue_before)
+                self.assertEqual(self.cat.read_bytes(), catalog_before)
+                if bad is None:
+                    self.assertFalse(self.state.exists())
+                else:
+                    self.assertEqual(self.state.read_bytes(), bad)
+        self.state.write_bytes(state_original_bytes)
+        self.state.chmod(0o600)  # recreated missing state needs private mode
+        self.assertEqual(self.run_job()['newlyQueued'], 0)
+        self.assertEqual(self.client.calls, 0)
+
+    def test_bad_existing_state_does_not_refresh_oauth(self):
+        from unittest import mock
+        self.run_job()
+        self.state.write_bytes(b'{"schema":')
+        self.client.calls = 0
+        self.client.list_calls = 0
+        with mock.patch('new_arrival_job.oauth_token_from_env',
+                        side_effect=AssertionError('OAUTH_REFRESH_BEFORE_STATE_PREFLIGHT')):
+            with mock.patch('new_arrival_job.DriveHTTP',
+                            side_effect=AssertionError('CLIENT_BEFORE_STATE_PREFLIGHT')):
+                with self.assertRaises(Hold):
+                    run_once(None, FOLDER, self.inbox, self.state, self.cat, self.queue)
+        self.assertEqual(self.client.list_calls, 0)
+        self.assertEqual(self.client.calls, 0)
+
+    @unittest.skipIf(__import__('os').name == 'nt', 'Owner-only POSIX mode not supported on Windows')
+    def test_symlinked_state_cannot_bypass_preflight(self):
+        self.run_job()
+        good = Path(self.t.name) / 'state-original.json'
+        good.write_bytes(self.state.read_bytes())
+        self.state.unlink()
+        self.state.symlink_to(good)
+        self.client.calls = 0
+        self.client.list_calls = 0
+        with self.assertRaisesRegex(Hold, 'PREVIOUS_INTAKE_STATE_UNSAFE'):
+            self.run_job()
+        self.assertEqual(self.client.list_calls, 0)
+        self.assertEqual(self.client.calls, 0)
+
     def test_invalid_saved_queue_never_reaches_drive_or_mutates_private_state(self):
         """An existing invalid queue must be checked before Drive list/media."""
         from unittest import mock

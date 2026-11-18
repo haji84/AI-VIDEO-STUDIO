@@ -16,13 +16,24 @@ from pathlib import Path
 import re
 import stat
 
-from drive_intake import (DriveHTTP, Hold, MAX_ENTRIES, _assert_private,
+from drive_intake import (DriveHTTP, Hold, MAX_ENTRIES, MIME_TO_EXT,
+                          ID_RE, SCHEMA as INTAKE_SCHEMA, _assert_private,
                           _atomic_json, _single_writer, oauth_token_from_env,
                           sync_once)
 import pipeline
 
 SCHEMA="hub-natural-private-review-queue-v1"
 _MAX_QUEUE_BYTES = 4 * 1024 * 1024
+_MAX_STATE_BYTES = 8 * 1024 * 1024
+_MD5 = re.compile(r"[0-9a-f]{32}")
+_INTAKE_COUNTS = {"imported", "already_present", "duplicate", "unsupported", "hold"}
+_INTAKE_ASSET_FIELDS = {
+    "id", "bytes", "md5", "mimeType", "version", "modifiedTime",
+    "local", "sha256", "status",
+}
+_INTAKE_STATE_FIELDS = {
+    "schema", "folder", "assets", "holdReasons", "lastSuccessfulCheckUnix", "summary",
+}
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _LOCAL = re.compile(r"owner_[0-9a-f]{24}[.](?:mp4|mov|m4v|mkv)")
 _COUNTS = {"imported", "already_present", "duplicate", "unsupported", "hold"}
@@ -132,40 +143,150 @@ def _load_previous_queue(queue):
     return previous
 
 
-def _verify_queued_sources(inbox, previous):
-    """Hash each pending original locally before OAuth, Drive or catalog writes.
+def _preflight_intake_state(state_path, folder_id, previous):
+    """Validate saved intake receipts and the queue relationship, offline.
 
-    The queue SHA belongs to a real owner-private source file. Using a file
-    descriptor and O_NOFOLLOW where available avoids hashing a redirected path.
-    This guards accidental corruption, not an attacker who can forge both the
-    queue and the original. Existing intake/scan checks remain in force too.
+    A missing state is valid ONLY if there is no previously committed queue:
+    a crash after media rename but before writing state must remain recoverable.
+    Extra valid state assets are allowed because state commits before queue;
+    they can be pending recovery after a hard stop.
     """
-    for record in previous.values():
-        source = inbox / record["local"]  # strict basename checked in queue loader
+    if state_path.is_symlink():
+        raise Hold("PREVIOUS_INTAKE_STATE_UNSAFE")
+    try:
+        fd = os.open(state_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except FileNotFoundError:
+        if previous:
+            raise Hold("PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH")
+        return {}
+    except OSError as exc:
+        raise Hold("PREVIOUS_INTAKE_STATE_UNSAFE") from exc
+    try:
+        with os.fdopen(fd, "rb") as source:
+            info = os.fstat(source.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                    or (os.name == "posix" and
+                        (info.st_uid != os.getuid() or info.st_mode & 0o077))):
+                raise Hold("PREVIOUS_INTAKE_STATE_UNSAFE")
+            if info.st_size == 0 or info.st_size > _MAX_STATE_BYTES:
+                raise Hold("PREVIOUS_INTAKE_STATE_UNREADABLE")
+            raw = source.read(_MAX_STATE_BYTES + 1)
+    except OSError as exc:
+        raise Hold("PREVIOUS_INTAKE_STATE_UNREADABLE") from exc
+    if not raw or len(raw) > _MAX_STATE_BYTES:
+        raise Hold("PREVIOUS_INTAKE_STATE_UNREADABLE")
+    try:
+        doc = json.loads(raw.decode("utf-8"),
+                         object_pairs_hook=_unique_object,
+                         parse_constant=_reject_json_constant)
+    except (UnicodeError, ValueError, TypeError) as exc:
+        raise Hold("PREVIOUS_INTAKE_STATE_UNREADABLE") from exc
+    if (not isinstance(doc, dict)
+            or not {"schema", "folder", "assets"} <= set(doc)
+            or not set(doc) <= _INTAKE_STATE_FIELDS
+            or doc["schema"] != INTAKE_SCHEMA or doc["folder"] != folder_id
+            or not isinstance(doc["assets"], dict)
+            or len(doc["assets"]) > MAX_ENTRIES):
+        raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+    if "lastSuccessfulCheckUnix" in doc and not _count(doc["lastSuccessfulCheckUnix"]):
+        raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+    if "summary" in doc and (not isinstance(doc["summary"], dict)
+                             or set(doc["summary"]) != _INTAKE_COUNTS
+                             or not all(_count(v) for v in doc["summary"].values())):
+        raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+    if "holdReasons" in doc and (not isinstance(doc["holdReasons"], dict)
+                                 or any(not isinstance(k, str) or not _count(v)
+                                        for k, v in doc["holdReasons"].items())):
+        raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+
+    imported_by_sha = {}
+    imported_by_local = {}
+    duplicates = []
+    for remote_id, item in doc["assets"].items():
+        if not isinstance(remote_id, str) or ID_RE.fullmatch(remote_id) is None:
+            raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+        if not isinstance(item, dict):
+            raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+        status = item.get("status")
+        required = _INTAKE_ASSET_FIELDS | ({"duplicateOf"} if status == "DUPLICATE" else set())
+        if (status not in ("IMPORTED", "DUPLICATE") or set(item) != required
+                or item["id"] != remote_id
+                or type(item["bytes"]) is not int or not 0 <= item["bytes"] <= 4*1024**3
+                or not isinstance(item["md5"], str) or not _MD5.fullmatch(item["md5"])
+                or not isinstance(item["mimeType"], str)
+                or item["mimeType"] not in MIME_TO_EXT
+                or not isinstance(item["version"], str)
+                or not (isinstance(item["modifiedTime"], str)
+                        or item["modifiedTime"] is None)
+                or not isinstance(item["sha256"], str)
+                or _SHA256.fullmatch(item["sha256"]) is None
+                or item["local"] != "owner_" + hashlib.sha256(remote_id.encode()).hexdigest()[:24] + MIME_TO_EXT[item["mimeType"]]):
+            raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+        if status == "IMPORTED":
+            if (item["local"] in imported_by_local
+                    or item["sha256"] in imported_by_sha):
+                raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+            imported_by_local[item["local"]] = item
+            imported_by_sha[item["sha256"]] = item
+        else:
+            duplicates.append(item)
+    for item in duplicates:
+        if not isinstance(item["duplicateOf"], str):
+            raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+        original = imported_by_local.get(item["duplicateOf"])
+        if (original is None or original["sha256"] != item["sha256"]
+                or original["bytes"] != item["bytes"]):
+            raise Hold("PREVIOUS_INTAKE_STATE_INVALID")
+    for sha, queued in previous.items():
+        original = imported_by_sha.get(sha)
+        if (original is None or original["local"] != queued["local"]):
+            raise Hold("PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH")
+    # The intake state can commit before the review queue. Return ALL
+    # imported receipts, including originals not yet enqueued after a crash.
+    return imported_by_sha
+
+
+def _verify_queued_sources(inbox, previous, receipts):
+    """Verify all committed IMPORTED originals before OAuth/Drive access.
+
+    Queue entries are a subset of the persisted intake receipts. The missing
+    queue is a permitted crash/restart state, not permission to skip source
+    integrity checks. Hash the exact local bytes, including unqueued imports.
+    This is not independent HMAC/anti-rollback protection.
+    """
+    for sha, receipt in receipts.items():
+        reason = ("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED" if sha in previous
+                  else "PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED")
+        # This basename was derived from the validated remote ID in the state.
+        source = inbox / receipt["local"]
         if source.is_symlink():
-            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+            raise Hold(reason)
         try:
             fd = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         except OSError as exc:
-            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED") from exc
+            raise Hold(reason) from exc
         try:
             with os.fdopen(fd, "rb") as stream:
                 before = os.fstat(stream.fileno())
                 if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
                         or (os.name == "posix" and
                             (before.st_uid != os.getuid() or before.st_mode & 0o077))):
-                    raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+                    raise Hold(reason)
                 hasher = hashlib.sha256()
+                md5 = hashlib.md5()
                 for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                     hasher.update(chunk)
+                    md5.update(chunk)
                 after = os.fstat(stream.fileno())
-                if (hasher.hexdigest() != record["sha256"]
+                if (hasher.hexdigest() != sha
+                        or md5.hexdigest() != receipt["md5"]
+                        or after.st_size != receipt["bytes"]
                         or before.st_size != after.st_size
                         or before.st_mtime_ns != after.st_mtime_ns
                         or before.st_ctime_ns != after.st_ctime_ns):
-                    raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED")
+                    raise Hold(reason)
         except OSError as exc:
-            raise Hold("PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED") from exc
+            raise Hold(reason) from exc
 
 
 def _assert_paths(inbox, state, catalog, queue):
@@ -184,6 +305,8 @@ def run_once(client, folder_id, inbox, state, catalog, queue, *, max_bytes=None)
     # _assert_private resolves paths; reject a supplied symlink before resolving.
     if Path(queue).expanduser().is_symlink():
         raise Hold("PREVIOUS_REVIEW_QUEUE_UNSAFE")
+    if Path(state).expanduser().is_symlink():
+        raise Hold("PREVIOUS_INTAKE_STATE_UNSAFE")
     inbox,state,catalog,queue=_assert_paths(inbox,state,catalog,queue)
     # Hold the job-level guard through intake, scan and queue commit. Without
     # this, two concurrent invocations can each overwrite the other's queue.
@@ -195,7 +318,8 @@ def _run_once_locked(client, folder_id, inbox, state, catalog, queue, *, max_byt
     # Validate locally persisted queue first, before listing Drive, downloading
     # video, or even refreshing an owner OAuth token.
     previous = _load_previous_queue(queue)
-    _verify_queued_sources(inbox, previous)
+    receipts = _preflight_intake_state(state, folder_id, previous)
+    _verify_queued_sources(inbox, previous, receipts)
     if client is None:
         client = DriveHTTP(oauth_token_from_env())
     options={"max_bytes":max_bytes} if max_bytes is not None else {}
