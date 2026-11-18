@@ -252,6 +252,30 @@ because code cannot self-certify owner acceptance. For Mac M1 the current
 approved role is small metadata/checkpoint management **only**. Do not use
 the space-constrained ZBook or M1 as video intake/editing hosts.
 
+### Do not count an initial backlog as a newly observed arrival
+
+Optional `--require-new-after-first-check` (requires `--cycles 2` or more)
+is a conservative owner-acceptance *candidate* gate: an existing video
+imported on the first check does **not** qualify. If later checks import
+zero new originals, the process returns `HOLD` with
+`POLL_NO_IMPORT_AFTER_FIRST_CHECK`. Otherwise the sanitized report includes
+`newImportsAfterFirstCheck`, but explicitly says the file was only
+**observed on a later poll**, not that the provider's original creation time
+or independent remote source SHA has been proven.
+
+A synthetic subprocess test covers the crash window after a second video's
+intake state is committed but before its review queue entry: the following
+fresh process re-attaches that source, queues it once, and the next fresh
+process replays without downloading either file. This is **local synthetic
+recovery evidence only**, not a live owner-host or OAuth demonstration.
+
+For the real go/no-go gate, retain an owner-private independent pre-run
+baseline and evidence of a genuinely new owner's file (provider availability
+time, stable remote metadata, downloaded-content SHA, private durable state,
+and post-stop independent re-read). Real media, host, OAuth and time evidence
+must stay outside Public GitHub. Neither `newImportsAfterFirstCheck` nor
+green synthetic CI can self-certify that production gate.
+
 Adding a recurring launchd/Task Scheduler job, storing OAuth refresh tokens,
 creating a private render host or allowing unattended public media handling
 requires the owner's separate approval and a real-device acceptance. CI uses
