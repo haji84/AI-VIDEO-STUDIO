@@ -182,13 +182,25 @@ catalog and videos without silent healing or an outbound request.
 
 Recovery exception: when **no queue has yet been committed**, an absent state
 (after a hard stop before its write) and extra valid intake receipts (after
-state write but before queue write) remain allowed. These are not evidence
-of reviewed or publishable footage. The preflight is local fail-closed
-consistency, not a provider-version lookup, remote OAuth authentication test,
-HMAC, or a promise that independent concurrent state writers cannot race
-between preflight and the existing state lock inside intake. Use one controlled
-owner-host pipeline instance for this gate; real Mac/iPhone and private Drive
-end-to-end proof remain pending.
+state write but before queue write) remain allowed. **Every existing IMPORTED
+state receipt must nevertheless match a local original's full SHA-256,
+provider-reported MD5 and byte count before OAuth/Drive**, even if that source
+is not yet in the review queue. A missing or changed original now HOLDs without
+accessing Drive or modifying existing state. This covers the crash window
+after intake state commit but before review queue commit. When both state and
+queue are absent after an earlier crash, no durable receipt exists to prove
+the orphan original without normal intake revalidation; this is still HOLD
+for any production-completion claim. These states are not evidence of reviewed
+or publishable footage. This added local hashing is a test-only gate until a
+real owner-approved *media-capable* host is connected; the M1 small-metadata
+role does not turn into video storage.
+
+The preflight is local fail-closed consistency, not a provider-version lookup,
+remote OAuth authentication test, independently keyed HMAC, or a promise that
+independent concurrent state writers cannot race between preflight and the
+existing state lock inside intake. Use one controlled owner-host pipeline
+instance for this gate; real Mac/iPhone and private Drive end-to-end proof
+remain pending.
 
 Example on an **owner-approved private persistent host**, not a public runner:
 
