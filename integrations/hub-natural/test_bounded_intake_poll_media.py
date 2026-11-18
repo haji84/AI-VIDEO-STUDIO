@@ -93,8 +93,9 @@ class SyntheticIntegrationTests(unittest.TestCase):
                 self.client.add("syntheticVideoFile00002", self.payloads[1])
 
         report = run_cycles(self.check, cycles=3, interval_seconds=60,
-                            sleep_fn=between_checks)
+                            require_later_arrival=True, sleep_fn=between_checks)
         self.assertEqual(report["checks"], 3)
+        self.assertEqual(report["newImportsAfterFirstCheck"], 1)
         self.assertEqual(report["newImports"], 2)
         self.assertEqual(report["newlyQueued"], 2)
         self.assertEqual(report["lastQueuePending"], 2)
