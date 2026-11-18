@@ -56,7 +56,8 @@ def run_cycles(check_once, *, cycles=1, interval_seconds=60,
     must instead be observed on a later check. This is still not proof of
     the provider's original upload timestamp or real owner-host acceptance.
     Each check re-runs the existing private queue/state/source preflight.
-    
+    """
+
     if type(cycles) is not int or not 1 <= cycles <= MAX_CYCLES:
         raise Hold("POLL_CYCLE_COUNT_INVALID")
     if (type(interval_seconds) is not int
