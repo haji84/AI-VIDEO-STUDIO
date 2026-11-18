@@ -114,6 +114,95 @@ class SyntheticIntegrationTests(unittest.TestCase):
         expected = {hashlib.sha256(data).hexdigest() for data in self.payloads}
         self.assertEqual(actual, expected)
 
+    def test_independent_workers_recover_after_crash_before_queue_commit(self):
+        """Three independent recover/replay workers preserve real synthetic bytes."""
+        import sys
+        root = Path(self.temp.name) / "owner-private"
+        sources = [Path(self.sources.name) / "blue.mp4",
+                   Path(self.sources.name) / "red.mp4"]
+        script = r'''
+import contextlib, hashlib, io, json, os, sys
+from pathlib import Path
+from bounded_intake_poll import run_cycles
+from new_arrival_job import run_once
+import new_arrival_job
+
+folder = "SyntheticInboxFake0000001"
+root = Path(sys.argv[1])
+stage = sys.argv[2]
+data = {"syntheticVideoFile00001": Path(sys.argv[3]).read_bytes()}
+if stage != "seed":
+    data["syntheticVideoFile00002"] = Path(sys.argv[4]).read_bytes()
+
+class Fake:
+    def __init__(self):
+        self.downloads = []
+    def list_files(self, f):
+        assert f == folder
+        return [
+            {"id": k, "mimeType": "video/mp4", "size": str(len(v)),
+             "md5Checksum": hashlib.md5(v).hexdigest(),
+             "version": "1", "modifiedTime": "2026-01-01T00:00:00Z",
+             "parents": [folder], "trashed": False}
+            for k,v in sorted(data.items())
+        ]
+    def file_metadata(self, file_id):
+        return next(v for v in self.list_files(folder) if v["id"] == file_id)
+    def media(self, file_id):
+        self.downloads.append(file_id)
+        return contextlib.closing(io.BytesIO(data[file_id]))
+
+client = Fake()
+if stage == "crash":
+    def stop_after_intake(*args, **kwargs):
+        os._exit(57)
+    new_arrival_job.pipeline.scan = stop_after_intake
+
+def check():
+    return run_once(client, folder, root / "media",
+                    root / "state" / "intake.json",
+                    root / "state" / "catalog.json",
+                    root / "state" / "review.json")
+
+summary = run_cycles(check, cycles=1)
+print(json.dumps({"summary": summary, "downloads": client.downloads}))
+'''
+        def invoke(stage):
+            return subprocess.run(
+                [sys.executable, "-c", script, str(root), stage,
+                 str(sources[0]), str(sources[1])],
+                cwd=str(Path(__file__).resolve().parent), capture_output=True,
+                text=True, timeout=40)
+
+        seeded = invoke("seed")
+        self.assertEqual(seeded.returncode, 0, seeded.stderr)
+        self.assertEqual(json.loads(seeded.stdout)["summary"]["newImports"], 1)
+        interrupted = invoke("crash")
+        self.assertEqual(interrupted.returncode, 57, interrupted.stderr)
+        state = json.loads(self.state.read_text(encoding="utf-8"))
+        queue = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(len(state["assets"]), 2)
+        self.assertEqual(queue["sourceCount"], 1)
+        self.assertEqual(len(list(self.inbox.glob("owner_*.mp4"))), 2)
+
+        restored = invoke("recover")
+        self.assertEqual(restored.returncode, 0, restored.stderr)
+        recovered = json.loads(restored.stdout)
+        self.assertEqual(recovered["summary"]["newImports"], 0)
+        self.assertEqual(recovered["summary"]["newlyQueued"], 1)
+        self.assertEqual(recovered["downloads"], [])
+
+        repeated = invoke("replay")
+        self.assertEqual(repeated.returncode, 0, repeated.stderr)
+        replayed = json.loads(repeated.stdout)
+        self.assertEqual(replayed["summary"]["newImports"], 0)
+        self.assertEqual(replayed["summary"]["newlyQueued"], 0)
+        self.assertEqual(replayed["downloads"], [])
+        self.assertEqual(json.loads(self.queue.read_text())["sourceCount"], 2)
+        self.assertEqual({hashlib.sha256(p.read_bytes()).hexdigest()
+                          for p in self.inbox.glob("owner_*.mp4")},
+                         {hashlib.sha256(b).hexdigest() for b in self.payloads})
+
     def test_original_corrupted_between_polls_stops_before_second_drive_list(self):
         initial_queue = []
 
