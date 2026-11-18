@@ -45,6 +45,70 @@ class PollerTests(unittest.TestCase):
         self.assertNotIn("file", str(report).lower())
         self.assertNotIn(FOLDER, str(report))
 
+    def test_later_arrival_gate_rejects_old_initial_backlog(self):
+        calls = []
+        data = [outcome(new=1, queued=1, pending=1),
+                outcome(new=0, queued=0, pending=1),
+                outcome(new=0, queued=0, pending=1)]
+
+        def next_cycle():
+            result = data[len(calls)]
+            calls.append(1)
+            return result
+
+        with self.assertRaisesRegex(Hold, "POLL_NO_IMPORT_AFTER_FIRST_CHECK"):
+            run_cycles(next_cycle, cycles=3, interval_seconds=60,
+                       require_later_arrival=True, sleep_fn=lambda _: None)
+        self.assertEqual(len(calls), 3)
+
+    def test_later_arrival_gate_accepts_new_import_only_after_first_check(self):
+        calls = []
+        data = [outcome(new=1, queued=1, pending=1),
+                outcome(new=1, queued=1, pending=2),
+                outcome(new=0, queued=0, pending=2)]
+        def check():
+            result = data[len(calls)]
+            calls.append(1)
+            return result
+        report = run_cycles(check, cycles=3, interval_seconds=60,
+                            require_later_arrival=True, sleep_fn=lambda _: None)
+        self.assertEqual(report["checks"], 3)
+        self.assertEqual(report["newImports"], 2)
+        self.assertEqual(report["newImportsAfterFirstCheck"], 1)
+        self.assertEqual(report["newImportTiming"],
+                         "OBSERVED_ON_LATER_CHECK_NOT_PROVIDER_CREATION_PROOF")
+        self.assertFalse(report["realHostVerified"])
+        self.assertEqual(report["publishing"], "NOT_PERFORMED")
+
+    def test_later_arrival_flag_requires_multiple_checks_before_any_io(self):
+        for cycles, enabled in ((1, True), (0, True), (2, 1), (2, "yes")):
+            with self.subTest(cycles=cycles, enabled=enabled):
+                with self.assertRaises(Hold):
+                    run_cycles(lambda: self.fail("should never list Drive"),
+                               cycles=cycles, interval_seconds=60,
+                               require_later_arrival=enabled,
+                               sleep_fn=lambda _: self.fail("should not sleep"))
+
+    def test_cli_later_arrival_gate_refuses_old_video_only(self):
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+            "--cycles", "2", "--require-new-after-first-check",
+        ]
+        with mock.patch("bounded_intake_poll.run_once",
+                        side_effect=[outcome(new=1, queued=1, pending=1),
+                                     outcome(new=0, queued=0, pending=1)]) as checked:
+            with mock.patch("bounded_intake_poll.time.sleep"):
+                with mock.patch("builtins.print") as printed:
+                    self.assertEqual(main(args), 2)
+        self.assertEqual(checked.call_count, 2)
+        msg = printed.call_args.args[0]
+        self.assertIn("POLL_NO_IMPORT_AFTER_FIRST_CHECK", msg)
+        self.assertNotIn(FOLDER, msg)
+        self.assertNotIn("/fake/private", msg)
+
     def test_default_one_cycle_does_not_sleep_or_post(self):
         sleeps = []
         report = run_cycles(lambda: outcome(), cycles=1,
