@@ -191,6 +191,42 @@ class PollerTests(unittest.TestCase):
         self.assertNotIn(FOLDER, value)
         self.assertNotIn("/fake/private", value)
 
+    def test_cli_never_echoes_unrecognized_uppercase_hold_reasons(self):
+        # A syntactically valid uppercase value may still contain a secret.
+        # Shape-based sanitization alone is not a declassification policy.
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+        ]
+        for private_value in (
+            "SYNTHETIC_PRIVATE_VALUE_DO_NOT_LOG_0123456789",
+            "POLL_FAKE_PRIVATE_VALUE_0123456789",
+        ):
+            with self.subTest(private_value=private_value):
+                with mock.patch("bounded_intake_poll.run_once",
+                                side_effect=Hold(private_value)):
+                    with mock.patch("builtins.print") as printed:
+                        self.assertEqual(main(args), 2)
+                report = printed.call_args.args[0]
+                self.assertIn('"reason": "POLL_CYCLE_FAILED"', report)
+                self.assertNotIn(private_value, report)
+                self.assertNotIn(FOLDER, report)
+
+    def test_cli_keeps_exact_audited_preflight_code(self):
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+        ]
+        with mock.patch("bounded_intake_poll.run_once",
+                        side_effect=Hold("PREVIOUS_INTAKE_STATE_INVALID")):
+            with mock.patch("builtins.print") as printed:
+                self.assertEqual(main(args), 2)
+        self.assertIn("PREVIOUS_INTAKE_STATE_INVALID", printed.call_args.args[0])
+
     def test_cli_sanitizes_untrusted_error_messages(self):
         """Never print tokens/paths even if upstream throws an unsafe message."""
         args = [
