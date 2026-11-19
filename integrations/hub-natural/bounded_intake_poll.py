@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import time
 
 from drive_intake import Hold
@@ -21,7 +20,29 @@ SCHEMA = "hub-natural-bounded-poll-summary-v1"
 MAX_CYCLES = 24
 MIN_INTERVAL_SECONDS = 60
 MAX_INTERVAL_SECONDS = 3600
-_SAFE_REASON = re.compile(r"[A-Z][A-Z0-9_]{0,95}")
+# Exact, audited diagnostic codes only. A regex accepting any uppercase token
+# would echo an attacker-supplied all-caps secret from an upstream Hold.
+# Unknown/future reasons deliberately collapse to a non-sensitive generic code.
+_PUBLIC_HOLD_CODES = frozenset({
+    "POLL_CYCLE_COUNT_INVALID",
+    "POLL_INTERVAL_INVALID",
+    "POLL_LATER_ARRIVAL_GATE_INVALID",
+    "POLL_CYCLE_RESULT_INVALID",
+    "POLL_CYCLE_HELD_INPUTS",
+    "POLL_NO_IMPORT_AFTER_FIRST_CHECK",
+    "OWNER_OAUTH_OFFLINE_AUTH_REQUIRED",
+    "PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED",
+    "PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED",
+    "PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH",
+    "PREVIOUS_INTAKE_STATE_UNSAFE",
+    "PREVIOUS_INTAKE_STATE_UNREADABLE",
+    "PREVIOUS_INTAKE_STATE_INVALID",
+    "PREVIOUS_REVIEW_QUEUE_UNSAFE",
+    "PREVIOUS_REVIEW_QUEUE_UNREADABLE",
+    "PREVIOUS_REVIEW_QUEUE_INVALID",
+    "PREVIOUS_QUEUE_SOURCE_OR_STATUS_CHANGED",
+    "PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE",
+})
 
 
 def _natural(value):
@@ -133,7 +154,7 @@ def main(argv=None):
         # Only emit a known-shaped gate code. Never echo a source filename,
         # private local path, provider ID, OAuth token or FFmpeg stderr.
         value = str(exc)
-        reason = value if _SAFE_REASON.fullmatch(value) else "POLL_CYCLE_FAILED"
+        reason = value if value in _PUBLIC_HOLD_CODES else "POLL_CYCLE_FAILED"
         print(json.dumps({"status": "HOLD", "reason": reason}, sort_keys=True))
         return 2
 
