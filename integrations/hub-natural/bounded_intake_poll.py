@@ -157,6 +157,13 @@ def main(argv=None):
         reason = value if value in _PUBLIC_HOLD_CODES else "POLL_CYCLE_FAILED"
         print(json.dumps({"status": "HOLD", "reason": reason}, sort_keys=True))
         return 2
+    except Exception:
+        # Unexpected worker/OS/provider exceptions can carry private paths,
+        # remote IDs or tokens. Never echo them or print a traceback here.
+        # Fail closed; retain local state for owner-only investigation.
+        print(json.dumps({"status": "HOLD", "reason": "POLL_CYCLE_FAILED"},
+                         sort_keys=True))
+        return 2
 
 
 if __name__ == "__main__":
