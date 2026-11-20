@@ -281,13 +281,15 @@ class PollerTests(unittest.TestCase):
             "--review-queue", "/fake/private/review.json",
             "--cycles", "2",
         ]
-        with mock.patch("bounded_intake_poll.run_once",
-                        return_value=outcome()) as worker:
-            with mock.patch("bounded_intake_poll.time.sleep",
-                            side_effect=OSError("PRIVATE_HOST_PATH_/secret/video.mp4")):
+        # Inject the failure at the cycle boundary so this test does not
+        # actually sleep: run_cycles captures time.sleep in its defaults.
+        with mock.patch("bounded_intake_poll.run_cycles",
+                        side_effect=OSError("PRIVATE_HOST_PATH_/secret/video.mp4")) as cycle:
+            with mock.patch("bounded_intake_poll.run_once") as worker:
                 with mock.patch("builtins.print") as printed:
                     self.assertEqual(main(args), 2)
-        self.assertEqual(worker.call_count, 1)
+        self.assertEqual(cycle.call_count, 1)
+        self.assertEqual(worker.call_count, 0)
         self.assertEqual(printed.call_count, 1)
         response = printed.call_args.args[0]
         self.assertIn('"reason": "POLL_CYCLE_FAILED"', response)
