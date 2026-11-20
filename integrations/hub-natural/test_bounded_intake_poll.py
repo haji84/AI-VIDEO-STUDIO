@@ -245,5 +245,56 @@ class PollerTests(unittest.TestCase):
         self.assertNotIn("/private", msg)
 
 
+    def test_cli_sanitizes_unexpected_worker_exceptions(self):
+        """Unexpected exceptions must HOLD without leaking paths or token-shaped text."""
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+        ]
+        for failure in (
+            RuntimeError("SYNTHETIC_PRIVATE_BEARER_TOKEN_0123456789"),
+            OSError("SYNTHETIC /private/owner_video.mp4"),
+            ValueError("SYNTHETIC_REMOTE_ID_SECRET"),
+        ):
+            with self.subTest(kind=type(failure).__name__):
+                with mock.patch("bounded_intake_poll.run_once",
+                                side_effect=failure) as worker:
+                    with mock.patch("builtins.print") as printed:
+                        self.assertEqual(main(args), 2)
+                self.assertEqual(worker.call_count, 1)
+                self.assertEqual(printed.call_count, 1)
+                response = printed.call_args.args[0]
+                self.assertIn('"status": "HOLD"', response)
+                self.assertIn('"reason": "POLL_CYCLE_FAILED"', response)
+                self.assertNotIn(str(failure), response)
+                self.assertNotIn(FOLDER, response)
+                self.assertNotIn("/fake/private", response)
+
+    def test_cli_sanitizes_sleep_failure_without_retrying_drive(self):
+        """A private-host sleep failure must not trigger a second Drive access."""
+        args = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+            "--cycles", "2",
+        ]
+        # Inject the failure at the cycle boundary so this test does not
+        # actually sleep: run_cycles captures time.sleep in its defaults.
+        with mock.patch("bounded_intake_poll.run_cycles",
+                        side_effect=OSError("PRIVATE_HOST_PATH_/secret/video.mp4")) as cycle:
+            with mock.patch("bounded_intake_poll.run_once") as worker:
+                with mock.patch("builtins.print") as printed:
+                    self.assertEqual(main(args), 2)
+        self.assertEqual(cycle.call_count, 1)
+        self.assertEqual(worker.call_count, 0)
+        self.assertEqual(printed.call_count, 1)
+        response = printed.call_args.args[0]
+        self.assertIn('"reason": "POLL_CYCLE_FAILED"', response)
+        self.assertNotIn("/secret/video.mp4", response)
+
+
 if __name__ == "__main__":
     unittest.main()
