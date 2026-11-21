@@ -24,6 +24,7 @@ MAX_INTERVAL_SECONDS = 3600
 # would echo an attacker-supplied all-caps secret from an upstream Hold.
 # Unknown/future reasons deliberately collapse to a non-sensitive generic code.
 _PUBLIC_HOLD_CODES = frozenset({
+    "POLL_ARGUMENTS_INVALID",
     "POLL_CYCLE_COUNT_INVALID",
     "POLL_INTERVAL_INVALID",
     "POLL_LATER_ARRIVAL_GATE_INVALID",
@@ -43,6 +44,15 @@ _PUBLIC_HOLD_CODES = frozenset({
     "PREVIOUS_QUEUE_SOURCE_OR_STATUS_CHANGED",
     "PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE",
 })
+
+
+class _RedactingArgumentParser(argparse.ArgumentParser):
+    """Never include untrusted argv values in diagnostic output."""
+
+    def error(self, message):
+        # argparse normally writes invalid argument values to stderr before
+        # our worker error boundary, potentially exposing tokens/paths.
+        raise Hold("POLL_ARGUMENTS_INVALID")
 
 
 def _natural(value):
@@ -121,7 +131,7 @@ def run_cycles(check_once, *, cycles=1, interval_seconds=60,
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
+    parser = _RedactingArgumentParser(
         description="Owner opt-in, bounded Drive intake repeat; no scheduling or posting")
     parser.add_argument("--folder-id", required=True)
     parser.add_argument("--inbox", required=True)
@@ -134,8 +144,6 @@ def main(argv=None):
         "--require-new-after-first-check", action="store_true",
         help="Refuse apparent success when only the initial backlog was imported",
     )
-    args = parser.parse_args(argv)
-
     def check_once():
         # Never create OAuth or a Drive client here: the existing run_once
         # protects the local state first, then gets owner credentials.
@@ -143,6 +151,8 @@ def main(argv=None):
                         args.state, args.catalog, args.review_queue)
 
     try:
+        # Parse inside the same fail-closed boundary as each Drive check.
+        args = parser.parse_args(argv)
         report = run_cycles(
             check_once, cycles=args.cycles,
             interval_seconds=args.interval_seconds,

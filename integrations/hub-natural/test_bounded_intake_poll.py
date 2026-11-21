@@ -2,6 +2,7 @@
 
 These tests never call real Drive, real OAuth, a Mac, Instagram or media.
 """
+import io
 import unittest
 from unittest import mock
 
@@ -294,6 +295,35 @@ class PollerTests(unittest.TestCase):
         response = printed.call_args.args[0]
         self.assertIn('"reason": "POLL_CYCLE_FAILED"', response)
         self.assertNotIn("/secret/video.mp4", response)
+
+
+    def test_cli_invalid_arguments_never_echo_private_inputs(self):
+        """Argument parsing itself must redact owner paths and token-like values."""
+        base = [
+            "--folder-id", FOLDER, "--inbox", "/fake/private/media",
+            "--state", "/fake/private/state.json",
+            "--catalog", "/fake/private/catalog.json",
+            "--review-queue", "/fake/private/review.json",
+        ]
+        for extra in (
+            ["--interval-seconds", "SYNTHETIC_PRIVATE_TOKEN_1234"],
+            ["--cycles", "/synthetic/private/video.mp4"],
+            ["--unknown-option", "SYNTHETIC_SECRET_VALUE_456"],
+        ):
+            with self.subTest(option=extra[0]):
+                with mock.patch("bounded_intake_poll.run_once") as worker:
+                    with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                        with mock.patch("builtins.print") as printed:
+                            self.assertEqual(main(base + extra), 2)
+                worker.assert_not_called()
+                self.assertEqual(stderr.getvalue(), "")
+                printed.assert_called_once()
+                response = printed.call_args.args[0]
+                self.assertIn('"status": "HOLD"', response)
+                self.assertIn('"reason": "POLL_ARGUMENTS_INVALID"', response)
+                self.assertNotIn("SYNTHETIC_", response)
+                self.assertNotIn("/synthetic", response)
+                self.assertNotIn(FOLDER, response)
 
 
 if __name__ == "__main__":
