@@ -3,6 +3,7 @@
 These tests never call real Drive, real OAuth, a Mac, Instagram or media.
 """
 import io
+import json
 import unittest
 from unittest import mock
 
@@ -324,6 +325,61 @@ class PollerTests(unittest.TestCase):
                 self.assertNotIn("SYNTHETIC_", response)
                 self.assertNotIn("/synthetic", response)
                 self.assertNotIn(FOLDER, response)
+
+
+
+class OneShotCliBoundaryTests(unittest.TestCase):
+    """The direct intake entrypoint must never print owner CLI inputs or errors."""
+
+    @staticmethod
+    def args():
+        return [
+            "--folder-id", FOLDER, "--inbox", "/synthetic/private/media",
+            "--state", "/synthetic/private/state.json",
+            "--catalog", "/synthetic/private/catalog.json",
+            "--review-queue", "/synthetic/private/queue.json",
+        ]
+
+    def test_direct_cli_rejects_unknown_args_without_exposing_secret_value(self):
+        from new_arrival_job import main as direct_main
+        with mock.patch("new_arrival_job.run_once") as worker:
+            with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                with mock.patch("builtins.print") as printed:
+                    with self.assertRaises(SystemExit) as stop:
+                        direct_main(self.args() + ["--bad-option", "SYNTHETIC_SECRET_12345"])
+        self.assertEqual(stop.exception.code, 2)
+        worker.assert_not_called()
+        self.assertEqual(stderr.getvalue(), "")
+        printed.assert_called_once()
+        self.assertEqual(json.loads(printed.call_args.args[0]),
+                         {"status": "HOLD", "reason": "INTAKE_ARGUMENTS_INVALID"})
+
+    def test_direct_cli_redacts_unknown_hold_and_runtime_errors(self):
+        from new_arrival_job import main as direct_main
+        for error in (Hold("SYNTHETIC_PRIVATE_TOKEN_987654"),
+                      OSError("SYNTHETIC /private/owner-video.mp4")):
+            with self.subTest(kind=type(error).__name__):
+                with mock.patch("new_arrival_job.run_once", side_effect=error) as worker:
+                    with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                        with mock.patch("builtins.print") as printed:
+                            with self.assertRaises(SystemExit) as stop:
+                                direct_main(self.args())
+                self.assertEqual(stop.exception.code, 2)
+                worker.assert_called_once()
+                self.assertEqual(stderr.getvalue(), "")
+                printed.assert_called_once()
+                self.assertEqual(json.loads(printed.call_args.args[0]),
+                                 {"status": "HOLD", "reason": "INTAKE_CYCLE_FAILED"})
+
+    def test_direct_cli_valid_worker_keeps_review_only_summary(self):
+        from new_arrival_job import main as direct_main
+        with mock.patch("new_arrival_job.run_once", return_value=outcome()) as worker:
+            with mock.patch("builtins.print") as printed:
+                self.assertIsNone(direct_main(self.args()))
+        worker.assert_called_once()
+        report = json.loads(printed.call_args.args[0])
+        self.assertEqual(report["publishing"], "NOT_PERFORMED")
+        self.assertEqual(report["status"], "HOLD_REVIEW_REQUIRED")
 
 
 if __name__ == "__main__":
