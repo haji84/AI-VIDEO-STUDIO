@@ -22,6 +22,34 @@ from drive_intake import (DriveHTTP, Hold, MAX_ENTRIES, MIME_TO_EXT,
                           sync_once)
 import pipeline
 
+# Only these audited, fixed gate codes may cross the direct CLI boundary.
+# An arbitrary Hold exception may contain a private filename, ID, or token.
+_PUBLIC_CLI_HOLD_CODES = frozenset({
+    "INTAKE_ARGUMENTS_INVALID",
+    "INTAKE_ALREADY_RUNNING",
+    "OWNER_OAUTH_OFFLINE_AUTH_REQUIRED",
+    "DRIVE_REDIRECT_REQUIRES_REVIEW",
+    "PREVIOUS_QUEUED_SOURCE_MISSING_OR_CHANGED",
+    "PREVIOUS_IMPORTED_SOURCE_MISSING_OR_CHANGED",
+    "PREVIOUS_INTAKE_QUEUE_STATE_MISMATCH",
+    "PREVIOUS_INTAKE_STATE_UNSAFE",
+    "PREVIOUS_INTAKE_STATE_UNREADABLE",
+    "PREVIOUS_INTAKE_STATE_INVALID",
+    "PREVIOUS_REVIEW_QUEUE_UNSAFE",
+    "PREVIOUS_REVIEW_QUEUE_UNREADABLE",
+    "PREVIOUS_REVIEW_QUEUE_INVALID",
+    "PREVIOUS_QUEUE_SOURCE_OR_STATUS_CHANGED",
+    "PREVIOUS_QUEUED_SOURCE_NOT_VISIBLE",
+})
+
+
+class _RedactingArgumentParser(argparse.ArgumentParser):
+    """Avoid argparse printing secret-shaped argv values to stderr."""
+
+    def error(self, message):
+        raise Hold("INTAKE_ARGUMENTS_INVALID")
+
+
 SCHEMA="hub-natural-private-review-queue-v1"
 _MAX_QUEUE_BYTES = 4 * 1024 * 1024
 _MAX_STATE_BYTES = 8 * 1024 * 1024
@@ -374,24 +402,32 @@ def _run_once_locked(client, folder_id, inbox, state, catalog, queue, *, max_byt
             'draftsMade':0,'publishing':'NOT_PERFORMED'}
 
 
-def main():
-    ap=argparse.ArgumentParser(description='Private unattended component: Drive arrival to semantic review queue')
+def main(argv=None):
+    ap=_RedactingArgumentParser(
+        description='Private unattended component: Drive arrival to semantic review queue')
     ap.add_argument('--folder-id',required=True)
     ap.add_argument('--inbox',required=True)
     ap.add_argument('--state',required=True)
     ap.add_argument('--catalog',required=True)
     ap.add_argument('--review-queue',required=True)
-    a=ap.parse_args()
     try:
-        # Credentials are not refreshed until the locked local queue passes
-        # its preflight. None selects the owner OAuth-backed client afterward.
+        # Parse and work inside a single fail-closed CLI boundary. OAuth is
+        # still created only after the existing locked local state preflight.
+        a=ap.parse_args(argv)
         result=run_once(None,a.folder_id,a.inbox,a.state,a.catalog,a.review_queue)
         print(json.dumps(result))
         if result['held']:
             raise SystemExit(2)
     except (Hold,pipeline.Hold) as exc:
-        # Exception messages only contain predefined non-sensitive gate codes.
-        print(json.dumps({'status':'HOLD','reason':str(exc)}))
+        reason=str(exc)
+        if reason not in _PUBLIC_CLI_HOLD_CODES:
+            reason="INTAKE_CYCLE_FAILED"
+        print(json.dumps({'status':'HOLD','reason':reason}))
+        raise SystemExit(2)
+    except Exception:
+        # Provider/OS/scan errors may contain private paths or credentials.
+        # Do not echo exception text or a traceback to shared process logs.
+        print(json.dumps({'status':'HOLD','reason':'INTAKE_CYCLE_FAILED'}))
         raise SystemExit(2)
 
 if __name__=='__main__':main()
