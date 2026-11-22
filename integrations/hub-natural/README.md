@@ -780,3 +780,62 @@ owner-private keys (once separately approved) and future launchd scheduling.
 Video byte download, FFmpeg editing, rendering and large temporary files must
 stay on a different owner-approved environment with sufficient space.
 Posting is performed only by the owner, and all other production gates HOLD.
+
+
+## Offline Google Photos Takeout: explicit owner-selected export gate (2026-11-22; NOT IMPORTED)
+
+`owner_photo_selection.py` prepares a verifiable receipt for a **specific set of files
+explicitly selected by the owner** from a locally available export. This is
+an offline preparation stage, NOT a Google Photos API integration, Google
+Photos sync, Drive uploader, automatic video download, semantic review,
+editor or publication workflow. It cannot certify that the local files
+originally came from Google Photos. Nothing is moved, uploaded or posted.
+
+POSIX-only safety contract: the owner creates an already-private directory
+(0700), an owner-owned JSON selection file (0600) and readable owner-only
+video copies (0600). All paths must be absolute and outside any Git checkout,
+symlink and shared parent. Only these exact file paths are inspected, never
+an entire folder. Supported: mp4, mov, m4v, mkv (maximum 100 selected,
+maximum 4 GiB per file). The owner should keep the *real* source paths,
+selection JSON and receipt in private storage, NEVER GitHub/CI/chat logs.
+For selection input, use this schema locally with paths chosen by the owner:
+
+```json
+{
+  "schema": "hub-natural-owner-photo-selection-v1",
+  "ownerSelected": true,
+  "selectedFiles": ["/owner-private/export/selected-video.mp4"]
+}
+```
+
+Before any receipt is written, inspect the sanitized preview on the **private
+owner host**:
+
+```sh
+python3 integrations/hub-natural/owner_photo_selection.py preview \
+  --selection-file /owner-private/selection.json
+```
+
+The preview reports selected count, SHA-256 content-deduplicated count,
+and a `selectionSHA256` digest. For a separate explicit freeze, re-run
+a fresh scan with **that same SHA** and a new receipt path:
+
+```sh
+python3 integrations/hub-natural/owner_photo_selection.py confirm \
+  --selection-file /owner-private/selection.json \
+  --receipt-file /owner-private/selection-receipt.json \
+  --expected-sha256 <preview-selectionSHA256>
+```
+
+The receipt is exclusive-create, owner-only 0600, contains SHA/size/extension
+but no original paths/filenames, and is never overwritten. A changed file,
+invalid private permission, duplicate selected path or digest mismatch
+produces HOLD. Identical media bytes in multiple selected files are counted
+as duplicates, not silently imported twice. This does NOT independently
+verify Google Photos origin, Takeout completeness, transfer into Drive
+INBOX, future integrity of the original files, or content privacy;
+no real owner material has been processed. Public tests use synthetic
+bytes only; Windows ownership ACL behavior is not yet verified.
+The separate owner-authorized Drive transport remains blocked pending
+approved private host and OAuth, and independent Drive readback must be
+proven there before any migration acceptance.
