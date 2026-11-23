@@ -2,6 +2,15 @@
 Updated: 2026-11-24 JST
 Status: IN_PROGRESS. Windows runner and physical MacBook with generated media are TESTED_SYNTHETIC.
 
+**Google Photos on the MacBook, 2026-11-24 JST.** Implementation
+`678485710ed22574b41144fb82668d1afa87bbfe` adds a Google Photos entry to the
+everyday editor. The download and local file route is ready. Chrome with a
+simulated Google account and Picker passed actual import, reviewed first cut,
+captioned export, whole-file decode, playback and restart SHA-256 readback.
+For live direct import, configure the Photos Picker API and the app's Desktop
+OAuth JSON, then verify owner-selected video with the owner's consent.
+[Google Photos verification](../validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
+
 **MacBook everyday launch, 2026-11-24 JST.** Tested implementation
 `80a38688062f5883548ce2699ed7020fdbbc98d4` in Draft #51. Finder's
 `start-mac.command` opens the local editor. The everyday project uses

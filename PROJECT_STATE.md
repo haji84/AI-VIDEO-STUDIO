@@ -7,6 +7,16 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Google Photos on MacBook (2026-11-24 JST)
+
+**TESTED_SYNTHETIC in the Mac editor.** Google Photos download guidance and
+local video selection are available in the everyday workspace. The optional
+Desktop OAuth and Photos Picker flow imports selected videos into the existing
+local editor. Chrome passed from a simulated Google selection through edited
+MP4 output, full decode and playback after restart. The live Google connection
+requires the owner's Desktop OAuth settings and account consent.
+[MacBook evidence and setup](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
+
 ## Issue #37 — MacBook everyday launch (2026-11-24 JST)
 
 **TESTED_SYNTHETIC on the physical MacBook.** `start-mac.command` opens the
