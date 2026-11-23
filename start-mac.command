@@ -20,4 +20,9 @@ if [ -z "${AIVS_FFMPEG_DIR:-}" ] && [ -d "$local_media_tools" ]; then
     export AIVS_FFMPEG_DIR="$local_media_tools"
 fi
 
+photos_client="$HOME/Library/Application Support/AI VIDEO STUDIO/google-photos-client.json"
+if [ -z "${AIVS_GOOGLE_PHOTOS_CLIENT_FILE:-}" ] && [ -f "$photos_client" ]; then
+    export AIVS_GOOGLE_PHOTOS_CLIENT_FILE="$photos_client"
+fi
+
 exec node apps/local-editor/server.mjs --workspace "$HOME/AI_VIDEO_STUDIO_DATA" --open-browser "$@"

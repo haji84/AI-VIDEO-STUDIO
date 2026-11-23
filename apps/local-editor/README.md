@@ -102,6 +102,34 @@ exFATなどハードリンクのない保存先では、上書き禁止のコピ
 不足する場合は読み込みを止めます。現在の上限は素材100本、1本16GiB/4時間、
 書き出し音声クリップ64個。大容量素材の実測性能は未検証です。
 
+## Google フォトから動画を追加
+
+「Google フォトから追加」を開きます。Google フォトのメニューからダウンロードした
+MP4/MOV は「ダウンロードした動画を追加」で選べます。ZIP で届いた場合は Finder で
+展開して動画ファイルを選びます。[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
+
+Mac で直接取り込むには、AI VIDEO STUDIO 用の Google Cloud プロジェクトで **Google Photos Picker API** を
+有効にし、種類が **デスクトップ アプリ** の OAuth クライアントを用意します。テスト公開中は、利用する
+Google アカウントをテストユーザーに登録します。ダウンロードした OAuth JSON を
+`~/Library/Application Support/AI VIDEO STUDIO/google-photos-client.json` に保存し、`start-mac.command` で
+再起動します。別の場所に保存している場合は `AIVS_GOOGLE_PHOTOS_CLIENT_FILE` で起動時に指定できます。
+[Picker API の設定](https://developers.google.com/photos/overview/configure-your-app) ·
+[デスクトップアプリの OAuth](https://developers.google.com/identity/protocols/oauth2/native-app) ·
+[OAuth のテスト公開](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
+
+1. 「Google に接続して動画を選ぶ」を押し、Mac の標準ブラウザで Google の許可と素材の選択を済ませます。
+2. Google フォトで「完了」を押し、編集画面の「選択した動画を取り込む」を押します。
+3. 動画が入ったら、「下書き候補を作る」や「完成動画を作る」を使います。検査待ちの動画は同じ画面から再試行できます。
+
+直接取込では、Google フォトで選んだ項目の種類を確認し、再生できる動画を Mac の通常の素材コピーとして
+保存します。Google が取得用に用意する高品質版を使うため、ファイルが元のアップロードと異なる場合があります。
+Google 接続は読み取り専用で、選択セッションとアクセストークンを作業中のメモリで扱います。
+[Google の取得用動画仕様](https://developers.google.com/photos/picker/guides/media-items#video-base-urls)
+
+素材のコピー、編集、MP4 は起動時の保存フォルダで管理します。Mac の既定では `~/AI_VIDEO_STUDIO_DATA` です。
+その保存フォルダの編集とコピーをすべて消す場合は、アプリを終了してから Finder でフォルダをゴミ箱へ移します。
+Google 側の接続許可は Google アカウントで管理できます。[Google アカウントの接続管理](https://myaccount.google.com/connections)
+
 ## 操作
 
 1. 「動画を追加」でMP4/MOVなどを選択。最初の映像をカットと元音声に配置。
