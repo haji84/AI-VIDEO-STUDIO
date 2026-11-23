@@ -124,15 +124,80 @@ jobs:
             rm -rf -- "$TMPDIR"
           fi
 
-  windows-tool-discovery-fixtures:
-    runs-on: windows-latest
-    timeout-minutes: 3
+  windows-synthetic-media-acceptance:
+    runs-on: windows-2025
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Native Windows path discovery fixtures (not actual ZBook media acceptance)
-        run: python -m unittest engine.test_media_tools.WindowsDiscoveryTests -v
+          python-version: '3.11.9'
+      - name: Install synthetic test dependencies
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.64.1
+          python -m pip install Pillow==13.0.0 fonttools==4.61.1 numpy==2.3.5
+      - name: Verify WinGet 9.0.2 package and run discovery with a restricted launch PATH
+        run: |
+          $scratch = Join-Path $env:RUNNER_TEMP 'aivs Windows media'
+          $fixtureLocalAppData = Join-Path $scratch 'LocalAppData'
+          $package = Join-Path $fixtureLocalAppData 'Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe'
+          $archive = Join-Path $scratch 'ffmpeg-9.0.2-full_build.zip'
+          New-Item -ItemType Directory -Path $scratch | Out-Null
+          # URL and digest from the Gyan.FFmpeg 9.0.2 x64 WinGet manifest.
+          Invoke-WebRequest -Uri 'https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-full_build.zip' -OutFile $archive
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne '759D0A9831C436A0EB331AD36F236C06CB04AAA0005DA46571F0E9D3D9206F6B') {
+            throw 'FFmpeg package digest mismatch'
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $package
+          $bin = Join-Path $package 'ffmpeg-9.0.2-full_build\bin'
+          $python = (Get-Command python.exe -CommandType Application).Source
+          $launchPath = $env:Path
+          $localAppData = $env:LOCALAPPDATA
+          try {
+            $env:Path = Split-Path -Parent $python
+            $env:LOCALAPPDATA = $fixtureLocalAppData
+            $resolved = & $python -m engine.media_tools --resolve | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Windows WinGet discovery failed' }
+            foreach ($tool in 'ffmpeg', 'ffprobe') {
+              $expected = (Resolve-Path -LiteralPath (Join-Path $bin "$tool.exe")).Path
+              if ($resolved.$tool -ne $expected) { throw "Unexpected resolved $tool" }
+              $firstLine = & $expected -version | Select-Object -First 1
+              if ($LASTEXITCODE -ne 0 -or $firstLine -notmatch "^$tool version 9\.0\.2") { throw "Unexpected $tool version" }
+              Write-Output $firstLine
+            }
+          } finally {
+            $env:Path = $launchPath
+            $env:LOCALAPPDATA = $localAppData
+          }
+          $chrome = Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'
+          if (!(Test-Path -LiteralPath $chrome -PathType Leaf)) { throw 'Installed Google Chrome unavailable' }
+          $font = Join-Path $scratch 'NotoSansCJKjp-Regular.otf'
+          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/notofonts/noto-cjk/523d033d6cb47f4a80c58a35753646f5c3608a78/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf' -OutFile $font
+          if ((Get-FileHash -LiteralPath $font -Algorithm SHA256).Hash -ne '68A3FC98800B2A27B371F2FB79991DAF3633BD89309D4FFAA6946FD587F375B5') {
+            throw 'Caption font digest mismatch'
+          }
+          $testTemp = Join-Path $scratch '合成 素材'
+          New-Item -ItemType Directory -Path $testTemp | Out-Null
+          "AIVS_FFMPEG_DIR=$bin" >> $env:GITHUB_ENV
+          "AIVS_PYTHON=$python" >> $env:GITHUB_ENV
+          "AIVS_BROWSER_EXECUTABLE=$chrome" >> $env:GITHUB_ENV
+          "AIVS_CAPTION_FONT=$font" >> $env:GITHUB_ENV
+          "TEMP=$testTemp" >> $env:GITHUB_ENV
+          "TMP=$testTemp" >> $env:GITHUB_ENV
+          $bin >> $env:GITHUB_PATH
+          Write-Output "Runner image: $env:ImageOS $env:ImageVersion"
+          node --version
+          python --version
+      - name: Windows JSON and media tool tests
+        run: python -m unittest engine.test_media_tools -v
+      - name: Windows editor HTTP media preflight
+        run: node --test apps/local-editor/media-preflight.test.mjs
+      - name: Windows Chrome upload recovery, first cut, export and replay (synthetic media)
+        env:
+          PYTHONIOENCODING: cp932
+        run: node apps/local-editor/browser-import-recovery-acceptance.mjs

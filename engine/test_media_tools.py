@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -14,6 +15,20 @@ from engine.media_tools import MediaToolError, parse_probe_json, resolve_tools
 
 
 class MediaBoundaryTests(unittest.TestCase):
+    def test_resolve_error_json_preserves_japanese_with_cp932_stderr(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = subprocess.run(
+                [sys.executable, '-m', 'engine.media_tools', '--resolve'],
+                env={**os.environ, 'AIVS_FFMPEG_DIR': str(Path(folder) / 'missing'),
+                     'PYTHONIOENCODING': 'cp932'},
+                capture_output=True, timeout=10, check=False,
+            )
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, b'')
+        error = json.loads(result.stderr)['error']
+        self.assertTrue(error.startswith('FFMPEG_TOOLCHAIN_INCOMPLETE:'))
+        self.assertIn('を確認してください。', error)
+
     def test_present_but_unlaunchable_executable_is_a_domain_error(self):
         with tempfile.TemporaryDirectory() as folder:
             executable=Path(folder)/('ffprobe.exe' if os.name=='nt' else 'ffprobe')

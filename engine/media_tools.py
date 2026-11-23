@@ -109,7 +109,8 @@ def main():
     try:
         print(json.dumps(resolve_tools()))
     except MediaToolError as error:
-        print(json.dumps({'error': str(error)}, ensure_ascii=False), file=sys.stderr)
+        # Node reads this pipe as UTF-8 even when Python uses a Windows code page.
+        print(json.dumps({'error': str(error)}), file=sys.stderr)
         return 2
     return 0
 

@@ -61,7 +61,9 @@ try{
  for(const [index,name] of ['master.mp4','clear.mp4'].entries()){
   await mutation('/api/import',()=>page.locator('#video-files').setInputFiles(join(folder,name)),400);
   await page.waitForFunction(count=>document.querySelectorAll('#pending-imports button').length===count,index+1);
-  assert.match(await page.locator('#notice').textContent(),/FFMPEG_TOOLCHAIN_INCOMPLETE/);
+  const notice=await page.locator('#notice').textContent();
+  assert.match(notice,/FFMPEG_TOOLCHAIN_INCOMPLETE/);
+  assert.match(notice,/を確認してください。/);
  }
  assert.equal(uploads,2);const pending=await json(join(workspace,'pending-imports.json'));
  assert.deepEqual(pending.map(p=>p.sha256),originals.map(sha));
