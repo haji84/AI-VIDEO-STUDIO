@@ -3,6 +3,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  AIVS_CI_CAPTION_FONT_URL: https://raw.githubusercontent.com/notofonts/noto-cjk/523d033d6cb47f4a80c58a35753646f5c3608a78/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf
+  AIVS_CI_CAPTION_FONT_SHA256: 68a3fc98800b2a27b371f2fb79991daf3633bd89309d4ffaa6946fd587f375b5
 jobs:
   offline-prototype-smoke:
     runs-on: ubuntu-latest
@@ -90,17 +93,21 @@ jobs:
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.64.1
           python -m pip install Pillow==13.0.0 fonttools==4.61.1 numpy==2.3.5
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          sudo apt-get install -y ffmpeg
       - name: Require installed Chrome, media tools and caption font
         run: |
           chrome_path="$(command -v google-chrome)" || { echo 'BLOCKED: installed Google Chrome unavailable'; exit 2; }
           python_path="$(command -v python)"
           command -v ffmpeg >/dev/null
           command -v ffprobe >/dev/null
-          test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
           test_root="$(mktemp -d "$RUNNER_TEMP/aivs-browser-acceptance.XXXXXX")"
-          printf 'AIVS_BROWSER_EXECUTABLE=%s\nAIVS_PYTHON=%s\nAIVS_CAPTION_FONT=%s\nTMPDIR=%s\n' \
-            "$chrome_path" "$python_path" /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc "$test_root" >> "$GITHUB_ENV"
+          printf 'TMPDIR=%s\n' "$test_root" >> "$GITHUB_ENV"
+          font_path="$test_root/NotoSansCJKjp-Regular.otf"
+          curl --fail --silent --show-error --location --retry 2 --max-time 90 \
+            --output "$font_path" "$AIVS_CI_CAPTION_FONT_URL"
+          printf '%s  %s\n' "$AIVS_CI_CAPTION_FONT_SHA256" "$font_path" | sha256sum --check --strict
+          printf 'AIVS_BROWSER_EXECUTABLE=%s\nAIVS_PYTHON=%s\nAIVS_CAPTION_FONT=%s\n' \
+            "$chrome_path" "$python_path" "$font_path" >> "$GITHUB_ENV"
           printf 'Runner image: %s %s\n' "$ImageOS" "$ImageVersion"
           "$chrome_path" --version
           node --version
@@ -178,8 +185,8 @@ jobs:
           $chrome = Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'
           if (!(Test-Path -LiteralPath $chrome -PathType Leaf)) { throw 'Installed Google Chrome unavailable' }
           $font = Join-Path $scratch 'NotoSansCJKjp-Regular.otf'
-          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/notofonts/noto-cjk/523d033d6cb47f4a80c58a35753646f5c3608a78/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf' -OutFile $font
-          if ((Get-FileHash -LiteralPath $font -Algorithm SHA256).Hash -ne '68A3FC98800B2A27B371F2FB79991DAF3633BD89309D4FFAA6946FD587F375B5') {
+          Invoke-WebRequest -Uri $env:AIVS_CI_CAPTION_FONT_URL -OutFile $font
+          if ((Get-FileHash -LiteralPath $font -Algorithm SHA256).Hash -ne $env:AIVS_CI_CAPTION_FONT_SHA256) {
             throw 'Caption font digest mismatch'
           }
           $testTemp = Join-Path $scratch '合成 素材'
