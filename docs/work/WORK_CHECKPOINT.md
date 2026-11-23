@@ -1,5 +1,30 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
-Updated: 2026-11-23 JST
+Updated: 2026-11-24 JST
+Status: IN_PROGRESS. Windows runner and physical MacBook with generated media are TESTED_SYNTHETIC.
+Tracking [Issue #37](https://github.com/haji84/AI-VIDEO-STUDIO/issues/37) and
+[Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51). Main remains
+`e1bf222dfe0043e307e3fc3c122e2fe52423dac8`.
+Tested source and workflow `d763e9e1507ae2b42fd9bc8245a34f06599b9183`.
+[Manual CI run 45213580681](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45213580681)
+passed all three jobs, including four Linux Chrome flows and the offline regression suite.
+
+The Windows 2025 runner used the exact WinGet Gyan.FFmpeg 9.0.2 package. Both
+executables were detected under a restricted launch PATH. Fixes preserve Japanese
+error JSON under CP932 and read intermediate JSON as UTF-8 in the first-cut and
+sync workers.
+Chrome processed two synthetic uploads with no resends, applied a reviewed numerical
+proposal and played an H.264/AAC MP4 through to the end on both sides of restart.
+Full decode and SHA-256 readback passed. [Windows evidence](../validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md)
+
+**Next Gate A task on the physical ZBook:** identify the authorized device and
+find the handoff's exact v2.x ZIP and the original exception location. Mac-side
+Tailscale is running. Confirm the device connection before running any physical
+acceptance. On the owner-approved external drive, reproduce the two-input flow
+under its actual launch methods and save only synthetic evidence. Gate A on the
+ZBook, Gates B–E and product acceptance remain open.
+
+## MacBook checkpoint — 2026-11-23 JST
+
 Status: IN_PROGRESS. Local Gate A on a physical MacBook is TESTED_SYNTHETIC.
 Tracking Issue #37, documentation Draft #36, and implementation
 [Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51) on `fix/zbook-media-preflight-20261115`.

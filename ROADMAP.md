@@ -2,7 +2,7 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-## Current Issue #37 Gate A — 2026-11-23 JST
+## Current Issue #37 Gate A — 2026-11-24 JST
 
 - [x] Reproduce main-equivalent missing ffprobe/invalid JSON failures; share tool discovery and bounded response validation.
 - [x] Retain completed validation-failed transfers; explicit authenticated retry after restart without re-upload, with integrity and duplicate/stale protections.
@@ -10,6 +10,7 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [x] Actual Linux browser two-upload recovery → numerical first-cut review/apply → Japanese-caption/source-audio MP4 → replay/decode/restart readback. Node196/Python78 + four browser scopes passed.
 - [x] Apple Silicon MacBook: tool discovery with restricted PATH, JSON error regression, canonical workspace fix, two-upload recovery without resend, numerical first-cut review/apply, captioned MP4 playback to end, full decode and restart SHA-256 readback.
 - [x] Hosted offline checks, four Linux browser flows and native Windows tool-discovery fixtures passed for the tested code. [CI run](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481)
+- [x] Windows runner: real WinGet FFmpeg/ffprobe 9.0.2 discovery with a restricted PATH, Japanese JSON diagnostics and analysis with Unicode paths, two-upload recovery, reviewed first-cut, captioned export, full playback/decode and restart SHA-256 readback. [Windows verification](docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md)
 - [ ] Obtain original v2.x app ZIP and redacted call-site evidence; adapt verified fixes to that source and independently verify ZBook/Windows launches.
 - [ ] On the physical ZBook, verify WinGet FFmpeg/ffprobe 9.0.2 under the actual launch methods and exercise an approved external storage target.
 - [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.

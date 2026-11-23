@@ -1,11 +1,30 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-11-23 JST
+Updated: 2026-11-24 JST
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
+
+## Issue #37 — Windows runner verification (2026-11-24 JST)
+
+**TESTED_SYNTHETIC on Windows Server 2025. Physical ZBook is BLOCKED.**
+The existing manual workflow uses the checksum-pinned WinGet Gyan.FFmpeg 9.0.2
+full build in a temporary package layout. Native discovery with a restricted
+launch PATH, Python 24 cases and Node HTTP preflight passed. The Chrome flow
+recovered two uploads without resending, applied the reviewed numerical first cut,
+rendered a Japanese-captioned H.264/AAC MP4 and played to the end before and after
+restart. Full decode and restart SHA-256 readback matched. All three CI jobs
+passed, including four Linux Chrome flows and the offline regression suite.
+[Manual CI](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45213580681)
+
+Tool error JSON preserves Japanese under a legacy console encoding. The first-cut
+and sync workers read Node's UTF-8 JSON explicitly, including when media paths
+contain Japanese and spaces. The Mac's Tailscale client was online. The ZBook
+endpoint, the distributed v2.x ZIP and its original failure location are still
+pending. [Windows runner evidence](docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md) ·
+[Implementation Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51)
 
 ## Issue #37 — MacBook verification (2026-11-23 JST)
 
