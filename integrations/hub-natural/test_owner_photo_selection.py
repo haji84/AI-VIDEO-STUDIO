@@ -63,6 +63,37 @@ class OwnerPhotoSelectionTests(unittest.TestCase):
             confirm(self.selection, self.receipt, pin)
         self.assertEqual(saved, self.receipt.read_text())
 
+    def test_identical_content_selection_count_is_frozen(self):
+        # Two explicitly selected copies must not inherit approval for one copy.
+        original = preview(self.selection)
+        self.assertEqual(original["selectedCount"], 2)
+        self.assertEqual(original["uniqueContentCount"], 1)
+        pin = original["selectionSHA256"]
+        self.choose([self.a])
+        reduced = preview(self.selection)
+        self.assertEqual(reduced["selectedCount"], 1)
+        self.assertEqual(reduced["uniqueContentCount"], 1)
+        self.assertNotEqual(reduced["selectionSHA256"], pin)
+        with self.assertRaisesRegex(Hold, "PHOTO_SELECTION_CHANGED_CONFIRM_AGAIN"):
+            confirm(self.selection, self.receipt, pin)
+        self.assertFalse(self.receipt.exists())
+
+    def test_identical_content_selected_extension_is_frozen(self):
+        # A duplicate MOV exchanged for a duplicate MP4 must alter the pin,
+        # even when the first selected file and unique-content count are fixed.
+        pin = preview(self.selection)["selectionSHA256"]
+        replacement = self.root / "selected_c.mp4"
+        replacement.write_bytes(self.a.read_bytes())
+        replacement.chmod(0o600)
+        self.choose([self.a, replacement])
+        altered = preview(self.selection)
+        self.assertEqual(altered["selectedCount"], 2)
+        self.assertEqual(altered["uniqueContentCount"], 1)
+        self.assertNotEqual(altered["selectionSHA256"], pin)
+        with self.assertRaisesRegex(Hold, "PHOTO_SELECTION_CHANGED_CONFIRM_AGAIN"):
+            confirm(self.selection, self.receipt, pin)
+        self.assertFalse(self.receipt.exists())
+
     def test_unapproved_selection_and_mutated_file_hold(self):
         self.choose([self.a], approved=False)
         with self.assertRaisesRegex(Hold, "PHOTO_SELECTION_INVALID"):

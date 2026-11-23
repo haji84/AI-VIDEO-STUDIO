@@ -10,7 +10,7 @@ import re
 import stat
 
 SCHEMA = "hub-natural-owner-photo-selection-v1"
-RECEIPT_SCHEMA = "hub-natural-owner-photo-selection-receipt-v1"
+RECEIPT_SCHEMA = "hub-natural-owner-photo-selection-receipt-v2"
 MAX_SELECTION_BYTES = 65536
 MAX_SELECTED_FILES = 100
 MAX_VIDEO_BYTES = 4 * 1024**3
@@ -119,20 +119,23 @@ def _fingerprint(source):
 def preview(selection_file):
     """Read-only SHA of exactly the files the owner listed, never a folder scan."""
     selection, filenames = _read_selection(selection_file)
-    seen, by_sha = set(), {}
+    seen, by_sha, selected_fingerprints = set(), {}, []
     for filename in filenames:
         path = _private_path(filename)
         if path == selection or path in seen:
             raise Hold("PHOTO_SELECTION_DUPLICATE_PATH")
         seen.add(path)
         item = _fingerprint(path)
+        selected_fingerprints.append((item["sha256"], item["bytes"], item["extension"]))
         original = by_sha.get(item["sha256"])
         if original is None:
             by_sha[item["sha256"]] = item
         elif original["bytes"] != item["bytes"]:
             raise Hold("PHOTO_SELECTION_INCONSISTENT_HASH")
     assets = sorted(by_sha.values(), key=lambda entry: entry["sha256"])
-    canonical = json.dumps(assets, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    # Freeze every explicitly selected asset, not just distinct content hashes.
+    # Filenames and paths remain absent; ordering is immaterial to consent.
+    canonical = json.dumps(sorted(selected_fingerprints), separators=(",", ":")).encode("utf-8")
     return {
         "schema": RECEIPT_SCHEMA,
         "status": "OWNER_SELECTION_PREVIEW_NOT_IMPORTED",
