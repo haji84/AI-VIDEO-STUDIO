@@ -143,6 +143,8 @@ jobs:
           python -m pip install Pillow==13.0.0 fonttools==4.61.1 numpy==2.3.5
       - name: Verify WinGet 9.0.2 package and run discovery with a restricted launch PATH
         run: |
+          $python = Join-Path $env:pythonLocation 'python.exe'
+          if (!(Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Configured Python unavailable' }
           $scratch = Join-Path $env:RUNNER_TEMP 'aivs Windows media'
           $fixtureLocalAppData = Join-Path $scratch 'LocalAppData'
           $package = Join-Path $fixtureLocalAppData 'Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe'
@@ -155,7 +157,6 @@ jobs:
           }
           Expand-Archive -LiteralPath $archive -DestinationPath $package
           $bin = Join-Path $package 'ffmpeg-9.0.2-full_build\bin'
-          $python = (Get-Command python.exe -CommandType Application).Source
           $launchPath = $env:Path
           $localAppData = $env:LOCALAPPDATA
           try {
