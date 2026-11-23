@@ -1,13 +1,38 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-11-15 JST
+Updated: 2026-11-23 JST
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
-## Current Issue #37 unit — 2026-11-15 JST
+## Issue #37 — MacBook verification (2026-11-23 JST)
+
+Status: **TESTED_SYNTHETIC on a physical MacBook Pro / physical ZBook BLOCKED**.
+Base main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, resumed branch head
+`7aff6b3bd0043c6873ee4c6328da61d45c3112ad`, tested source `de9d303f13500cd4be390748ea8fd57020c236e6`.
+Using one canonical workspace path fixes completed-output recording and recovery
+when macOS supplies a path through `/var`. Repository containment, a shared
+workspace lock and output/report integrity checks passed.
+
+On arm64 macOS 26.6.2, Chrome verified two retained uploads without a resend,
+numerical first-cut review and apply, Japanese captions and original audio,
+full playback, full decode and download SHA-256 after restart. Normal editing and
+cross-workspace relinking also passed. FFmpeg and ffprobe discovery and the JSON
+error cases passed. FFmpeg 8.0.3 was used for the full regression suite because
+8.0 can under-report multichannel true peak. The separate saved-cut preview
+worker stays Linux-only.
+
+The distributed v2.x ZIP and ZBook exception location are still unavailable.
+Actual Windows launches, FFmpeg 9.0.2, the approved storage target and off-network
+phone acceptance remain pending. Product DoD remains open.
+The tested code passed offline, Linux browser and Windows tool fixture CI.
+[MacBook evidence and remaining gates](docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md) ·
+[Implementation Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51) ·
+[CI on the tested code](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481)
+
+## Earlier Linux Issue #37 unit — 2026-11-15 JST
 
 Status: **TESTED_SYNTHETIC / physical ZBook and original ZIP BLOCKED**.
 Base main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`; implementation `f26002df4e5be8fe0d97dee56d36ceed1d85020b` on

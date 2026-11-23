@@ -10,7 +10,10 @@ iPhone/Android/Windows/Macの実機成功とは扱っていません。
 
 リポジトリを取得したPCで、Node、Python 3.11以上、FFmpeg/ffprobeが使える状態にします。
 実測した環境は Linux / Node24.22.1 / Python3.12.14 / FFmpeg6.1.1です。
-Windows/Macへの導入・動作は別途確認が必要です。追加課金・アカウント登録なし。
+MacBook Pro（Apple Silicon）では macOS 26.6.2 / Node24.21.0 / Python3.14.7 /
+FFmpeg 8.0.3 で合成素材の取り込み、下書き編集、MP4 の書き出しと再生を確認しました。
+Windows 実機の結果は未取得です。追加課金・アカウント登録なし。
+[MacBook 検証記録](../../docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md)
 
 字幕を書き出す場合は、同じPythonへローカル描画用の依存を導入します。
 
@@ -50,6 +53,9 @@ node apps/local-editor/server.mjs --workspace "$HOME/AI_VIDEO_STUDIO_DATA"
 `AIVS_FFMPEG_DIR` を指定する場合は両方がある `bin` フォルダを選んでください。
 指定先が不完全なときは別の導入先へ黙って切り替えません。未指定なら同梱用フォルダ、
 PATH、Windowsの既知のWinGet導入先を確認します。複数候補が残れば明示指定が必要です。
+FFmpeg 8.0 には複数チャンネルの true peak を過小に測る不具合があります。
+8.0 系列では 8.0.1 から修正が含まれています。
+[FFmpeg の修正コミット](https://github.com/FFmpeg/FFmpeg/commit/5630394ebf2956a3f8e1eac00912467a582ac94d)
 検出のために再インストール、ダウンロード、Smart App Controlの変更は行いません。
 Pythonは `AIVS_PYTHON` で選択できます。ZBookの別配布v2.x ZIPはこの実装とは別です。
 
@@ -265,6 +271,7 @@ Undo/Redo・音量編集・再起動、完成動画の実再生とBGM成分も�
 再起動後に再送なしで取り込みます。その後、同期位置の確認、数値的な下書きの生成・明示適用、
 日本語字幕、MP4再生・保存・全編デコード、元音声成分、再起動後の読戻しを検査します。
 この試験はPATHからPythonも一時的に外すため、実行前に `AIVS_PYTHON` の絶対パス指定が必要です。
+成果物は Chrome で終端まで再生し、FFmpeg で映像・音声を全編デコードします。
 分割転送、無人バッチ、実技の意味理解、実機Windowsや遠隔スマホの成功は証明しません。
 
 既存 `manual-smoke.yml` の手動実行に、独立した `synthetic-browser-acceptance` ジョブを
@@ -286,6 +293,8 @@ SHA256、実ブラウザの版、再生・全編デコード結果を記録し�
 [main実行40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)でも、
 両ブラウザ経路と通常CI（Node167件・Python60件、失敗・skip0）が成功しました。
 新しい保存済みカット確認機能のブラウザ結果とは区別しています。
-Windows/macOS/iPhone/Androidの実機、初心者評価、実11GB素材、プレビューと書き出しの
-一致、製品全体の完成は未確認です。詳細は
+Windows/iPhone/Androidの実機、初心者評価、実11GB素材、プレビューと書き出しの
+一致、製品全体の受入は未確認です。macOS の短い合成素材は別の
+[MacBook 検証記録](../../docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md) で確認できます。
+Ubuntu の結果の詳細は
 `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md` を参照してください。

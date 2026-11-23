@@ -1,5 +1,33 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
-Updated: 2026-11-15 JST
+Updated: 2026-11-23 JST
+Status: IN_PROGRESS. Local Gate A on a physical MacBook is TESTED_SYNTHETIC.
+Tracking Issue #37, documentation Draft #36, and implementation
+[Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51) on `fix/zbook-media-preflight-20261115`.
+Current main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`.
+Tested Mac source `de9d303f13500cd4be390748ea8fd57020c236e6` follows inherited
+branch head `7aff6b3bd0043c6873ee4c6328da61d45c3112ad`.
+
+At resume, retain the 2026-11-15 media-tool, JSON and pending-import implementation.
+The Mac fix resolves the workspace path at startup so aliases use the same
+lock, write location and output verification. Chrome ran the normal editor,
+relink and two-upload recovery flows. The 423,828-byte 960×540 H.264/AAC recovery
+output played to the end before and after restart, decoded fully, and had SHA-256
+`7d695213dd8e99dc333011b4f1ad8cefde445fb8e6abe90136672b4b3364da76` on readback.
+FFmpeg/ffprobe 8.0 discovery and probe error boundaries were exercised on the Mac.
+Regression used 8.0.3 for corrected multichannel true-peak measurement.
+Evidence: [MacBook validation](../validation/MACOS_MEDIA_GATE_A_2026-11-23.md).
+The same source passed all three hosted manual-smoke jobs.
+[Hosted CI](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481)
+
+**Next Gate A task on ZBook:** obtain the exact v2.x ZIP specified in the handoff
+and redacted exception location. In the actual Windows launch environments verify
+FFmpeg and ffprobe 9.0.2 discovery and JSON behavior. Use a consented external
+storage folder, verify retained input hashes, then repeat no-resend import through
+output, full decode, playback and independent restart readback. Record the Windows
+result separately from Mac/hosted tests. Product DoD and Gates B–E remain open.
+
+## Prior Issue #37 checkpoint — 2026-11-15 JST
+
 Status: IN_PROGRESS. Issue #37 bounded main-equivalent fix is TESTED_SYNTHETIC.
 Product DoD NOT MET. Exact ZIP, physical Windows/ZBook and remote device gates remain blocked/unverified.
 mainSHA observed at resume/final base check: `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`.

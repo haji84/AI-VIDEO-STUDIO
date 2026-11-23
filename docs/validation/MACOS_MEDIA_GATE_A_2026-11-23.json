@@ -1,0 +1,318 @@
+{
+  "schema": "aivs-macos-synthetic-gate-a-v1",
+  "dateJST": "2026-11-23",
+  "status": "TESTED_SYNTHETIC",
+  "mainAtResume": "e1bf222dfe0043e307e3fc3c122e2fe52423dac8",
+  "resumedBranchHead": "7aff6b3bd0043c6873ee4c6328da61d45c3112ad",
+  "testedCodeCommit": "de9d303f13500cd4be390748ea8fd57020c236e6",
+  "runtime": {
+    "host": "Physical MacBook Pro (Apple M1 Pro)",
+    "macOS": "26.6.2",
+    "macOSBuild": "25G83",
+    "arch": "arm64",
+    "node": "24.21.0",
+    "python": "3.14.7",
+    "chrome": "157.0.8103.79",
+    "playwright": "1.64.1",
+    "pillow": "13.0.0",
+    "fonttools": "4.61.1",
+    "numpy": "2.3.5",
+    "captionFont": "Hiragino Sans W4",
+    "ffmpeg": "n8.0.3",
+    "ffprobe": "n8.0.3",
+    "ffmpegSourceCommit": "8ae0b34901ba60a802f183ee75a250a9fc3e09a5"
+  },
+  "mediaDetection": {
+    "homebrewPath": "FFMPEG_AND_FFPROBE_8_0",
+    "restrictedPath": "FFMPEG_TOOLCHAIN_UNAVAILABLE",
+    "configuredPairWithRestrictedPath": "SAME_PAIR",
+    "incompleteExplicitConfiguration": "FFMPEG_TOOLCHAIN_INCOMPLETE",
+    "httpImportWithEmptyPathAndConfiguredPair": "PASS",
+    "emptyAndNoneProbeOutput": "FFPROBE_JSON_EMPTY",
+    "malformedProbeProcessOutput": "FFPROBE_JSON_INVALID",
+    "nullOrMalformedProbeShape": "FFPROBE_JSON_SCHEMA",
+    "validFFprobeJSON": "PASS_ACTUAL_MAC_PROCESS"
+  },
+  "aliasRegression": {
+    "before": "OUTPUT_PATH_UNSAFE",
+    "after": "VERIFIED_MP4_AND_REPORT_REOPEN",
+    "canonicalAndAliasShareWorkspaceLock": true,
+    "aliasIntoSourceCheckoutRejected": true
+  },
+  "checkedSourceSha256": {
+    "apps/local-editor/browser-import-recovery-acceptance.mjs": "5e855bc33a239c5171e3e492fe61e8fddab39f51a1c4e7f9c84bf638bdf86c65",
+    "apps/local-editor/media-preflight.test.mjs": "7eb895f5c054ee2bdee23c08f3eb1c435fbd632d7e076912001a740eec471481",
+    "apps/local-editor/output-history-latest.test.mjs": "4b5a0b070e4cf5db9b0d897ed5efc8200faa1a657074ca4d057145c003c6362b",
+    "apps/local-editor/output-history-server.test.mjs": "5323448f659933633a5ce725121c8d4207c5dc0c43e32ba00663f0f2cfa9f3ec",
+    "apps/local-editor/output-history.test.mjs": "1733f016ba6e5c4611a0fd98648fec02fbd5e1a582a68a9d613113eaa40484cc",
+    "apps/local-editor/preview.test.mjs": "0d5e5451878b93a9f5d6eb2742c41466bc71b63d7021052f418a653898dd07d1",
+    "apps/local-editor/server.mjs": "9286e6fde6f41f9cbd2b1b742c2e5ee94aa2f71af0a52a72e25c13473f7af3de",
+    "apps/local-editor/server.test.mjs": "fb025a9d55f179a25e8e186f0f33a332b60a79b0f1fb3d7c9846c22cea6384ff",
+    "cloud/tests/media-pipeline.test.mjs": "5cb87cb024bdab0ec39c3b79c6c705fb079a679ea95075b42122e2f0b09b5e06",
+    "engine/test_media_tools.py": "725f3b659ec0dae09b3f8822e351322e900e4ab02bc10c84b3c17d2fe2246bd9",
+    "packages/project/local-store.test.mjs": "d0a4b08891d0f6a9f6a0130ecaa18069f7bcc77bad01e517fc03d3aff066b9b6"
+  },
+  "checks": {
+    "node": {
+      "passed": 187,
+      "failed": 0,
+      "cancelled": 0,
+      "skippedLinuxWorkers": 10
+    },
+    "python": {
+      "passed": 66,
+      "failed": 0,
+      "errors": 0,
+      "skippedDejaVuTestClasses": 1
+    },
+    "pythonAudio": {
+      "passed": 3,
+      "failed": 0
+    },
+    "macSavedCutWorker": "PREVIEW_PLATFORM_UNVERIFIED",
+    "codeReview": "INDEPENDENT_REGRESSION_REPLAY_NO_ACTIONABLE_FINDINGS"
+  },
+  "lastMainCI": {
+    "runId": 40811805222,
+    "conclusion": "SUCCESS"
+  },
+  "browser": [
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "existing-editor",
+      "runtime": {
+        "node": "v24.21.0",
+        "playwright": "1.64.1",
+        "browser": "157.0.8103.79"
+      },
+      "inputs": {
+        "videoSha256": "9a15ebca712b797a2c35d44a3c65f23a0cf70e2bd23dd84da8ed70d6909192d4",
+        "clearVideoSha256": "9620c7a60a5d51a7e55403fa043d588e726be30b31ec1fa5301129a1652a1139",
+        "bgmSha256": "df52a6b6b998f01f5d30cb53408529651efbd4e1fa672cc11a7bcb548ade0adb"
+      },
+      "savedProjectSha256": "ee7d0524f07f4d45ce6f769ff20f311b25cf944151dd5466db7b6184dbaa3ead",
+      "qaSha256": "765dc10649e780feace486251079f7f3a3637ebc21c3c1333146a5cbfe854f8f",
+      "outputSha256": "faf4074c4c46f1b063d23cbb186fb6330fe67b2ad6f48be214007047516cd31f",
+      "playback": {
+        "advanced": true,
+        "width": 960
+      },
+      "wholeFileDecode": "PASS",
+      "bytes": 113202
+    },
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "two-workspace-source-relink",
+      "runtime": {
+        "node": "v24.21.0",
+        "playwright": "1.64.1",
+        "browser": "157.0.8103.79"
+      },
+      "inputs": {
+        "videoSha256": "ee01f143433cd03a7a10ccb355b2da73b67311b610c1f4fe10c05cef381602bf",
+        "historicalBgmSha256": "ae752f3ce5a5203ad0ab6925437021aa982af3c344e823a9af876bb2a4f7271c",
+        "wrongSameNameBgmSha256": "86037f642b2b05fb8c31cee600e9c4043621051297647a8218ac45ee0b8d5320"
+      },
+      "savedProjectSha256": "433ffffb43d8615e962a59de179f29ae811930710214d0cf6a4cea1099208402",
+      "previousWorkspaceSha256": "d452518271d84531abd0b8c4faa3adaa353fbea45f75eb413fac295de42216b8",
+      "recoveredProjectSha256": "45a5b3b51f46a9d1149a73e2e3fd949686fa08b7f880f3fe81cf967641fa45dc",
+      "qaSha256": "8a301e9570f632297f15af442dda2fe0ed3936c2fa3f8600774d413a100b3aef",
+      "outputSha256": "d7e76ec023be7cc0fc53ce48bf1651560e0233338ccaaa4ada73ef7a4e193049",
+      "bytes": 41927,
+      "sourceIds": 3,
+      "physicalFiles": 2,
+      "sameMp4RecoveredBothRoles": true,
+      "partialFailurePreservesSession": true,
+      "restartRequiresExplicitOpen": true,
+      "savedHistoryRecovered": true,
+      "manualGainSurvivesRestart": true,
+      "historicalBgmAmplitude": 0.08791489318757864,
+      "playback": {
+        "advanced": true,
+        "width": 960
+      },
+      "wholeFileDecode": "PASS",
+      "originalsAndFirstWorkspaceUnchanged": true
+    },
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "import-recovery-first-cut",
+      "runtime": {
+        "node": "v24.21.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "browser": "157.0.8103.79",
+        "ffmpeg": "ffmpeg version n8.0.3 Copyright (c) 2000-2026 the FFmpeg developers",
+        "ffprobe": "ffprobe version n8.0.3 Copyright (c) 2007-2026 the FFmpeg developers"
+      },
+      "inputsSha256": [
+        "036c545fa189c41186a6f90cf991df022935e114c809b2ae7841546e9fa440cd",
+        "0e30883bb3484b9b3fccc105b53cdcc385deeae7c1dad53523273b67817b1718"
+      ],
+      "uploadRequests": 2,
+      "retryRequests": 2,
+      "mediaResentOnRetry": false,
+      "savedProjectSha256": "82f43732e3b0e41a7ff577dd4432c3d51a79e17e7853ecd0645bb458132e4e04",
+      "outputSha256": "7d695213dd8e99dc333011b4f1ad8cefde445fb8e6abe90136672b4b3364da76",
+      "qaSha256": "5791f77a0afa72a922243ca6e5ee0949ef687f30210d945e1479c414c4270b27",
+      "bytes": 423828,
+      "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+      "originalAudio440": 0.1242773176077732,
+      "otherCamera660": 8.251525833302578e-07,
+      "media": {
+        "videoCodec": "h264",
+        "audioCodec": "aac",
+        "durationSec": 4.02002,
+        "videoFrames": 96
+      },
+      "playback": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.02002
+      },
+      "replayAfterRestart": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.02002
+      },
+      "caption": {
+        "glyphCoverage": "CMAP_VERIFIED",
+        "glyphCodepointsChecked": 9
+      },
+      "restartReadback": "SHA256_MATCH",
+      "wholeFileDecode": "PASS",
+      "physicalZBook": "NOT_RUN",
+      "zipSource": "UNAVAILABLE",
+      "chunkedUpload": "NOT_IMPLEMENTED",
+      "remotePhone": "NOT_RUN"
+    }
+  ],
+  "homebrew80RecoveryBrowser": {
+    "status": "PASS_SYNTHETIC_BROWSER",
+    "scope": "import-recovery-first-cut",
+    "runtime": {
+      "node": "v24.21.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "browser": "157.0.8103.79",
+      "ffmpeg": "ffmpeg version 8.0 Copyright (c) 2000-2025 the FFmpeg developers",
+      "ffprobe": "ffprobe version 8.0 Copyright (c) 2007-2025 the FFmpeg developers"
+    },
+    "inputsSha256": [
+      "e33886c26f17dfe24957f5fa1a7c019bbfb785edae77434f2773608215031c7c",
+      "b93919abf4dcea9e8d9a0146c0edd6540eabb4518dbb625d919b16e617c0de38"
+    ],
+    "uploadRequests": 2,
+    "retryRequests": 2,
+    "mediaResentOnRetry": false,
+    "savedProjectSha256": "b408194ff1a4493d5c372ff3d7053d4bab1e45a1d949cce5ff6b5ffb160e3661",
+    "outputSha256": "4aebb9f159a06644fd536ba1b119134af5e1f2a3165f593ab4ca9683932aea69",
+    "qaSha256": "ed5b066e2e09917fa75c9daba51f65b7c7af5f9c48d35cc7789a4eadd42c2037",
+    "bytes": 423828,
+    "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+    "originalAudio440": 0.1242773176077732,
+    "otherCamera660": 8.251525833302578e-07,
+    "media": {
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "durationSec": 4.02002,
+      "videoFrames": 96
+    },
+    "playback": {
+      "advanced": true,
+      "ended": true,
+      "width": 960,
+      "height": 540,
+      "durationSec": 4.02002
+    },
+    "replayAfterRestart": {
+      "advanced": true,
+      "ended": true,
+      "width": 960,
+      "height": 540,
+      "durationSec": 4.02002
+    },
+    "caption": {
+      "glyphCoverage": "CMAP_VERIFIED",
+      "glyphCodepointsChecked": 9
+    },
+    "restartReadback": "SHA256_MATCH",
+    "wholeFileDecode": "PASS",
+    "physicalZBook": "NOT_RUN",
+    "zipSource": "UNAVAILABLE",
+    "chunkedUpload": "NOT_IMPLEMENTED",
+    "remotePhone": "NOT_RUN"
+  },
+  "homebrew80TruePeakLimitation": {
+    "stereoDbTP": -20.0,
+    "rightChannelInIsolationDbTP": 1.6,
+    "patched803StereoDbTP": 1.6,
+    "fixIn80ReleaseBranch": "5630394ebf2956a3f8e1eac00912467a582ac94d",
+    "nativeRegressionFailuresBeforeToolchainSelection": {
+      "node": 1,
+      "python": 2
+    }
+  },
+  "remaining": [
+    "ORIGINAL_V2_ZIP_AND_REDACTED_WINDOWS_EXCEPTION_LOCATION",
+    "PHYSICAL_ZBOOK_LAUNCH_MODES_FFMPEG_9_0_2_AND_APPROVED_EXTERNAL_STORAGE",
+    "CHUNKED_RESUMABLE_UPLOAD_AND_UNATTENDED_BATCH",
+    "PRIVATE_TAILSCALE_OFF_NETWORK_IPHONE_AND_ANDROID",
+    "DIRECT_GOOGLE_PHOTOS_IMPORT",
+    "JAPANESE_ASR_TTS_AND_SEMANTIC_TRAINING_EDIT",
+    "AUTHORIZED_REAL_MEDIA_AT_ONE_HOUR_AND_TENS_OF_GB",
+    "FOUR_DEVICE_PRODUCT_ACCEPTANCE"
+  ],
+  "implementationPR": "https://github.com/haji84/AI-VIDEO-STUDIO/pull/51",
+  "hostedCI": {
+    "runId": 45177252481,
+    "url": "https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481",
+    "attempt": 1,
+    "commit": "de9d303f13500cd4be390748ea8fd57020c236e6",
+    "conclusion": "SUCCESS",
+    "jobs": [
+      {
+        "name": "offline-prototype-smoke",
+        "url": "https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481/job/137701618085",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "synthetic-browser-acceptance",
+        "url": "https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481/job/137701618500",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "windows-tool-discovery-fixtures",
+        "url": "https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481/job/137701618623",
+        "conclusion": "SUCCESS"
+      }
+    ],
+    "linuxBrowser": [
+      {
+        "scope": "existing-editor",
+        "outputSha256": "ef867951a413ebca67a511c21f05cc048bd810a3516a7ac6fa1bcd0a95df572c",
+        "wholeFileDecode": "PASS"
+      },
+      {
+        "scope": "two-workspace-source-relink",
+        "outputSha256": "3884487a5752a6a3c0c77a083767efb4257cf2eef1ece2baf2019e84424f4288",
+        "wholeFileDecode": "PASS"
+      },
+      {
+        "scope": "saved-cut-preview",
+        "outputSha256": "13d9cafeeffa724a0834441323c656ac499174c9edc40499f5e1a2655e6bde93",
+        "wholeFileDecode": "PASS"
+      },
+      {
+        "scope": "import-recovery-first-cut",
+        "outputSha256": "fe8a0e5e915c98639d28f320899c5b871506802c009b18da7e44bfb16618fd85",
+        "wholeFileDecode": "PASS"
+      }
+    ],
+    "windowsToolDiscoveryFixturesPassed": 4
+  }
+}
