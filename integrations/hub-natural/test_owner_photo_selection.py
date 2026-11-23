@@ -79,11 +79,17 @@ class OwnerPhotoSelectionTests(unittest.TestCase):
         self.assertFalse(self.receipt.exists())
 
     def test_identical_content_selected_extension_is_frozen(self):
-        # Same bytes, different selected video suffixes are distinct consent.
-        self.choose([self.a])
+        # A duplicate MOV exchanged for a duplicate MP4 must alter the pin,
+        # even when the first selected file and unique-content count are fixed.
         pin = preview(self.selection)["selectionSHA256"]
-        self.choose([self.b])
-        self.assertNotEqual(preview(self.selection)["selectionSHA256"], pin)
+        replacement = self.root / "selected_c.mp4"
+        replacement.write_bytes(self.a.read_bytes())
+        replacement.chmod(0o600)
+        self.choose([self.a, replacement])
+        altered = preview(self.selection)
+        self.assertEqual(altered["selectedCount"], 2)
+        self.assertEqual(altered["uniqueContentCount"], 1)
+        self.assertNotEqual(altered["selectionSHA256"], pin)
         with self.assertRaisesRegex(Hold, "PHOTO_SELECTION_CHANGED_CONFIRM_AGAIN"):
             confirm(self.selection, self.receipt, pin)
         self.assertFalse(self.receipt.exists())
