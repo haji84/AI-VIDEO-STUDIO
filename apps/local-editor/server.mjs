@@ -297,7 +297,14 @@ export async function startServer({workspace,port=8765,previewOptions={}}={}){
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
-  const args=process.argv.slice(2),options={};for(let i=0;i<args.length;i+=2){if(args[i]==='--workspace')options.workspace=args[i+1];else if(args[i]==='--port')options.port=Number(args[i+1]);else throw new Error('Use --workspace <local folder> [--port 8765]');}
+  const args=process.argv.slice(2),options={};
+  let openBrowser=false;
+  for(let i=0;i<args.length;i++){
+    if(args[i]==='--workspace')options.workspace=args[++i];
+    else if(args[i]==='--port')options.port=Number(args[++i]);
+    else if(args[i]==='--open-browser'&&process.platform==='darwin')openBrowser=true;
+    else throw new Error('Use --workspace <local folder> [--port 8765] [--open-browser on macOS]');
+  }
   const app=await startServer(options);console.log(app.url);
   let shuttingDown=false;
   const shutdown=()=>{
@@ -309,4 +316,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).hr
     });
   };
   process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);
+  if(openBrowser)execFile('/usr/bin/open',[app.url],error=>{
+    if(error)console.error('ブラウザを開けませんでした。表示されたアドレスをブラウザで開いてください。');
+  });
 }

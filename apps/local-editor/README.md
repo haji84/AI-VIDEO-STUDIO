@@ -4,11 +4,37 @@
 GitHubのUbuntu環境と実Chromeで、編集・書き出しと別保存先への素材再リンクの
 合成素材による画面試験が成功しました。PR24はmainへ統合済みで、
 [mainの実行40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)でも両経路と通常CIが成功しました。
-iPhone/Android/Windows/Macの実機成功とは扱っていません。
+Apple Silicon MacBook では、以下の起動方法から利用できることも確認しました。
 
 ## 起動
 
-リポジトリを取得したPCで、Node、Python 3.11以上、FFmpeg/ffprobeが使える状態にします。
+### MacBook
+
+Finder でリポジトリ直下の `start-mac.command` をダブルクリックします。
+編集画面が開き、同じ Mac の `~/AI_VIDEO_STUDIO_DATA` に素材のコピー、編集、完成動画を保存します。
+終了するときは起動に使ったターミナルで Control+C を押します。次に開くと保存した編集を再開できます。
+すでに起動している場合は [編集画面](http://127.0.0.1:8765/) を開きます。
+
+ランチャーは標準の Homebrew のインストール先も探し、`.venv/bin/python` があれば使用します。
+字幕の依存を用意する場合は、リポジトリ直下で一度だけ次を実行します。
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-media.txt
+```
+
+`~/Library/Application Support/AI VIDEO STUDIO/ffmpeg/bin` にアプリ専用の組がある場合は、
+その FFmpeg と ffprobe を使います。それ以外は通常のツール検出を使います。
+環境変数 `AIVS_PYTHON` と `AIVS_FFMPEG_DIR` で使用先を指定できます。
+別の編集を始める場合は、新しい専用フォルダで起動できます。
+
+```sh
+./start-mac.command --workspace "$HOME/AI_VIDEO_STUDIO_TEST" --port 8766
+```
+
+### 共通の設定とコマンド
+
+リポジトリを取得した PC で、Node.js、Python 3.11 以上、FFmpeg／ffprobe が使える状態にします。
 実測した環境は Linux / Node24.22.1 / Python3.12.14 / FFmpeg6.1.1です。
 MacBook Pro（Apple Silicon）では macOS 26.6.2 / Node24.21.0 / Python3.14.7 /
 FFmpeg 8.0.3 で合成素材の取り込み、下書き編集、MP4 の書き出しと再生を確認しました。
