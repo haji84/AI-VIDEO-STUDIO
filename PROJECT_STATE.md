@@ -10,9 +10,11 @@ Subscription / billing: deferred.
 ## Google Photos on MacBook (2026-11-24 JST)
 
 **TESTED_SYNTHETIC in the Mac editor.** Google Photos download guidance and
-local video selection are available in the everyday workspace. The optional
-Desktop OAuth and Photos Picker flow imports selected videos into the existing
-local editor. Chrome passed from a simulated Google selection through edited
+local video selection are available in the everyday workspace. The local file
+route starts a first-cut candidate after an eligible import. With Desktop OAuth
+configured, the optional Photos Picker flow waits for the user's selection to
+finish, imports the chosen videos and starts a first-cut candidate in the Mac
+app. Chrome verified this flow with a simulated provider through reviewed edit,
 MP4 output, full decode and playback after restart. The live Google connection
 requires the owner's Desktop OAuth settings and account consent.
 [MacBook evidence and setup](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)

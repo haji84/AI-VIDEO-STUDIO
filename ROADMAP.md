@@ -16,6 +16,7 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [ ] On the physical ZBook, verify WinGet FFmpeg/ffprobe 9.0.2 under the actual launch methods and exercise an approved external storage target.
 - [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.
 - [x] MacBook Google Photos panel accepts downloaded videos. Optional Photos Picker passes simulated Google selection through actual local editing, MP4 export and replay. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
+- [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)
 - [ ] Confirm live Google Photos selection and download after the owner configures the Desktop OAuth client and consents to read selected media.
 
 Product and remote acceptance remain open. See the

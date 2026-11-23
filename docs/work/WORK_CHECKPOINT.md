@@ -11,6 +11,13 @@ For live direct import, configure the Photos Picker API and the app's Desktop
 OAuth JSON, then verify owner-selected video with the owner's consent.
 [Google Photos verification](../validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
 
+**Automatic first-cut follow-up.** Implementation
+`600d50b1b409f1513b363240b398acdc853f6d46` waits for the user's Picker selection,
+imports under the existing workspace lock and starts a first-cut candidate on
+the running Mac app. The downloaded-file route also starts a draft if it adds
+an eligible video. Actual Chrome with simulated Google responses and the full
+Mac Node suite passed. The everyday editor is running with the updated panel.
+
 **MacBook everyday launch, 2026-11-24 JST.** Tested implementation
 `80a38688062f5883548ce2699ed7020fdbbc98d4` in Draft #51. Finder's
 `start-mac.command` opens the local editor. The everyday project uses
