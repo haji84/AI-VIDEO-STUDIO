@@ -7,6 +7,16 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Issue #37 — MacBook everyday launch (2026-11-24 JST)
+
+**TESTED_SYNTHETIC on the physical MacBook.** `start-mac.command` opens the
+local editor from Finder. The app uses the previously verified app-local
+FFmpeg/ffprobe 8.0.3 pair and local Python environment on this Mac. Chrome ran
+a normal one-video import, reviewed first cut, Japanese-captioned MP4 export,
+full playback and restart readback. The two-upload recovery suite also passed.
+The empty everyday workspace is separate from the synthetic tests.
+[MacBook launch and evidence](docs/validation/MACOS_LOCAL_EDITOR_2026-11-24.md)
+
 ## Issue #37 — Windows runner verification (2026-11-24 JST)
 
 **TESTED_SYNTHETIC on Windows Server 2025. Physical ZBook is BLOCKED.**

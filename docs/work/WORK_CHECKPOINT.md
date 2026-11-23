@@ -1,6 +1,17 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
 Updated: 2026-11-24 JST
 Status: IN_PROGRESS. Windows runner and physical MacBook with generated media are TESTED_SYNTHETIC.
+
+**MacBook everyday launch, 2026-11-24 JST.** Tested implementation
+`80a38688062f5883548ce2699ed7020fdbbc98d4` in Draft #51. Finder's
+`start-mac.command` opens the local editor. The everyday project uses
+`~/AI_VIDEO_STUDIO_DATA`. The app-local FFmpeg/ffprobe 8.0.3 pair and the
+repository `.venv` work from a system-only launch PATH. A normal synthetic
+one-input edit, Japanese-captioned MP4, full playback, restart hash readback,
+and the separate two-input recovery flow passed. [MacBook launch evidence](../validation/MACOS_LOCAL_EDITOR_2026-11-24.md)
+
+## Windows runner checkpoint — 2026-11-24 JST
+
 Tracking [Issue #37](https://github.com/haji84/AI-VIDEO-STUDIO/issues/37) and
 [Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51). Main remains
 `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`.

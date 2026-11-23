@@ -1,0 +1,136 @@
+{
+  "schema": "aivs-macos-local-editor-launch-v1",
+  "dateJST": "2026-11-24",
+  "status": "TESTED_SYNTHETIC",
+  "hardware": "Physical Apple Silicon MacBook Pro",
+  "macOS": "26.6.2",
+  "python": "3.14.7",
+  "baseCommit": "c01a1db1fa9abbe20ea3583045e571ae28278fdc",
+  "testedCodeCommit": "80a38688062f5883548ce2699ed7020fdbbc98d4",
+  "implementationPR": "https://github.com/haji84/AI-VIDEO-STUDIO/pull/51",
+  "sourceSha256": {
+    "start-mac.command": "c434ee566d9b9f6c480cc7cff438c2227ff771c0ae51e9d45bda597299176900",
+    "apps/local-editor/server.mjs": "50f58921669a8845134af1dcfa1ba1f2dbb647fb8cc93631670a51e1f0ec2c79"
+  },
+  "appLocalToolSha256": {
+    "ffmpeg": "46afc053d8f77ada1d044159cab03070fe46ccfcba2e898506253cd6f7a50e65",
+    "ffprobe": "0a1a881a8f9e8341bf99eb1a355f0d0c87c57ebca32767361d7bc40247b73b4d"
+  },
+  "everydayWorkspace": {
+    "url": "http://127.0.0.1:8765/",
+    "dataFolder": "~/AI_VIDEO_STUDIO_DATA",
+    "initialProject": "EMPTY_UI_VERIFIED"
+  },
+  "ordinaryEditing": {
+    "status": "TESTED_SYNTHETIC",
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "chrome": "157.0.8103.79",
+    "ffmpeg": "ffmpeg version n8.0.3 Copyright (c) 2000-2026 the FFmpeg developers",
+    "ffprobe": "ffprobe version n8.0.3 Copyright (c) 2007-2026 the FFmpeg developers",
+    "launcher": {
+      "relativePath": "start-mac.command",
+      "inheritedPath": "MACOS_SYSTEM_ONLY",
+      "cwdOutsideRepo": true,
+      "japaneseWorkspace": true,
+      "listenInterface": "127.0.0.1",
+      "gracefulStops": 2
+    },
+    "sourceBefore": "59e24233453842d5ada93488d3b7cc60c2fa10b319e77ab8bb9d78ef032745ef",
+    "originalsUnchanged": true,
+    "savedProjectSha256": "a26f09db2f3ff3c74e5f362f520a0259c2d0afeca2e9244ae367b87b4f2e282c",
+    "outputSha256": "56e2455582cdbe49cd6de18259b6a04692cfea6353edc63afd33b3ba8f74da9e",
+    "qaSha256": "4abc8d36c99ff0c21988c5169d6002a24232b3ddb1d3fe833f2c71d9e47aef33",
+    "media": {
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "videoFrames": 96,
+      "durationSec": 4.02002,
+      "bytes": 471564
+    },
+    "playback": {
+      "ended": true,
+      "durationSec": 4.02002,
+      "width": 960,
+      "height": 540
+    },
+    "replay": {
+      "ended": true,
+      "durationSec": 4.02002,
+      "width": 960,
+      "height": 540
+    },
+    "firstCut": "EXPLICITLY_REVIEWED_AND_APPLIED",
+    "caption": {
+      "fontName": "ヒラギノ角ゴシック W3.ttc",
+      "glyphCoverage": "CMAP_VERIFIED",
+      "glyphCount": 12
+    },
+    "restartReadback": "SHA256_MATCH",
+    "wholeFileDecode": "PASS"
+  },
+  "retainedUploadRecovery": {
+    "status": "PASS_SYNTHETIC_BROWSER",
+    "scope": "import-recovery-first-cut",
+    "runtime": {
+      "node": "v24.21.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "browser": "157.0.8103.79",
+      "ffmpeg": "ffmpeg version n8.0.3 Copyright (c) 2000-2026 the FFmpeg developers",
+      "ffprobe": "ffprobe version n8.0.3 Copyright (c) 2007-2026 the FFmpeg developers"
+    },
+    "inputsSha256": [
+      "036c545fa189c41186a6f90cf991df022935e114c809b2ae7841546e9fa440cd",
+      "0e30883bb3484b9b3fccc105b53cdcc385deeae7c1dad53523273b67817b1718"
+    ],
+    "uploadRequests": 2,
+    "retryRequests": 2,
+    "mediaResentOnRetry": false,
+    "savedProjectSha256": "2d08fa064ccb2ed7deb14cbb60e94d2da00fd081111c910210198da4a19b70db",
+    "outputSha256": "1dd32ee11973aa72741a67b8c97d5dfd204023dc219b42068029102e8a1e7796",
+    "qaSha256": "bd448fedf5db0e61a5956f2ab62fd280286c0e599c041611497e85d6cc332bee",
+    "bytes": 423928,
+    "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+    "originalAudio440": 0.1242773176077732,
+    "otherCamera660": 8.251525833302578e-07,
+    "media": {
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "durationSec": 4.02002,
+      "videoFrames": 96
+    },
+    "playback": {
+      "advanced": true,
+      "ended": true,
+      "width": 960,
+      "height": 540,
+      "durationSec": 4.02002
+    },
+    "replayAfterRestart": {
+      "advanced": true,
+      "ended": true,
+      "width": 960,
+      "height": 540,
+      "durationSec": 4.02002
+    },
+    "caption": {
+      "glyphCoverage": "CMAP_VERIFIED",
+      "glyphCodepointsChecked": 9
+    },
+    "restartReadback": "SHA256_MATCH",
+    "wholeFileDecode": "PASS",
+    "physicalZBook": "NOT_RUN",
+    "zipSource": "UNAVAILABLE",
+    "chunkedUpload": "NOT_IMPLEMENTED",
+    "remotePhone": "NOT_RUN"
+  },
+  "localRegression": {
+    "nodePassed": 187,
+    "nodeSkippedLinuxWorkers": 10,
+    "pythonPassed": 69,
+    "pythonAudioPassed": 3,
+    "pythonSkippedDejaVuClass": 1
+  }
+}
