@@ -105,8 +105,8 @@ exFATなどハードリンクのない保存先では、上書き禁止のコピ
 ## Google フォトから動画を追加
 
 「Google フォトから追加」を開きます。Google フォトのメニューからダウンロードした
-MP4/MOV は「ダウンロードした動画を追加」で選べます。ZIP で届いた場合は Finder で
-展開して動画ファイルを選びます。[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
+MP4/MOV は「ダウンロードした動画を追加して下書きを作る」で選べます。取り込み後、対応した素材から下書きを作ります。
+ZIP で届いた場合は Finder で展開して動画ファイルを選びます。[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
 
 Mac で直接取り込むには、AI VIDEO STUDIO 用の Google Cloud プロジェクトで **Google Photos Picker API** を
 有効にし、種類が **デスクトップ アプリ** の OAuth クライアントを用意します。テスト公開中は、利用する
@@ -117,9 +117,14 @@ Google アカウントをテストユーザーに登録します。ダウンロ�
 [デスクトップアプリの OAuth](https://developers.google.com/identity/protocols/oauth2/native-app) ·
 [OAuth のテスト公開](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
 
-1. 「Google に接続して動画を選ぶ」を押し、Mac の標準ブラウザで Google の許可と素材の選択を済ませます。
-2. Google フォトで「完了」を押し、編集画面の「選択した動画を取り込む」を押します。
-3. 動画が入ったら、「下書き候補を作る」や「完成動画を作る」を使います。検査待ちの動画は同じ画面から再試行できます。
+1. 「Google フォトで選んで下書きを作る」を押し、Mac の標準ブラウザで Google の許可と素材の選択を済ませます。
+2. Google フォトで「完了」を押すと、起動中のローカル編集アプリが取り込みと下書き作成を始めます。
+3. 「自動編集の下書き候補」で内容を確認・適用し、「完成動画を作る」で出力します。検査待ちの動画は同じ画面から再試行できます。
+
+自動で受け取る対象は、Google の画面で選択を完了した動画です。編集アプリを起動している間に選択を待ち、
+取り込み途中は画面でキャンセルできます。下書きの解析には同期基準や確認済みのカメラが使われます。
+すでに素材があるプロジェクトに追加したカメラは、同期位置を確認してから下書きに使えます。
+[Google フォトの選択セッション](https://developers.google.com/photos/picker/guides/sessions)
 
 直接取込では、Google フォトで選んだ項目の種類を確認し、再生できる動画を Mac の通常の素材コピーとして
 保存します。Google が取得用に用意する高品質版を使うため、ファイルが元のアップロードと異なる場合があります。

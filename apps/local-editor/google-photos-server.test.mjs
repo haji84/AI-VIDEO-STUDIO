@@ -5,8 +5,10 @@ import {mkdtemp, readFile, readdir, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
+import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import {startServer} from './server.mjs';
+import {createProject, EditSession} from '../../packages/project/project.mjs';
 
 const exec = promisify(execFile);
 const scope = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
@@ -47,14 +49,18 @@ test('Google Photos setup is optional and sends no requests at startup or on an 
   assert.equal(networkCalls, 0);
 });
 
-test('a picked video becomes an editable local asset through the Google OAuth and Picker contract', async t => {
+async function syntheticVideo(t) {
   const fixtures = await mkdtemp(join(tmpdir(), 'aivs-photos-fixture-'));
   t.after(() => rm(fixtures, {recursive: true, force: true}));
   const videoFile = join(fixtures, 'fixture.mp4');
   await exec('ffmpeg', ['-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=24:d=2',
     '-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=2',
     '-c:v','libx264','-c:a','aac','-shortest',videoFile]);
-  const fixtureBytes = await readFile(videoFile);
+  return readFile(videoFile);
+}
+
+test('a picked video becomes an editable local asset through the Google OAuth and Picker contract', async t => {
+  const fixtureBytes = await syntheticVideo(t);
   let permissionUrl;
   const calls = [];
   const {app, call, workspace} = await startTestEditor(t, {
@@ -139,7 +145,7 @@ function digestForPkce(verifier) {
   return createHash('sha256').update(verifier).digest('base64url');
 }
 
-async function pickerSession(t, {sessionStatus = 200, downloads} = {}) {
+async function pickerSession(t, {sessionStatus = 200, downloads, draftMode, pick = () => ({mediaItemsSet:true}), prepare} = {}) {
   const config = await mkdtemp(join(tmpdir(),'aivs-photos-config-'));
   t.after(() => rm(config, {recursive:true, force:true}));
   const clientFile = join(config,'google-photos-client.json');
@@ -155,7 +161,7 @@ async function pickerSession(t, {sessionStatus = 200, downloads} = {}) {
       }
       if (url.href === 'https://photospicker.googleapis.com/v1/sessions/picker-fixture') {
         if (options.method === 'DELETE') { deleted++; return new Response(null,{status:204}); }
-        return Response.json({mediaItemsSet:true},{status:sessionStatus});
+        return Response.json(pick(),{status:sessionStatus});
       }
       if (url.hostname === 'photospicker.googleapis.com' && url.pathname === '/v1/mediaItems') {
         return Response.json({mediaItems:[selectedVideo('fixture','https://lh3.googleusercontent.com/p/video')]});
@@ -164,7 +170,9 @@ async function pickerSession(t, {sessionStatus = 200, downloads} = {}) {
       assert.fail(`Unexpected destination: ${url.hostname}`);
     },
   });
-  assert.equal((await editor.call('/api/google-photos/start','POST')).status,200);
+  const revision = await prepare?.(editor) ?? 0;
+  const suffix = draftMode ? `?draftMode=${draftMode}` : '';
+  assert.equal((await editor.call('/api/google-photos/start'+suffix,'POST',revision)).status,200);
   const callback = new URL(permissionUrl.searchParams.get('redirect_uri'));
   callback.searchParams.set('code','fixture-authorization-code');
   callback.searchParams.set('state',permissionUrl.searchParams.get('state'));
@@ -214,4 +222,96 @@ test('a non-Google video redirect creates no asset and triggers no further downl
   assert.equal(state.session.project.sourceRefs.length,0);
   assert.deepEqual(await readdir(join(workspace,'assets')),[]);
   assert.equal(deletionCount(),1);
+});
+
+async function waitForEditor(call, predicate) {
+  for (let attempts=0;attempts<80;attempts++) {
+    const state=await (await call('/api/state')).json();
+    if (predicate(state)) return state;
+    await delay(50);
+  }
+  assert.fail('The editor did not reach the requested state');
+}
+
+test('cancelling the automatic selection stops polling and leaves the selected library untouched', {timeout:5000}, async t => {
+  const firstPoll=Promise.withResolvers();
+  let polls=0,downloads=0;
+  const {call,workspace,deletionCount}=await pickerSession(t,{
+    draftMode:'training',
+    pick:()=>{polls++;firstPoll.resolve();return {mediaItemsSet:false,pollingConfig:{pollInterval:'0.5s'}};},
+    downloads:()=>{downloads++;assert.fail('Unexpected download');},
+  });
+  await firstPoll.promise;
+  const response=await call('/api/google-photos/cancel','POST');
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).googlePhotos.phase,'READY');
+  await delay(600);
+  assert.equal(polls,1);
+  assert.equal(downloads,0);
+  assert.equal(deletionCount(),1);
+  assert.deepEqual(await readdir(join(workspace,'assets')),[]);
+});
+
+test('a Picker selection is held to the project open when it was requested', {timeout:8000}, async t => {
+  for(const reopen of [false,true])await t.test(reopen?'reopening the same project':'opening a different project',async child=>{
+    let selected=false,downloads=0;
+    const {app,call,deletionCount}=await pickerSession(child,{
+      draftMode:'training',pick:()=>({mediaItemsSet:selected,pollingConfig:{pollInterval:'0.5s'}}),
+      downloads:()=>{downloads++;assert.fail('Unexpected download');},
+    });
+    const old=(await (await call('/api/state')).json()).session.project;
+    const projectId=reopen?old.projectId:'project_other';
+    const next=new EditSession(createProject({projectId,name:'Opened snapshot'}));
+    const opened=await fetch(app.url+'/api/open',{method:'POST',body:next.serialize(),
+      headers:{'X-AIVS-Token':app.token,'X-AIVS-Revision':'0'}});
+    assert.equal(opened.status,200);
+    selected=true;
+    const state=await waitForEditor(call,value=>value.googlePhotos.phase==='READY'&&deletionCount()===1);
+    assert.equal(state.session.project.projectId,projectId);
+    assert.equal(state.session.project.sourceRefs.length,0);
+    assert.equal(downloads,0);
+  });
+});
+
+test('automatic editing does not create a draft using only the project’s previous camera', {timeout:5000}, async t => {
+  const bytes=await syntheticVideo(t);
+  let previous;
+  const {call}=await pickerSession(t,{
+    draftMode:'training',downloads:()=>new Response(bytes,{headers:{'Content-Type':'video/mp4'}}),
+    prepare:async({app})=>{
+      const response=await fetch(app.url+'/api/import?kind=video',{method:'POST',body:bytes,
+        headers:{'X-AIVS-Token':app.token,'X-AIVS-Revision':'0','X-File-Name':'existing.mp4'}});
+      assert.equal(response.status,200);
+      previous=(await response.json()).session.project;
+      return previous.revision;
+    },
+  });
+  const state=await waitForEditor(call,value=>value.googlePhotos.status==='DONE');
+  assert.equal(state.googleImport.imported,1);
+  assert.equal(state.googleImport.draft,'SYNC_REQUIRED');
+  assert.equal(state.firstCut.status,'NOT_RUN');
+  assert.equal(state.session.project.sourceRefs.length,2);
+  assert.deepEqual(state.session.project.timeline,previous.timeline);
+  assert.deepEqual(state.session.project.audioClips,previous.audioClips);
+});
+
+test('reopening before Google sign-in permits a new selection and rejects the old callback', async t => {
+  const started=[];
+  const {app,call}=await startTestEditor(t,{
+    client:{clientId:'fixture.apps.googleusercontent.com'},openExternal:async url=>started.push(new URL(url)),
+    request:async()=>assert.fail('the replaced flow must not make an OAuth request'),
+  });
+  const state=await (await call('/api/state')).json();
+  assert.equal((await call('/api/google-photos/start?draftMode=training','POST')).status,200);
+  const opened=await fetch(app.url+'/api/open',{method:'POST',body:JSON.stringify(state.session),
+    headers:{'X-AIVS-Token':app.token,'X-AIVS-Revision':'0'}});
+  assert.equal(opened.status,200);
+  const reopened=await opened.json();
+  assert.equal(reopened.googlePhotos.phase,'READY');
+  const callback=new URL(started[0].searchParams.get('redirect_uri'));
+  callback.searchParams.set('state',started[0].searchParams.get('state'));
+  callback.searchParams.set('code','expired-code');
+  assert.equal((await fetch(callback,{redirect:'manual'})).status,400);
+  assert.equal((await call('/api/google-photos/start?draftMode=training','POST',reopened.session.project.revision)).status,200);
+  assert.equal(started.length,2);
 });

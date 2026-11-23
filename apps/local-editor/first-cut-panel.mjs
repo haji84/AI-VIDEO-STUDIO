@@ -3,7 +3,7 @@ const make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)
 const reason=code=>({FIRST_CUT_ZERO_MASTER_REQUIRED:'同期基準のカメラを1本、位置0秒で指定してください。',FIRST_CUT_DRIFT_UNSUPPORTED:'ドリフト補正のある素材は、この候補生成にまだ対応していません。',FIRST_CUT_CAMERA_BUDGET_EXCEEDED:'確認済みカメラは最大8本です。',FIRST_CUT_ANALYSIS_BUDGET_EXCEEDED:'各素材と共通区間は最大20分です。長い素材は手動で編集してください。',FIRST_CUT_PROTECTS_MANUAL_EFFECTS:'テロップ・効果・画面分割があるため置換を保護しています。プロジェクトを保存し、手動編集を続けてください。',FIRST_CUT_WOULD_TRUNCATE_AUDIO:'候補が現在の音声より短いため適用できません。音声を見直してから再解析してください。'}[code]??code);
 export function mountFirstCutPanel({container,current,request,act,refresh,mediaUrl,notice}){
  let mode='training',poll;
- function watch(){if(poll)return;poll=setInterval(async()=>{try{const j=await request('/api/first-cut');if(j.status==='RUNNING')return;clearInterval(poll);poll=undefined;await refresh();if(j.status==='FAIL')notice(j.error);}catch(e){clearInterval(poll);poll=undefined;notice(e.message);}},500);}
+ function watch(){if(poll)return;poll=setInterval(async()=>{try{const j=await request('/api/first-cut');if(j.status==='RUNNING')return;clearInterval(poll);poll=undefined;await refresh(true);if(j.status==='FAIL')notice(j.error);}catch(e){clearInterval(poll);poll=undefined;notice(e.message);}},500);}
  return {show(){
   const state=current(),p=state.session.project,job=state.firstCut??{status:'NOT_RUN'};container.replaceChildren();container.append(make('h2','自動編集の下書き候補'));
   container.append(make('p','素材全体の明暗・動き・音量からカメラを選ぶ下書きです。発話内容・人物の役割・作業の正しさは判断しません。完成版として自動確定しません。'));

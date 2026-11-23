@@ -7,7 +7,9 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {randomUUID,randomBytes,timingSafeEqual} from 'node:crypto';
 import {execFile,spawn} from 'node:child_process';
 import {promisify} from 'node:util';
+import {setTimeout as delay} from 'node:timers/promises';
 import {createProject,EditSession,buildRenderPlan} from '../../packages/project/project.mjs';
+import {firstCutModes} from '../../packages/project/first-cut.mjs';
 import {hashFile,saveSession,loadSession,verifyBindings,readLocalJson} from '../../packages/project/local-store.mjs';
 import {createSyncManager} from './sync-job.mjs';
 import {createFirstCutManager} from './first-cut-job.mjs';
@@ -78,6 +80,8 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
     }
   }
   let session=await exists(projectFile)?await loadSession(projectFile):new EditSession(createProject({projectId:'project_'+randomUUID().replaceAll('-','')}));
+  let projectOpenCount=0;
+  const photosProjectKey=()=>`${projectOpenCount}:${session.current.projectId}`;
   const bindings=()=>session.current.sourceRefs.map(s=>({assetId:s.assetId,path:registry.get(s.assetId)?.path}));
   const checkIdentity=p=>{for(const s of p.sourceRefs){const known=registry.get(s.assetId)?.source;
     if(!known||['assetId','sha256','mediaKind','durationSec','hasAudio'].some(k=>s[k]!==known[k]))fail('素材情報の変更はできません。素材を再リンクしてください');}};
@@ -178,14 +182,68 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
   const syncManager=await createSyncManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
   const firstCutManager=await createFirstCutManager({folder,root:ROOT,getSession:()=>session,getBindings:bindings,atomicJson});
   const previewManager=await createPreviewManager({...previewOptions,folder,root:ROOT,getSession:()=>session,getBindings:bindings});
+  let photosAutomation;
+  function beginMutation(){
+    if(closing||mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy()||previewManager.busy())return;
+    mutation=true;
+    let release;
+    mutationDone=new Promise(done=>{release=done;});
+    return ()=>{mutation=false;release();};
+  }
+  async function receiveGoogleVideo(input){
+    const uploadId=await recordImport({kind:'video',...input});
+    try{await finishImport(uploadId);return 'imported';}catch{return 'pending';}
+  }
+  function startGoogleAutomation(projectKey,mode){
+    const run={projectKey,status:'WAITING'};
+    const isCurrent=()=>!closing&&photosProjectKey()===projectKey;
+    photosAutomation=run;
+    run.done=(async()=>{
+      try{
+        await googlePhotos.importWhenSelected(projectKey,isCurrent,async(importPicked,signal,expiresAt)=>{
+          run.status='WAITING_FOR_EDITOR';
+          let finish;
+          while(!finish){
+            if(signal.aborted||closing)return;
+            if(!isCurrent())fail('編集中のプロジェクトが変わりました。Google フォトから選び直してください。');
+            if(Date.now()>=expiresAt)fail('Google フォトの選択時間が過ぎました。動画を選び直してください。');
+            finish=beginMutation();
+            if(!finish)await delay(500,undefined,{signal});
+          }
+          try{
+            run.status='IMPORTING';
+            requireImportSpace();
+            const before=new Set(session.current.sourceRefs.map(source=>source.assetId));
+            run.report=await importPicked(receiveGoogleVideo);
+            if(!run.report.imported||signal.aborted||closing)return;
+            const hasNewEligibleVideo=session.current.sourceRefs.some(source=>source.mediaKind==='video'
+              && !before.has(source.assetId)&&['master','verified'].includes(source.syncStatus));
+            if(!hasNewEligibleVideo){run.report.draft='SYNC_REQUIRED';return;}
+            run.status='STARTING_DRAFT';
+            try{await firstCutManager.start({mode});run.report.draft='STARTED';}
+            catch{run.report.draft='UNAVAILABLE';}
+          }finally{finish();}
+        });
+        run.status='DONE';
+      }catch(error){
+        run.status='FAIL';
+        run.error=error.status?error.message:'Google フォトから自動で取り込めませんでした。';
+      }
+    })();
+  }
   const html=(await readFile(join(HERE,'index.html'),'utf8')).replaceAll('__TOKEN__',token).replaceAll('__NONCE__',nonce);
-  function state(){return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),pendingImports:pendingImports.views(),googlePhotos:googlePhotos.state(),job,sync:syncManager.state(),firstCut:firstCutManager.state(),preview:previewManager.state()};}
+  function state(){
+    const run=photosAutomation?.projectKey===photosProjectKey()?photosAutomation:undefined;
+    const googleState={...googlePhotos.state(photosProjectKey()),...(run?{status:run.status,error:run.error}:{})};
+    return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),pendingImports:pendingImports.views(),googlePhotos:googleState,
+      ...(run?.report?{googleImport:run.report}:{}),job,sync:syncManager.state(),firstCut:firstCutManager.state(),preview:previewManager.state()};
+  }
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
   const relink=await createSourceRelinkManager({folder,getSession:()=>session,getRegistry:()=>registry,probe,
     commitRegistry:async next=>{await atomicJson(registryFile,[...next.values()].map(({path,...rest})=>rest));registry=next;},
     commitSession:async candidate=>{
       const document=JSON.parse(candidate.serialize());document.project.revision=session.current.revision+1;
-      const opened=EditSession.open(JSON.stringify(document));await transaction(()=>{session=opened;});return state();
+      const opened=EditSession.open(JSON.stringify(document));await transaction(()=>{session=opened;});projectOpenCount++;return state();
     }});
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   const authorized=value=>{if(typeof value!=='string'||value.length!==token.length)return false;return timingSafeEqual(Buffer.from(value),Buffer.from(token));};
@@ -213,8 +271,10 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
       if(req.method==='GET'&&path==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html);return;}
       if(req.method==='GET'&&path==='/google-photos/oauth'){
         try{
-          const pickerUrl=await googlePhotos.authorize(url.searchParams,session.current.projectId);
+          const projectKey=photosProjectKey();
+          const {pickerUrl,draftMode}=await googlePhotos.authorize(url.searchParams,projectKey);
           res.writeHead(303,{'Location':pickerUrl,'Cache-Control':'no-store'});res.end();
+          if(draftMode&&!closing)startGoogleAutomation(projectKey,draftMode);
         }catch(error){
           res.writeHead(error.status??502,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
           res.end(error.status?error.message:'Google フォトに接続できませんでした。編集画面からやり直してください。');
@@ -257,12 +317,17 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
       if(req.method==='GET'&&path.startsWith('/exports/')){const checked=await checkedOutput(path.slice(9));await stream(res,req,null,'video/mp4',checked);return;}
       if(req.method==='POST'&&path==='/api/google-photos/cancel'){
         // Only interrupt the selection; the active import still owns the workspace until it stops.
+        const run=photosAutomation;
+        if(run?.projectKey===photosProjectKey()&&(run.status==='STARTING_DRAFT'||(run.status==='DONE'&&run.report?.draft==='STARTED'))){
+          fail('動画の取り込みは完了し、下書き作成を開始しています。',409);
+        }
+        const running=run?.done;
         const finishCancellation=googlePhotos.interrupt();
-        await mutationDone;await finishCancellation();send(res,200,state());return;
+        await mutationDone;await finishCancellation();await running;send(res,200,state());return;
       }
       if(req.method!=='POST'||!['/api/import','/api/import/retry','/api/google-photos/start','/api/google-photos/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/preview','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
-      if(mutation||job.status==='RUNNING'||syncManager.busy()||firstCutManager.busy()||previewManager.busy())fail('処理が終わるまでお待ちください',409);mutation=true;
-      let finishMutation;mutationDone=new Promise(done=>{finishMutation=done;});
+      const finishMutation=beginMutation();
+      if(!finishMutation)fail('処理が終わるまでお待ちください',409);
       try{
         if(req.headers['x-aivs-revision']!==String(session.current.revision))fail('REVISION_CONFLICT: 別の画面で更新されています',409);
         if(path==='/api/preview'){
@@ -289,13 +354,14 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
           await finishImport(await recordImport({kind,label,extension:extname(label).toLowerCase(),body:req,length:req.headers['content-length']}));
         }else if(path==='/api/google-photos/start'){
           requireImportSpace();
-          await googlePhotos.start({origin,projectId:session.current.projectId,maxCount:remainingImports()});
+          const draftMode=url.searchParams.get('draftMode');
+          if(draftMode!==null&&!firstCutModes.includes(draftMode))fail('自動編集の傾向を選んでください');
+          const previous=photosAutomation;
+          await googlePhotos.start({origin,projectKey:photosProjectKey(),maxCount:remainingImports(),draftMode});
+          if(photosAutomation===previous)photosAutomation=undefined;
         }else if(path==='/api/google-photos/import'){
           requireImportSpace();
-          const googleImport=await googlePhotos.importSelection(session.current.projectId,async input=>{
-            const uploadId=await recordImport({kind:'video',...input});
-            try{await finishImport(uploadId);return 'imported';}catch{return 'pending';}
-          });
+          const googleImport=await googlePhotos.importSelection(photosProjectKey(),receiveGoogleVideo);
           send(res,200,{...state(),googleImport});return;
         }else if(path==='/api/first-cut'){
           const started=await firstCutManager.start(await jsonBody(req));send(res,202,started);return;
@@ -314,6 +380,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
           const document=JSON.parse(candidate.serialize());document.project.revision=session.current.revision+1;
           candidate=EditSession.open(JSON.stringify(document));
           await transaction(()=>{session=candidate;});
+          projectOpenCount++;
         }else if(path==='/api/undo'||path==='/api/redo'){
           await transaction(()=>path.endsWith('undo')?session.undo():session.redo());
         }else if(path==='/api/render'){
@@ -337,7 +404,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
           send(res,202,job);return;
         }
         send(res,200,state());
-      }finally{mutation=false;finishMutation();}
+      }finally{finishMutation();}
     }catch(error){if(!res.headersSent)send(res,error.status??(error.message==='RELINK_STALE'?409:400),{error:error.message,...(canReadState?{pendingImports:pendingImports.views()}:{})});else res.destroy();}
   });
   await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',done);});
@@ -349,7 +416,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
       closePromise=(async()=>{
         // A completed probe/import may still persist after the HTTP socket closes.
         // Keep ownership until it finishes; incomplete request bodies are aborted.
-        await mutationDone;await previewManager.close();await Promise.all([finishPhotos(),jobPromise,syncManager.wait(),firstCutManager.wait()]);await stopped;
+        await mutationDone;await previewManager.close();await Promise.all([finishPhotos(),photosAutomation?.done,jobPromise,syncManager.wait(),firstCutManager.wait()]);await stopped;
         if(await readFile(lockFile,'utf8')===lockToken)await unlink(lockFile);
       })();return closePromise;
     }};

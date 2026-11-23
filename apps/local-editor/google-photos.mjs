@@ -1,5 +1,6 @@
 import {createHash, randomBytes, timingSafeEqual} from 'node:crypto';
 import {open} from 'node:fs/promises';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const scope = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
 const pickerApi = 'https://photospicker.googleapis.com/v1';
@@ -82,7 +83,7 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
   const authHeader = entry => ({Authorization: `Bearer ${entry.accessToken}`});
   const sessionUrl = entry => `${pickerApi}/sessions/${encodeURIComponent(entry.sessionId)}`;
   const expires = entry => Date.now() >= entry.expiresAt;
-  const state = () => ({phase: flow ? (expires(flow) ? 'EXPIRED' : flow.phase) : setup});
+  const state = projectKey => ({phase: flow && flow.projectKey === projectKey ? (expires(flow) ? 'EXPIRED' : flow.phase) : setup});
   const signalFor = (entry, timeout) => AbortSignal.any([entry.controller.signal, AbortSignal.timeout(timeout)]);
 
   async function googleRequest(url, options) {
@@ -128,14 +129,14 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
     return async () => { if (entry) await cancel(entry); };
   }
 
-  async function start({origin, projectId, maxCount}) {
+  async function start({origin, projectKey, maxCount, draftMode}) {
     if (setup !== 'READY') fail('Google フォトの直接取込には Mac の接続設定が必要です。');
-    if (flow && !expires(flow)) fail('Google フォトで選択中です。取り込みを続けるか、キャンセルしてください。');
+    if (flow && flow.projectKey === projectKey && !expires(flow)) fail('Google フォトで選択中です。取り込みを続けるか、キャンセルしてください。');
     await cancel();
     const secretState = randomBytes(32).toString('base64url');
     const verifier = randomBytes(32).toString('base64url');
     const redirectUri = `${origin}${oauthPath}`;
-    const entry = {projectId, maxCount, secretState, verifier, redirectUri, phase: 'AUTHORIZING',
+    const entry = {projectKey, maxCount, draftMode, secretState, verifier, redirectUri, phase: 'AUTHORIZING',
       controller: new AbortController(), expiresAt: Date.now() + authorizationMs};
     flow = entry;
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -149,10 +150,10 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
     }
   }
 
-  async function authorize(params, projectId) {
+  async function authorize(params, projectKey) {
     const entry = flow;
     const supplied = params.get('state') ?? '';
-    if (!entry || entry.phase !== 'AUTHORIZING' || entry.projectId !== projectId || expires(entry)
+    if (!entry || entry.phase !== 'AUTHORIZING' || entry.projectKey !== projectKey || expires(entry)
       || params.getAll('state').length !== 1 || !/^[\w-]{43}$/.test(supplied)
       || !timingSafeEqual(Buffer.from(entry.secretState), Buffer.from(supplied))) {
       fail('この Google フォト接続は無効です。編集画面からやり直してください。', 400);
@@ -195,7 +196,7 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
       const pollTimeout = secondsToMs(session.pollingConfig?.timeoutIn);
       if (pollTimeout !== undefined) entry.pollUntil = Date.now() + pollTimeout;
       entry.phase = 'SELECTING';
-      return pickerUrl.href;
+      return {pickerUrl: pickerUrl.href, draftMode: entry.draftMode};
     } catch (error) {
       await cancel(entry);
       throw error;
@@ -262,49 +263,85 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
     fail('Google フォトの動画の取得先を確認できませんでした。', 502);
   }
 
-  async function importSelection(projectId, receive) {
+  function selectionFor(projectKey) {
     const entry = flow;
-    if (!entry || entry.projectId !== projectId || expires(entry)) {
+    if (!entry || entry.projectKey !== projectKey || expires(entry)) {
       fail('編集画面から Google フォトの動画を選び直してください。');
     }
     if (entry.phase !== 'SELECTING') fail('Google の画面で接続を完了してから取り込んでください。');
+    return entry;
+  }
+
+  async function pollSelection(entry) {
+    const session = await googleJson(sessionUrl(entry), {headers: authHeader(entry)}, entry);
+    if (session.mediaItemsSet === true) return true;
+    entry.nextPollAt = Date.now() + (secondsToMs(session.pollingConfig?.pollInterval) ?? 2000);
+    const timeout = secondsToMs(session.pollingConfig?.timeoutIn);
+    if (timeout !== undefined) entry.pollUntil = Math.min(entry.pollUntil ?? Infinity, Date.now() + timeout);
+    return false;
+  }
+
+  async function importSelection(projectKey, receive) {
+    const entry = selectionFor(projectKey);
+    if (entry.draftMode) fail('Google フォトで「完了」を押すと自動で取り込みます。');
     if (entry.pollUntil !== undefined && Date.now() >= entry.pollUntil) {
       await cancel(entry);
       fail('Google フォトの選択時間が過ぎました。動画を選び直してください。');
     }
     if (Date.now() < entry.nextPollAt) fail('Google フォトの選択を少し待ってから取り込んでください。');
     entry.nextPollAt = Date.now() + 2000;
-    let session;
-    try { session = await googleJson(sessionUrl(entry), {headers: authHeader(entry)}, entry); }
+    let ready;
+    try { ready = await pollSelection(entry); }
     catch (error) {
       if (error.status === 410 || error.status === 403) await cancel(entry);
       throw error;
     }
-    if (session.mediaItemsSet !== true) {
-      entry.nextPollAt = Date.now() + (secondsToMs(session.pollingConfig?.pollInterval) ?? 2000);
-      fail('Google フォトで動画を選び「完了」を押してから取り込んでください。');
-    }
-    const report = {imported: 0, pending: 0, photosSkipped: 0, videosSkipped: 0, failed: 0};
+    if (!ready) fail('Google フォトで動画を選び「完了」を押してから取り込んでください。');
+    try { return await importPicked(entry, receive); }
+    finally { await cancel(entry); }
+  }
+
+  async function importWhenSelected(projectKey, isCurrent, ready) {
+    const entry = selectionFor(projectKey), signal = entry.controller.signal;
     try {
-      for (const item of await listPicked(entry)) {
-        if (entry.controller.signal.aborted) break;
-        if (item.type !== 'VIDEO') { report.photosSkipped++; continue; }
-        if (item.mediaFile?.mediaFileMetadata?.videoMetadata?.processingStatus !== 'READY') {
-          report.videosSkipped++; continue;
+      while (!signal.aborted) {
+        if (!isCurrent()) fail('編集中のプロジェクトが変わりました。Google フォトから選び直してください。');
+        const now = Date.now(), deadline = Math.min(entry.expiresAt, entry.pollUntil ?? Infinity);
+        if (now >= deadline) fail('Google フォトの選択時間が過ぎました。動画を選び直してください。');
+        if (now < entry.nextPollAt) {
+          await delay(Math.min(entry.nextPollAt, deadline) - now, undefined, {signal});
+          continue;
         }
-        try {
-          const result = await downloadVideo(entry, item.mediaFile, receive);
-          report[result]++;
+        if (await pollSelection(entry)) {
+          if (signal.aborted) return;
+          return await ready(receive => importPicked(entry, receive), signal, entry.expiresAt);
         }
-        catch (error) {
-          if (entry.controller.signal.aborted) break;
-          report.failed++;
-          report.error ??= error.status ? error.message : '動画を作業フォルダに保存できませんでした。';
-        }
+        entry.nextPollAt = Math.max(entry.nextPollAt, Date.now() + 500);
       }
-      return report;
+    } catch (error) {
+      if (!signal.aborted) throw error;
     } finally { await cancel(entry); }
   }
 
-  return {state, start, authorize, importSelection, interrupt};
+  async function importPicked(entry, receive) {
+    const report = {imported: 0, pending: 0, photosSkipped: 0, videosSkipped: 0, failed: 0};
+    for (const item of await listPicked(entry)) {
+      if (entry.controller.signal.aborted) break;
+      if (item.type !== 'VIDEO') { report.photosSkipped++; continue; }
+      if (item.mediaFile?.mediaFileMetadata?.videoMetadata?.processingStatus !== 'READY') {
+        report.videosSkipped++; continue;
+      }
+      try {
+        const result = await downloadVideo(entry, item.mediaFile, receive);
+        report[result]++;
+      } catch (error) {
+        if (entry.controller.signal.aborted) break;
+        report.failed++;
+        report.error ??= error.status ? error.message : '動画を作業フォルダに保存できませんでした。';
+      }
+    }
+    return report;
+  }
+
+  return {state, start, authorize, importSelection, importWhenSelected, interrupt};
 }

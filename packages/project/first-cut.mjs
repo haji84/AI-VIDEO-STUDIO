@@ -3,9 +3,10 @@ import {createProject,validateProject} from './project.mjs';
 const fail=code=>{throw new Error(code);};
 const identityKeys=['assetId','sha256','mediaKind','durationSec','hasAudio','offsetSec','driftPpm','syncStatus'];
 const known=s=>['master','verified'].includes(s.syncStatus);
+export const firstCutModes=Object.freeze(['training','documentary','television','short']);
 export function validateFirstCutSelection(project,request){
   validateProject(project);
-  if(!request||Object.getPrototypeOf(request)!==Object.prototype||Object.keys(request).some(k=>k!=='mode')||!['training','documentary','television','short'].includes(request.mode))fail('INVALID_FIRST_CUT_REQUEST');
+  if(!request||Object.getPrototypeOf(request)!==Object.prototype||Object.keys(request).some(k=>k!=='mode')||!firstCutModes.includes(request.mode))fail('INVALID_FIRST_CUT_REQUEST');
   const videos=project.sourceRefs.filter(s=>s.mediaKind==='video'),masters=videos.filter(s=>s.syncStatus==='master');
   if(masters.length!==1||masters[0].offsetSec!==0)fail('FIRST_CUT_ZERO_MASTER_REQUIRED');
   const ordered=[masters[0],...videos.filter(s=>s!==masters[0])],eligible=ordered.filter(known);
