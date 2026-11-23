@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,readFile,writeFile} from 'node:fs/promises';
+import {mkdtemp,rm,readFile,writeFile,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -14,9 +14,14 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 test('exports actual local application starter',()=>assert.equal(typeof app.startServer,'function'));
 test('private editing state cannot be written into the public source checkout',async()=>{
-  const dir=resolve(dirname(fileURLToPath(import.meta.url)),'../..','workspace-test-'+randomUUID());
-  try{await assert.rejects(async()=>{const s=await app.startServer({workspace:dir,port:0});await s.close();},/WORKSPACE_MUST_BE_OUTSIDE_SOURCE/);}
-  finally{await rm(dir,{recursive:true,force:true});}
+  const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..'),name='workspace-test-'+randomUUID();
+  const temp=await mkdtemp(join(tmpdir(),'aivs-source-guard-')),alias=join(temp,'source-alias'),dir=join(root,name);
+  try{
+    await symlink(root,alias,'junction');
+    for(const workspace of [dir,join(alias,name)]){
+      await assert.rejects(async()=>{const s=await app.startServer({workspace,port:0});await s.close();},/WORKSPACE_MUST_BE_OUTSIDE_SOURCE/);
+    }
+  }finally{await rm(dir,{recursive:true,force:true});await rm(temp,{recursive:true,force:true});}
 });
 test('local import/edit/history/restart/render is usable and protected',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'aivs-editor-'));let server;

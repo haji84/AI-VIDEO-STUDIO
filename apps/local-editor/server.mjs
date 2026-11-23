@@ -45,13 +45,16 @@ async function probe(file){
 
 export async function startServer({workspace,port=8765,previewOptions={}}={}){
   if(!workspace)fail('保存フォルダを --workspace で指定してください');
-  const folder=resolve(workspace),marker=join(folder,'.aivs-local-editor');
-  let ancestor=folder;while(!await exists(ancestor))ancestor=dirname(ancestor);
-  const canonical=resolve(await realpath(ancestor),relative(ancestor,folder)),sourceRoot=await realpath(ROOT);
+  const requested=resolve(workspace);
+  let ancestor=requested;while(!await exists(ancestor))ancestor=dirname(ancestor);
+  const canonical=resolve(await realpath(ancestor),relative(ancestor,requested)),sourceRoot=await realpath(ROOT);
   const rel=relative(sourceRoot,canonical);
   if(rel===''||(rel!=='..'&&!rel.startsWith('..'+sep)&&!isAbsolute(rel)))fail('WORKSPACE_MUST_BE_OUTSIDE_SOURCE: 素材と編集データはリポジトリ外の専用フォルダへ保存してください');
-  if(await exists(folder)){if(!await exists(marker))fail('専用の新しい保存フォルダを指定してください');}
-  else{await mkdir(folder,{recursive:true});await writeFile(marker,'AI VIDEO STUDIO local workspace v1\n',{flag:'wx',mode:0o600});}
+  const marker=join(canonical,'.aivs-local-editor');
+  if(await exists(canonical)){if(!await exists(marker))fail('専用の新しい保存フォルダを指定してください');}
+  else{await mkdir(canonical,{recursive:true});await writeFile(marker,'AI VIDEO STUDIO local workspace v1\n',{flag:'wx',mode:0o600});}
+  // Output checks require a canonical root, including on macOS where /var is an alias.
+  const folder=await realpath(canonical);
   const lockFile=join(folder,'.editor.lock'),lockToken=randomUUID();
   try{await writeFile(lockFile,lockToken,{flag:'wx',mode:0o600});}
   catch(e){if(e.code==='EEXIST')fail('WORKSPACE_IN_USE: この保存先は使用中です。異常終了後はアプリ終了を確認して .editor.lock を削除してください');throw e;}

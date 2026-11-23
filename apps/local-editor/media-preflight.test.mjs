@@ -1,7 +1,7 @@
 /** Issue #37: actual import process must honor the renderer's explicit tools. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs,{mkdtemp,readFile,writeFile,copyFile,mkdir,rm,chmod,access} from 'node:fs/promises';
+import fs,{mkdtemp,readFile,writeFile,copyFile,mkdir,rm,chmod,access,symlink} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {join,dirname} from 'node:path';
@@ -87,9 +87,12 @@ test('malformed probe JSON is a bounded visible failure that preserves completed
  try{
   const source=join(dir,'synthetic.mp4');await exec('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=10:d=1','-c:v','libx264',source]);
   const bytes=await readFile(source),tools=join(dir,'tools');await mkdir(tools);
-  // A real Node process prints its version for -v and exits 0, rather than JSON.
-  const suffix=process.platform==='win32'?'.exe':'';
-  for(const name of ['ffmpeg','ffprobe'])await copyFile(process.execPath,join(tools,name+suffix));
+  // Node prints its version for -v and exits 0. Keep its installed location
+  // on POSIX so Homebrew Node can still load its relative shared libraries.
+  for(const name of ['ffmpeg','ffprobe']){
+   if(process.platform==='win32')await copyFile(process.execPath,join(tools,name+'.exe'));
+   else await symlink(process.execPath,join(tools,name));
+  }
   process.env.AIVS_FFMPEG_DIR=tools;server=await startServer({workspace:join(dir,'data'),port:0});
   const r=await fetch(server.url+'/api/import?kind=video',{method:'POST',body:bytes,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':'0','X-File-Name':'synthetic.mp4'}});
   assert.equal(r.status,400);const failure=await r.json();assert.match(failure.error,/FFPROBE_JSON_INVALID/);assert.equal(failure.pendingImports.length,1);

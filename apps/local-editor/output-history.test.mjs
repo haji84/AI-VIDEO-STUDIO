@@ -1,7 +1,7 @@
 /** Filesystem integrity and bounded history; arbitrary bytes here are not media acceptance. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,rm,readFile,writeFile,rename,unlink,symlink,stat,utimes,open} from 'node:fs/promises';
+import {mkdtemp,mkdir,rm,readFile,writeFile,rename,unlink,symlink,stat,utimes,open,realpath} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
@@ -17,7 +17,7 @@ async function fixture(folder,n){
  const receipt={id,outputSha256:sha(bytes),reportSha256:sha(await readFile(reportFile)),outputBytes:bytes.length,projectId:'project_history',projectRevision:n,qualityStatus:'CHECKED_LIMITED',createdAt:'2026-10-29T00:00:00.000Z',origin:'RENDER'};
  return {id,bytes,report,output,reportFile,receipt};
 }
-async function workspace(fn){const dir=await mkdtemp(join(tmpdir(),'aivs-history-files-'));try{await fn(dir);}finally{await rm(dir,{recursive:true,force:true});}}
+async function workspace(fn){const dir=await mkdtemp(join(await realpath(tmpdir()),'aivs-history-files-'));try{await fn(dir);}finally{await rm(dir,{recursive:true,force:true});}}
 
 test('receipt captures output/report identities and ignores the report local path',()=>workspace(async folder=>{
  const f=await fixture(folder,1),receipt=await captureOutputReceipt({folder,id:f.id,outputSha256:f.receipt.outputSha256,createdAt:f.receipt.createdAt});

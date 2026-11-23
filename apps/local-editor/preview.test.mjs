@@ -10,6 +10,7 @@ import {startServer} from './server.mjs';
 import {applyClipEdit} from './edits.mjs';
 import {EditSession,createProject} from '../../packages/project/project.mjs';
 const exec=promisify(execFile),delay=ms=>new Promise(r=>setTimeout(r,ms)),hash=b=>createHash('sha256').update(b).digest('hex');
+const linuxOnly={skip:process.platform!=='linux'&&'Saved-cut preview workers require Linux'};
 async function waitFor(check,limit=30000){const end=Date.now()+limit;do{const value=await check();if(value)return value;await delay(30);}while(Date.now()<end);throw new Error('TEST_CONDITION_TIMEOUT');}
 async function fixture(options={}){
   const dir=await mkdtemp(join(tmpdir(),'aivs-preview-test-')),folder=join(dir,'data'),source=join(dir,'generated.mp4');
@@ -27,7 +28,17 @@ async function protectedBytes(folder){const result={};for(const file of ['projec
 async function running(pid){try{const data=await readFile('/proc/'+pid+'/stat','utf8');return !['Z','X'].includes(data.slice(data.lastIndexOf(')')+2).split(' ')[0]);}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 async function hangingPython(dir){const executable=join(dir,'owned-hanging-python'),pids=join(dir,'owned-pids.json');await writeFile(executable,'#!/usr/bin/env python3\nimport os,sys,signal,subprocess,time,json\nsignal.signal(signal.SIGTERM,signal.SIG_IGN)\nc=subprocess.Popen([sys.executable,"-c","import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(300)"])\nopen('+JSON.stringify(pids)+',"w").write(json.dumps([os.getpid(),c.pid]))\ntime.sleep(300)\n');await chmod(executable,0o700);return {executable,pids};}
 
-test('saved-cut preview is authenticated, read-only and serves the actually rendered file',async()=>{
+test('saved-cut preview reports its platform gate without starting a worker', {skip:process.platform==='linux'}, async()=>{
+  const f=await fixture();try{
+    assert.equal(f.state.preview.supported,false);
+    const response=await f.call('/api/preview',{method:'POST',body:JSON.stringify({clipId:f.state.session.project.timeline[0].clipId,startSec:0})});
+    assert.equal(response.status,400);
+    assert.match((await response.json()).error,/PREVIEW_PLATFORM_UNVERIFIED/);
+    assert.equal((await(await f.call('/api/preview')).json()).status,'NOT_RUN');
+  }finally{await f.close();}
+});
+
+test('saved-cut preview is authenticated, read-only and serves the actually rendered file',linuxOnly,async()=>{
   const f=await fixture();try{
     const before=await protectedBytes(f.folder),oldOutputs=await(await f.call('/api/outputs')).json();
     assert.equal((await fetch(f.server.url+'/api/preview')).status,403);
@@ -44,7 +55,7 @@ test('saved-cut preview is authenticated, read-only and serves the actually rend
   }finally{await f.close();}
 });
 
-test('ready previews reject changed source or changed project before adoption and media serving',async()=>{
+test('ready previews reject changed source or changed project before adoption and media serving',linuxOnly,async()=>{
   const f=await fixture();try{
     const {id}=await f.start();assert.equal((await f.ready()).status,'PASS');
     const bindings=JSON.parse(await readFile(join(f.folder,'bindings.json'))),asset=bindings[0].path,bytes=await readFile(asset);
@@ -56,7 +67,7 @@ test('ready previews reject changed source or changed project before adoption an
   }finally{await f.close();}
 });
 
-test('absolute deadline kills the owned worker and descendant and releases the editor',async()=>{
+test('absolute deadline kills the owned worker and descendant and releases the editor',linuxOnly,async()=>{
   const dir=await mkdtemp(join(tmpdir(),'aivs-preview-hang-')),hung=await hangingPython(dir);let f;
   try{f=await fixture({python:hung.executable,budgetMs:700});const began=Date.now();await f.start();await waitFor(async()=>{try{return JSON.parse(await readFile(hung.pids));}catch{return false;}},2500);
     const job=await f.ready();assert.equal(job.status,'FAIL');assert.match(job.error,/TIMEOUT/);assert.ok(Date.now()-began<3500);
@@ -65,7 +76,7 @@ test('absolute deadline kills the owned worker and descendant and releases the e
   }finally{if(f)await f.close();await rm(dir,{recursive:true,force:true});}
 });
 
-test('parent close cancels only its preview group and removes the workspace lock promptly',async()=>{
+test('parent close cancels only its preview group and removes the workspace lock promptly',linuxOnly,async()=>{
   const dir=await mkdtemp(join(tmpdir(),'aivs-preview-close-')),hung=await hangingPython(dir);let f;
   try{f=await fixture({python:hung.executable});await f.start();const pids=await waitFor(async()=>{try{return JSON.parse(await readFile(hung.pids));}catch{return false;}},2500);
     const began=Date.now();await f.server.close();assert.ok(Date.now()-began<2500);for(const pid of pids)assert.equal(await running(pid),false,'owned process survived parent close');
@@ -74,7 +85,7 @@ test('parent close cancels only its preview group and removes the workspace lock
   }finally{if(f){await f.server.close().catch(()=>{});await rm(f.dir,{recursive:true,force:true});}await rm(dir,{recursive:true,force:true});}
 });
 
-test('SIGTERM on the actual CLI closes its detached preview group before exiting',async()=>{
+test('SIGTERM on the actual CLI closes its detached preview group before exiting',linuxOnly,async()=>{
   const f=await fixture(),hung=await hangingPython(f.dir);let cli,pids;
   try{
     await f.server.close();
@@ -96,7 +107,7 @@ test('SIGTERM on the actual CLI closes its detached preview group before exiting
   }
 });
 
-test('output replacement cannot substitute a different file after verified descriptor open',async()=>{
+test('output replacement cannot substitute a different file after verified descriptor open',linuxOnly,async()=>{
   const f=await fixture();let manager;
   try{
     // First verify the real route exists; baseline failure is the missing feature.
@@ -114,7 +125,7 @@ test('output replacement cannot substitute a different file after verified descr
   }finally{if(manager)await manager.close();await f.close();}
 });
 
-test('held preview descriptors are capped and releasing one admits a new media reader',async()=>{
+test('held preview descriptors are capped and releasing one admits a new media reader',linuxOnly,async()=>{
   const f=await fixture();let manager;const handles=[];
   try{
     const {createPreviewManager}=await import('./preview-job.mjs');
@@ -145,7 +156,7 @@ async function expiringPreview(f){
   }catch(error){release?.();if(held)await held.close().catch(()=>{});await manager.close().catch(()=>{});throw error;}
 }
 
-test('ready expiry holds the worker slot until actual descriptor cleanup succeeds, then admits a new job',async()=>{
+test('ready expiry holds the worker slot until actual descriptor cleanup succeeds, then admits a new job',linuxOnly,async()=>{
   const f=await fixture();let expired;
   try{
     const before=await protectedBytes(f.folder);expired=await expiringPreview(f);
@@ -163,7 +174,7 @@ test('ready expiry holds the worker slot until actual descriptor cleanup succeed
   }finally{if(expired)await expired.finish();await f.close();}
 });
 
-test('ready expiry cleanup deadline remains fail-closed even when the delayed descriptor later closes',async()=>{
+test('ready expiry cleanup deadline remains fail-closed even when the delayed descriptor later closes',linuxOnly,async()=>{
   const f=await fixture();let expired;
   try{
     expired=await expiringPreview(f);const {manager,id,request,folder}=expired;
@@ -179,7 +190,7 @@ test('ready expiry cleanup deadline remains fail-closed even when the delayed de
   }finally{if(expired)await expired.finish();await f.close();}
 });
 
-test('close during ready expiry joins the same disposal before returning or removing owned files',async()=>{
+test('close during ready expiry joins the same disposal before returning or removing owned files',linuxOnly,async()=>{
   const f=await fixture();let expired;
   try{
     expired=await expiringPreview(f);const {manager,id,request,folder}=expired;

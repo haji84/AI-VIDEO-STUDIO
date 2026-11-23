@@ -28,11 +28,15 @@ async function mutation(path,action,status=200){
 async function saved(){await page.waitForFunction(()=>document.getElementById('notice').textContent==='端末内に保存済み');}
 async function download(control,path){const pending=page.waitForEvent('download');await control.click();await(await pending).saveAs(path);}
 async function playOutput(){
- await page.locator('#output').waitFor({state:'visible'});
+ const player=page.locator('#output');
+ await player.waitFor({state:'visible'});
  await page.waitForFunction(()=>{const v=document.getElementById('output');return v.readyState>=2&&v.videoWidth>0;});
- await page.locator('#output').evaluate(v=>v.play());
+ await player.evaluate(v=>v.play());
  await page.waitForFunction(()=>document.getElementById('output').currentTime>.1);
- return page.locator('#output').evaluate(v=>({advanced:v.currentTime>.1,width:v.videoWidth,height:v.videoHeight}));
+ await page.waitForFunction(()=>{const v=document.getElementById('output');return v.ended||v.error;});
+ const playback=await player.evaluate(v=>({advanced:v.currentTime>.1,ended:v.ended,width:v.videoWidth,height:v.videoHeight,durationSec:v.duration}));
+ assert.equal(playback.ended,true,'output playback did not finish');
+ return playback;
 }
 
 try{
@@ -94,9 +98,14 @@ try{
  await download(page.locator('#download'),output);
  await download(page.getByRole('button',{name:'検査記録を保存',exact:true}),qaFile);
  const bytes=await readFile(output),qa=await json(qaFile);assert.equal(qa.sha256,sha(bytes));assert.equal(qa.technical_ok,true);assert.equal(qa.whole_file_decode_checked,true);
- await exec(tools.ffmpeg,['-v','error','-xerror','-i',output,'-f','null','-']);
+ const caption=qa.captionRasters[0];assert.equal(caption?.glyphCoverage,'CMAP_VERIFIED');assert.equal(caption.glyphCodepointsChecked,9);
+ await exec(tools.ffmpeg,['-v','error','-xerror','-i',output,'-map','0:v:0','-map','0:a:0','-f','null','-']);
  const metadata=JSON.parse((await exec(tools.ffprobe,['-v','error','-show_format','-show_streams','-of','json',output])).stdout);
- assert.ok(metadata.streams.some(s=>s.codec_type==='video'));assert.ok(metadata.streams.some(s=>s.codec_type==='audio'));
+ const video=metadata.streams.find(s=>s.codec_type==='video'),audio=metadata.streams.find(s=>s.codec_type==='audio');
+ assert.equal(video?.codec_name,'h264');assert.equal(audio?.codec_name,'aac');
+ const media={videoCodec:video.codec_name,audioCodec:audio.codec_name,durationSec:Number(metadata.format.duration),videoFrames:Number(video.nb_frames)};
+ assert.ok(Math.abs(media.durationSec-playback.durationSec)<.01,'browser and ffprobe durations differ by at least 10 ms');
+ assert.equal(media.videoFrames,qa.inspection.decodedVideoFrames);
  const pcm=(await exec(tools.ffmpeg,['-v','error','-i',output,'-vn','-ac','1','-ar','8000','-f','f32le','pipe:1'],{encoding:'buffer',maxBuffer:1024**2})).stdout;
  const amplitude=f=>{let sin=0,cos=0;for(let i=0;i<pcm.length/4;i++){const v=pcm.readFloatLE(i*4),phase=2*Math.PI*f*i/8000;sin+=v*Math.sin(phase);cos+=v*Math.cos(phase);}return 2*Math.hypot(sin,cos)/(pcm.length/4);};
  const originalAudio440=amplitude(440),otherCamera660=amplitude(660);assert.ok(originalAudio440>.04);assert.ok(originalAudio440>otherCamera660*5);
@@ -106,11 +115,13 @@ try{
  assert.equal(sha(await readFile(restoredOutput)),sha(bytes));assert.equal(sha(await readFile(join(workspace,'project.aivs.json'))),sha(savedProject));
  for(const [index,name] of ['master.mp4','clear.mp4'].entries())assert.equal(sha(await readFile(join(folder,name))),sha(originals[index]));
  assert.equal(uploads,2);assert.equal(retries,2);assert.deepEqual(pageErrors,[]);
- const evidence={status:'PASS_SYNTHETIC_BROWSER',scope,runtime:{node:process.version,browser:browser.version(),ffmpeg:(await exec(tools.ffmpeg,['-version'])).stdout.split('\n')[0]},
+ const version=async tool=>(await exec(tool,['-version'])).stdout.split('\n')[0];
+ const evidence={status:'PASS_SYNTHETIC_BROWSER',scope,runtime:{node:process.version,platform:process.platform,arch:process.arch,browser:browser.version(),ffmpeg:await version(tools.ffmpeg),ffprobe:await version(tools.ffprobe)},
   inputsSha256:originals.map(sha),uploadRequests:uploads,retryRequests:retries,mediaResentOnRetry:false,
   savedProjectSha256:sha(savedProject),outputSha256:sha(bytes),qaSha256:sha(await readFile(qaFile)),bytes:bytes.length,
-  firstCut:'NUMERICAL_EXPLICITLY_REVIEWED',originalAudio440,otherCamera660,playback,replayAfterRestart,
-  restartReadback:'SHA256_MATCH',wholeFileDecode:'PASS',physicalDevice:'NOT_RUN',zipSource:'UNAVAILABLE',chunkedUpload:'NOT_IMPLEMENTED',remotePhone:'NOT_RUN'};
+  firstCut:'NUMERICAL_EXPLICITLY_REVIEWED',originalAudio440,otherCamera660,media,playback,replayAfterRestart,
+  caption:{glyphCoverage:caption.glyphCoverage,glyphCodepointsChecked:caption.glyphCodepointsChecked},
+  restartReadback:'SHA256_MATCH',wholeFileDecode:'PASS',physicalZBook:'NOT_RUN',zipSource:'UNAVAILABLE',chunkedUpload:'NOT_IMPLEMENTED',remotePhone:'NOT_RUN'};
  if(process.env.AIVS_EVIDENCE_DIR){
   const target=resolve(process.env.AIVS_EVIDENCE_DIR);assert.ok(target!==root&&!target.startsWith(root+sep),'evidence must stay outside source');await mkdir(target,{recursive:true});
   const id=randomUUID();await writeFile(join(target,'recovered-'+id+'.mp4'),bytes,{flag:'wx'});await writeFile(join(target,'evidence-'+id+'.json'),JSON.stringify(evidence,null,2),{flag:'wx'});

@@ -68,7 +68,7 @@ class MediaBoundaryTests(unittest.TestCase):
                 target.write_bytes(b'test executable location; not executed')
                 target.chmod(0o700)
             with patch.dict(os.environ, {'AIVS_FFMPEG_DIR': folder, 'PATH': ''}):
-                expected = str(tools / ('ffprobe' + suffix))
+                expected = str((tools / ('ffprobe' + suffix)).resolve())
                 self.assertEqual(core._which('ffprobe'), expected)
                 try:
                     actual = local_signals._program('ffprobe')

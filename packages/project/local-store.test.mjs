@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,writeFile,readFile,rename,rm,symlink,link,readdir} from 'node:fs/promises';
+import {mkdtemp,writeFile,readFile,rename,rm,symlink,link,readdir,realpath} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -47,7 +47,7 @@ test('symlink and hardlink aliases of source media cannot be overwritten',()=>wi
 }));
 test('streamed hashes allow moved media and reject wrong same-name bytes',()=>withFiles(async({dir,media,sha})=>{
   const p=fixture(sha),moved=join(dir,'moved.mp4');await rename(media,moved);
-  const bindings=[{assetId,path:moved}];assert.equal((await store.verifyBindings(p,bindings))[assetId],moved);
+  const bindings=[{assetId,path:moved}];assert.equal((await store.verifyBindings(p,bindings))[assetId],await realpath(moved));
   await writeFile(media,'wrong bytes');await assert.rejects(store.verifyBindings(p,[{assetId,path:media}]),/HASH_MISMATCH/);
   await assert.rejects(store.verifyBindings(p,[]),/MISSING_BINDING/);
   await assert.rejects(store.verifyBindings(p,[...bindings,...bindings]),/DUPLICATE/);
@@ -57,7 +57,7 @@ test('existing manifest bridge preserves clip order, source time, static text an
   const p=fixture(sha);p.timeline[0].effects=[{effectId:'effect_a',type:'caption',version:1,startSec:0,endSec:2,parameters:{text:'合成テロップ'},keyframes:[]}];
   const manifest=await adapter.createManifest(p,[{assetId,path:media}]);
   assert.equal(manifest.timeline[0].start,1);assert.equal(manifest.timeline[0].caption,'合成テロップ');
-  assert.equal(manifest.sources[0].path,media);assert.equal(manifest.autoPlan,false);
+  assert.equal(manifest.sources[0].path,await realpath(media));assert.equal(manifest.autoPlan,false);
   assert.equal(manifest.sources[0].sha256,sha);assert.equal(manifest.sources[0].hasAudio,true);
   assert.equal(manifest.sources[0].durationSec,12);
 }));
