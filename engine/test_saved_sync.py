@@ -55,20 +55,24 @@ class SavedSyncTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):cls.fixture.cleanup()
 
-    def test_cli_reads_utf8_json_with_non_ascii_paths_under_legacy_locale(self):
+    def test_cli_reads_utf8_json_for_non_ascii_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp) / '同期 素材'
             folder.mkdir()
             paths = [Path(shutil.copy2(path, folder / path.name)) for path in self.paths[:2]]
             make_session(folder, paths)
             output = folder / 'report.json'
+            # A C locale also disables Unicode filesystem paths on Linux.
+            locale_env = {'PYTHONUTF8': '1'}
+            if sys.platform in ('darwin', 'win32'):
+                locale_env = {'PYTHONUTF8': '0', 'PYTHONCOERCECLOCALE': '0', 'LC_ALL': 'C'}
             result = subprocess.run(
                 [sys.executable, '-m', 'engine.sync_saved_project',
                  '--project', str(folder / 'project.json'), '--bindings', str(folder / 'bindings.json'),
                  '--request', str(folder / 'request.json'), '--workspace', str(folder / 'analysis'),
                  '--output', str(output)],
                 cwd=ROOT, capture_output=True, timeout=45, check=False,
-                env={**os.environ, 'PYTHONUTF8': '0', 'PYTHONCOERCECLOCALE': '0', 'LC_ALL': 'C'},
+                env={**os.environ, **locale_env},
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             report = json.loads(output.read_bytes())
