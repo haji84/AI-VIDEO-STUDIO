@@ -817,7 +817,14 @@ python3 integrations/hub-natural/owner_photo_selection.py preview \
 ```
 
 The preview reports selected count, SHA-256 content-deduplicated count,
-and a `selectionSHA256` digest. For a separate explicit freeze, re-run
+and a `selectionSHA256` digest. The v2 selection receipt pins a sorted multiset
+of **every selected file's SHA-256, byte size and extension**, including
+byte-identical copies; dropping one duplicate or swapping its extension
+invalidates the old preview pin. Older v1 preview pins must be re-previewed
+before confirmation. This is byte/extension-level consent: replacing a chosen
+path with another file of identical bytes and extension is not distinguishable
+without retaining path identity, and no path is stored in the receipt.
+For a separate explicit freeze, re-run
 a fresh scan with **that same SHA** and a new receipt path:
 
 ```sh
