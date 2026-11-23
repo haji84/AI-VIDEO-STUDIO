@@ -194,11 +194,12 @@ jobs:
           Write-Output "Runner image: $env:ImageOS $env:ImageVersion"
           node --version
           python --version
-      - name: Windows JSON and media tool tests
-        run: python -m unittest engine.test_media_tools -v
+      - name: Windows JSON, media tool discovery and analysis tests
+        run: python -m unittest engine.test_media_tools engine.test_saved_first_cut engine.test_saved_sync -v
       - name: Windows editor HTTP media preflight
         run: node --test apps/local-editor/media-preflight.test.mjs
       - name: Windows Chrome upload recovery, first cut, export and replay (synthetic media)
         env:
+          PYTHONUTF8: '0'
           PYTHONIOENCODING: cp932
         run: node apps/local-editor/browser-import-recovery-acceptance.mjs

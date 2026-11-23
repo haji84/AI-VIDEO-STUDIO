@@ -1,5 +1,5 @@
 """Actual saved-project low-level analysis; generated footage only."""
-import hashlib,json,subprocess,tempfile,unittest
+import hashlib,json,os,subprocess,sys,tempfile,unittest
 from pathlib import Path
 from .first_cut_saved_project import analyse_first_cut
 from .render_saved_project import ROOT
@@ -21,6 +21,24 @@ def make_session(folder):
     subprocess.run(['node','--input-type=module','-e',script,str(folder)],cwd=ROOT,check=True)
 
 class SavedFirstCutTests(unittest.TestCase):
+    def test_cli_reads_utf8_json_with_non_ascii_paths_under_legacy_locale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / '合成 素材'
+            make_media(folder / 'media')
+            make_session(folder)
+            output = folder / 'report.json'
+            result = subprocess.run(
+                [sys.executable, '-m', 'engine.first_cut_saved_project',
+                 '--project', str(folder / 'project.json'), '--bindings', str(folder / 'bindings.json'),
+                 '--request', str(folder / 'request.json'), '--workspace', str(folder / 'analysis'),
+                 '--output', str(output)],
+                cwd=ROOT, capture_output=True, timeout=45, check=False,
+                env={**os.environ, 'PYTHONUTF8': '0', 'PYTHONCOERCECLOCALE': '0', 'LC_ALL': 'C'},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(output.read_bytes())
+            self.assertEqual(report['proposal']['timeline'][0]['sourceId'], 'asset_' + '2' * 32)
+
     def test_checked_sources_full_signals_proposal_and_no_mutation(self):
         with tempfile.TemporaryDirectory() as t:
             f=Path(t);make_media(f/'media');make_session(f);before=(f/'project.json').read_bytes()
@@ -46,6 +64,6 @@ class SavedFirstCutTests(unittest.TestCase):
     def test_small_verified_offset_with_continuous_master_coverage(self):
         with tempfile.TemporaryDirectory() as t:
             f=Path(t);make_media(f/'media',(6,4,4));make_session(f)
-            document=json.loads((f/'project.json').read_text());document['project']['sourceRefs'][1]['offsetSec']=.1;(f/'project.json').write_text(json.dumps(document))
+            document=json.loads((f/'project.json').read_text(encoding='utf-8'));document['project']['sourceRefs'][1]['offsetSec']=.1;(f/'project.json').write_text(json.dumps(document))
             report=analyse_first_cut(f/'project.json',f/'bindings.json',f/'request.json',f/'analysis',f/'report.json')
             self.assertEqual(report['proposal']['evidence']['gaps'],[]);self.assertEqual(report['proposal']['durationSeconds'],6)
