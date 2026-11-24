@@ -1,6 +1,29 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
-Updated: 2026-11-24 JST
-Status: IN_PROGRESS. Windows runner and physical MacBook with generated media are TESTED_SYNTHETIC.
+Updated: 2026-11-25 JST
+Status: IN_PROGRESS. Physical ZBook, physical MacBook and Windows runner with generated media are TESTED_SYNTHETIC.
+
+**Physical ZBook / external SSD, 2026-11-25 JST.** Main remains
+`e1bf222dfe0043e307e3fc3c122e2fe52423dac8`; active implementation is Draft #51,
+source `4253284038f2e49aeb4c8061b8459f97fe610235`. The native USB/exFAT target exposed
+four defects: unsupported import hard links, unsupported final-output hard links,
+changed file identity after rename, and cached-output verification with unchanged
+timestamps. Regression-first fixes and independent static review are recorded in
+[the physical ZBook report](../validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md).
+
+Everyday launch uses the desktop shortcut `AI VIDEO STUDIO - 外付けSSD` and
+`D:\AI_VIDEO_STUDIO_DATA\editor`. Synthetic test data and media also remain on that
+external SSD. Native Chrome passed retained two-upload recovery, reviewed first cut,
+caption/source-audio MP4, full playback/decode/restart readback, simulated Google
+Photos import and cross-workspace project recovery. Python 28 passed; native full
+editor tests were 102 pass, 11 skip, 6 unsupported-symlink-fixture failures. Do not call
+the full suite green. The new hosted CI is NOT_RUN at this checkpoint.
+
+The two original v2.x archives were found and their handoff digests verified; the
+original failing call site and old-runtime repair are still unverified. Next: run
+hosted Linux/Windows checks on this source, preserve the native fixture limitation,
+then complete the dedicated Photos Desktop OAuth setup with owner authorization.
+Large-file replay cost, off-network phones, interrupted transfers and real-media
+acceptance remain separate gates. Keep this checkpoint ahead of the historical notes below.
 
 **Google Photos on Windows and ZBook, 2026-11-24 JST.** Tested source
 `fd52522abea17595d3273245fa3ef7b26405cce2` in Draft #51 includes a Windows launcher

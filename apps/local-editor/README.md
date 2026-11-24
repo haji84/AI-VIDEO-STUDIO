@@ -71,7 +71,12 @@ FFmpeg 8.0.3 で合成素材の取り込み、下書き編集、MP4 の書き出
 Windows Server 2025 の CI では、WinGet 配布物の FFmpeg／ffprobe 9.0.2 で
 日本語を含むパスの取り込み復旧、Google フォトを模擬した動画選択、下書き編集、
 MP4 の再生と再起動後の取得を確認しました。
-ZBook 実機での起動と保存先は確認待ちです。
+ZBook 実機では、外付け SSD（USB / exFAT）での起動、合成素材の取り込み・復旧、
+保存した編集の復元、字幕と元音声付き MP4 の全編再生・decode・再起動後の照合を確認しました。
+この ZBook のデスクトップに用意した `AI VIDEO STUDIO - 外付けSSD` は
+`D:\AI_VIDEO_STUDIO_DATA\editor` を使います。SSD を接続してから起動してください。
+Google フォトの実アカウント接続、大容量・実素材、スマホ別回線の受入は未完了です。
+[ZBook と外付け SSD の実機検証・試験上の制限](../../docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
 [Windows ランナー検証](../../docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md) ·
 [Windows の Google フォト検証](../../docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md) ·
 [MacBook 検証記録](../../docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md)

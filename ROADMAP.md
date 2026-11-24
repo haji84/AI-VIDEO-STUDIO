@@ -2,7 +2,7 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-## Current Issue #37 Gate A — 2026-11-24 JST
+## Current Issue #37 Gate A — 2026-11-25 JST
 
 - [x] Reproduce main-equivalent missing ffprobe/invalid JSON failures; share tool discovery and bounded response validation.
 - [x] Retain completed validation-failed transfers; explicit authenticated retry after restart without re-upload, with integrity and duplicate/stale protections.
@@ -12,13 +12,16 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [x] MacBook Finder launch into a dedicated local workspace, standard Japanese font, normal one-video import through first-cut review and MP4 export, and restart from the same workspace. [MacBook launch verification](docs/validation/MACOS_LOCAL_EDITOR_2026-11-24.md)
 - [x] Hosted offline checks, four Linux browser flows and native Windows tool-discovery fixtures passed for the tested code. [CI run](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481)
 - [x] Windows runner: real WinGet FFmpeg/ffprobe 9.0.2 discovery with a restricted PATH, Japanese JSON diagnostics and analysis with Unicode paths, two-upload recovery, reviewed first-cut, captioned export, full playback/decode and restart SHA-256 readback. [Windows verification](docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md)
-- [ ] Obtain original v2.x app ZIP and redacted call-site evidence; adapt verified fixes to that source and independently verify ZBook/Windows launches.
-- [ ] On the physical ZBook, verify WinGet FFmpeg/ffprobe 9.0.2 under the actual launch methods and exercise an approved external storage target.
+- [x] Locate the original v2.2/v2.2.1 ZIPs on the ZBook and verify their handoff SHA-256 digests without overwriting or running the old app.
+- [ ] Obtain the original exception call-site evidence and independently verify the distributed v2.x runtime repair.
+- [x] On the physical ZBook, verify WinGet FFmpeg/ffprobe 9.0.2 with a restricted launch PATH and launch the editor against the owner-requested USB/exFAT SSD. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+- [x] Fix native exFAT import/output publication, source restoration after rename, and Windows output integrity checks; verify synthetic MP4 playback, full decode and restart readback. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+- [ ] Complete hosted Linux/Windows checks for the SSD fixes and separately retain the six unsupported native symlink-fixture results; do not claim the full native suite passed.
 - [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.
 - [x] MacBook Google Photos panel accepts downloaded videos. Optional Photos Picker passes simulated Google selection through actual local editing, MP4 export and replay. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
 - [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)
 - [x] Windows runner confirms the desktop launcher, simulated Picker selection and local file import, automatic first-cut preparation, reviewed export, complete playback and restart readback. [Verification](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
-- [ ] Use the ZBook's Codex connection to verify launching the GitHub version, importing from downloaded video and exporting to approved storage on the physical machine.
+- [x] Use the ZBook's Codex connection to verify launching the GitHub version, importing downloaded synthetic video and exporting to the owner-requested external SSD on the physical machine. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
 - [ ] Confirm live Google Photos selection and download after the owner configures the Desktop OAuth client and consents to read selected media.
 
 Product and remote acceptance remain open. See the

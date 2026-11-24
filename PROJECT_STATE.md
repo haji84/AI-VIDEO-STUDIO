@@ -1,11 +1,32 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-11-24 JST
+Updated: 2026-11-25 JST
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
+
+## Physical ZBook with an external SSD (2026-11-25 JST)
+
+**TESTED_SYNTHETIC on the physical ZBook.** Source `4253284038f2e49aeb4c8061b8459f97fe610235`
+in Draft #51 fixes exFAT import, no-clobber MP4 publication, source restoration after
+file-identity changes, and Windows output revalidation despite unchanged timestamps.
+The owner requested external storage. The connected USB/exFAT SSD holds the everyday
+workspace, synthetic fixtures, temporary media and exports. A desktop shortcut opens
+the editor with that storage target.
+
+Chrome verified two retained uploads without resending, reviewed first cut, Japanese
+captions and original-audio MP4, full playback/decode and restart SHA readback. A
+simulated Google Picker flow and saved-project/media recovery also passed. Python 28
+passed. The complete native editor suite reported 102 passed, 11 skipped and 6 failures
+while creating unsupported symlink fixtures on exFAT; this is not an all-green suite.
+The targeted storage and output-integrity regressions passed. New hosted CI is NOT_RUN.
+
+The original v2.2/v2.2.1 archives are now found and match the handoff digests, but the
+old runtime's exact exception call site and repair acceptance remain unverified.
+Live Photos OAuth, off-network phones, large media/performance and product DoD remain open.
+[Physical ZBook evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
 
 ## Google Photos on Windows and ZBook (2026-11-24 JST)
 
