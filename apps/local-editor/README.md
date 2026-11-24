@@ -38,7 +38,7 @@ python3 -m venv .venv
 `http://127.0.0.1:8765/` を開きます。既定の保存先は `%USERPROFILE%\AI_VIDEO_STUDIO_DATA` です。
 終了は起動に使ったターミナルで Control+C を押し、終了するまで待ちます。
 
-Node.js と Python 3.11 以上、FFmpeg／ffprobe を用意します。WinGet で導入済みの
+Node.js 22 以上、Python 3.11 以上、FFmpeg／ffprobe を用意します。WinGet で導入済みの
 Gyan.FFmpeg は、起動時の PATH に見えない場合も既知のユーザー用インストール先を確認します。
 日本語字幕用の依存を用意する場合は、リポジトリ直下で一度だけ次を実行します。
 
@@ -57,6 +57,10 @@ py -3.11 -m venv .venv
 
 [Windows の Python セットアップ](https://learn.microsoft.com/en-us/windows/python/beginners) ·
 [Node.js の配布ページ](https://nodejs.org/en/download)
+
+iPhone の Codex から操作する場合は、接続先で ZBook を選びます。編集画面は
+ZBook 上のブラウザで開き、動画の処理と MP4 の保存は ZBook で実行します。
+[Codex の接続先を選ぶ手順](https://learn.chatgpt.com/docs/remote-connections)
 
 ### 共通の設定とコマンド
 
@@ -132,7 +136,8 @@ exFATなどハードリンクのない保存先では、上書き禁止のコピ
 
 「Google フォトから追加」を開きます。Google フォトのメニューからダウンロードした
 MP4/MOV は「ダウンロードした動画を追加して下書きを作る」で選べます。取り込み後、対応した素材から下書きを作ります。
-ZIP で届いた場合は Finder で展開して動画ファイルを選びます。[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
+ZIP で届いた場合は Finder またはエクスプローラーで展開して動画ファイルを選びます。
+[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
 
 Mac または Windows で直接取り込むには、AI VIDEO STUDIO 用の Google Cloud プロジェクトで **Google Photos Picker API** を
 有効にし、種類が **デスクトップ アプリ** の OAuth クライアントを用意します。テスト公開中は、利用する
