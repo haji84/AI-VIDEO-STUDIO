@@ -130,7 +130,7 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
   }
 
   async function start({origin, projectKey, maxCount, draftMode}) {
-    if (setup !== 'READY') fail('Google フォトの直接取込には Mac の接続設定が必要です。');
+    if (setup !== 'READY') fail('Google フォトの直接取込にはこの端末の接続設定が必要です。');
     if (flow && flow.projectKey === projectKey && !expires(flow)) fail('Google フォトで選択中です。取り込みを続けるか、キャンセルしてください。');
     await cancel();
     const secretState = randomBytes(32).toString('base64url');
@@ -146,7 +146,7 @@ export async function createGooglePhotosImport({clientFile, client, request = fe
     try { await openExternal(url.href); }
     catch {
       await cancel(entry);
-      fail('ブラウザを開けませんでした。Mac のブラウザを確認して再試行してください。', 502);
+      fail('ブラウザを開けませんでした。既定のブラウザを確認して再試行してください。', 502);
     }
   }
 

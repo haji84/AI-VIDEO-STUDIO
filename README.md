@@ -11,10 +11,10 @@ The local desktop editor has synthetic browser acceptance on Apple Silicon MacBo
 
 ## ローカルPC編集版を起動
 
-MacBook では Finder で `start-mac.command` をダブルクリックすると、ブラウザに編集画面が開きます。
+MacBook では `start-mac.command`、Windows では `start-windows.cmd` を開くと、ブラウザに編集画面が開きます。
 「動画を追加」「下書き候補を作る」「完成動画を作る」から、端末内で取り込み、編集、MP4 出力を行えます。
 
-[Mac の起動、他 OS のコマンド、復旧手順](apps/local-editor/README.md#起動)
+[Mac と Windows の起動、復旧手順](apps/local-editor/README.md#起動)
 
 AI VIDEO STUDIO is a standalone, local-first, non-destructive AI-assisted video editing project. It is **not** part of GORIQ, and does not share GORIQ's release status, repository, credentials or personal media. The goal is a beginner-friendly editor for **iPhone, Android, Windows and macOS**, supporting 1 to N cameras, Japanese subtitles/TTS, animated titles/video effects, BGM/SE, and optional cloud processing with separate consent.
 

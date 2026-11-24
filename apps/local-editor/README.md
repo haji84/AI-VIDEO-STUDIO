@@ -32,6 +32,32 @@ python3 -m venv .venv
 ./start-mac.command --workspace "$HOME/AI_VIDEO_STUDIO_TEST" --port 8766
 ```
 
+### Windows / ZBook
+
+リポジトリ直下の `start-windows.cmd` をダブルクリックします。Windows の既定ブラウザが
+`http://127.0.0.1:8765/` を開きます。既定の保存先は `%USERPROFILE%\AI_VIDEO_STUDIO_DATA` です。
+終了は起動に使ったターミナルで Control+C を押し、終了するまで待ちます。
+
+Node.js と Python 3.11 以上、FFmpeg／ffprobe を用意します。WinGet で導入済みの
+Gyan.FFmpeg は、起動時の PATH に見えない場合も既知のユーザー用インストール先を確認します。
+日本語字幕用の依存を用意する場合は、リポジトリ直下で一度だけ次を実行します。
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-media.txt
+```
+
+`py` が使えない場合は、確認済みの Python 3.11 以上の実行ファイルを使います。ランチャーは
+`AIVS_PYTHON`、`.venv`、Windows の `py`、`python` の順に使える設定を選びます。
+空き容量に合わせ、所有者が選んだ外部 SSD 上の専用フォルダを指定できます。
+
+```powershell
+.\start-windows.cmd --workspace "E:\AI_VIDEO_STUDIO_DATA"
+```
+
+[Windows の Python セットアップ](https://learn.microsoft.com/en-us/windows/python/beginners) ·
+[Node.js の配布ページ](https://nodejs.org/en/download)
+
 ### 共通の設定とコマンド
 
 リポジトリを取得した PC で、Node.js、Python 3.11 以上、FFmpeg／ffprobe が使える状態にします。
@@ -108,16 +134,21 @@ exFATなどハードリンクのない保存先では、上書き禁止のコピ
 MP4/MOV は「ダウンロードした動画を追加して下書きを作る」で選べます。取り込み後、対応した素材から下書きを作ります。
 ZIP で届いた場合は Finder で展開して動画ファイルを選びます。[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
 
-Mac で直接取り込むには、AI VIDEO STUDIO 用の Google Cloud プロジェクトで **Google Photos Picker API** を
+Mac または Windows で直接取り込むには、AI VIDEO STUDIO 用の Google Cloud プロジェクトで **Google Photos Picker API** を
 有効にし、種類が **デスクトップ アプリ** の OAuth クライアントを用意します。テスト公開中は、利用する
-Google アカウントをテストユーザーに登録します。ダウンロードした OAuth JSON を
-`~/Library/Application Support/AI VIDEO STUDIO/google-photos-client.json` に保存し、`start-mac.command` で
-再起動します。別の場所に保存している場合は `AIVS_GOOGLE_PHOTOS_CLIENT_FILE` で起動時に指定できます。
+Google アカウントをテストユーザーに登録します。ダウンロードした OAuth JSON を使用する PC の
+次の場所に保存し、ランチャーで再起動します。別の場所は `AIVS_GOOGLE_PHOTOS_CLIENT_FILE` で指定できます。
+
+| 端末 | OAuth JSON の保存先 |
+| --- | --- |
+| Mac | `~/Library/Application Support/AI VIDEO STUDIO/google-photos-client.json` |
+| Windows | `%LOCALAPPDATA%\AI VIDEO STUDIO\google-photos-client.json` |
+
 [Picker API の設定](https://developers.google.com/photos/overview/configure-your-app) ·
 [デスクトップアプリの OAuth](https://developers.google.com/identity/protocols/oauth2/native-app) ·
 [OAuth のテスト公開](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
 
-1. 「Google フォトで選んで下書きを作る」を押し、Mac の標準ブラウザで Google の許可と素材の選択を済ませます。
+1. 「Google フォトで選んで下書きを作る」を押し、PC の既定ブラウザで Google の許可と素材の選択を済ませます。
 2. Google フォトで「完了」を押すと、起動中のローカル編集アプリが取り込みと下書き作成を始めます。
 3. 「自動編集の下書き候補」で内容を確認・適用し、「完成動画を作る」で出力します。検査待ちの動画は同じ画面から再試行できます。
 
@@ -126,13 +157,13 @@ Google アカウントをテストユーザーに登録します。ダウンロ�
 すでに素材があるプロジェクトに追加したカメラは、同期位置を確認してから下書きに使えます。
 [Google フォトの選択セッション](https://developers.google.com/photos/picker/guides/sessions)
 
-直接取込では、Google フォトで選んだ項目の種類を確認し、再生できる動画を Mac の通常の素材コピーとして
+直接取込では、Google フォトで選んだ項目の種類を確認し、再生できる動画を PC の通常の素材コピーとして
 保存します。Google が取得用に用意する高品質版を使うため、ファイルが元のアップロードと異なる場合があります。
 Google 接続は読み取り専用で、選択セッションとアクセストークンを作業中のメモリで扱います。
 [Google の取得用動画仕様](https://developers.google.com/photos/picker/guides/media-items#video-base-urls)
 
-素材のコピー、編集、MP4 は起動時の保存フォルダで管理します。Mac の既定では `~/AI_VIDEO_STUDIO_DATA` です。
-その保存フォルダの編集とコピーをすべて消す場合は、アプリを終了してから Finder でフォルダをゴミ箱へ移します。
+素材のコピー、編集、MP4 は起動時の保存フォルダで管理します。既定は各 PC のホームフォルダ内の `AI_VIDEO_STUDIO_DATA` です。
+その保存フォルダの編集とコピーをすべて消す場合は、アプリを終了してから Finder またはエクスプローラーでフォルダをゴミ箱へ移します。
 Google 側の接続許可は Google アカウントで管理できます。[Google アカウントの接続管理](https://myaccount.google.com/connections)
 
 ## 操作

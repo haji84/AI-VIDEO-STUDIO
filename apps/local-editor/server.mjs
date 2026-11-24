@@ -18,7 +18,9 @@ import {createSourceRelinkManager} from './source-relink.mjs';
 import {createPreviewManager} from './preview-job.mjs';
 import {createPendingImports} from './pending-imports.mjs';
 import {createGooglePhotosImport} from './google-photos.mjs';
+import {createSystemBrowserOpener} from './system-browser.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
+const openSystemBrowser=createSystemBrowserOpener();
 const mediaExtensions=new Set(['.mp4','.mov','.mkv','.webm','.wav','.mp3','.m4a','.aac','.flac','.ogg']);
 const maxImportBytes=16*1024**3, importDiskReserve=600*1024**2;
 const fail=(message,status=400)=>{const e=new Error(message);e.status=status;throw e;};
@@ -66,7 +68,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
   const assets=join(folder,'assets');await mkdir(assets,{recursive:true});
   const pendingImports=await createPendingImports({folder,assets,atomicJson});
   const googlePhotos=await createGooglePhotosImport({clientFile:process.env.AIVS_GOOGLE_PHOTOS_CLIENT_FILE,
-    openExternal:process.platform==='darwin'?(url=>exec('/usr/bin/open',[url],{timeout:10000})):undefined,
+    openExternal:openSystemBrowser,
     ...googlePhotosOptions});
   const projectFile=join(folder,'project.aivs.json'),registryFile=join(folder,'media.json'),bindingFile=join(folder,'bindings.json');
   let registry=new Map();
@@ -429,8 +431,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).hr
   for(let i=0;i<args.length;i++){
     if(args[i]==='--workspace')options.workspace=args[++i];
     else if(args[i]==='--port')options.port=Number(args[++i]);
-    else if(args[i]==='--open-browser'&&process.platform==='darwin')openBrowser=true;
-    else throw new Error('Use --workspace <local folder> [--port 8765] [--open-browser on macOS]');
+    else if(args[i]==='--open-browser'&&openSystemBrowser)openBrowser=true;
+    else throw new Error('Use --workspace <local folder> [--port 8765] [--open-browser on macOS or Windows]');
   }
   const app=await startServer(options);console.log(app.url);
   let shuttingDown=false;
@@ -443,7 +445,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).hr
     });
   };
   process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);
-  if(openBrowser)execFile('/usr/bin/open',[app.url],error=>{
-    if(error)console.error('ブラウザを開けませんでした。表示されたアドレスをブラウザで開いてください。');
-  });
+  if(openBrowser)openSystemBrowser(app.url).catch(()=>console.error('ブラウザを開けませんでした。表示されたアドレスをブラウザで開いてください。'));
 }

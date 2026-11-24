@@ -8,7 +8,7 @@
 <section id="source-relink" hidden></section><section id="pending-imports" hidden></section>
 <section><div class="row"><label>動画を追加<input id="video-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm"></label><label>名前<input id="project-name" maxlength="160"></label></div><p class="muted">素材はこのPC内の専用フォルダに保存します。元ファイルは変更しません。</p>
 <details id="google-photos"><summary>Google フォトから追加</summary>
-<p>AI VIDEO STUDIO は、Google フォトで選んだ動画を読み取り、この Mac の作業フォルダにコピーします。編集と書き出しはこの Mac 内で行います。</p>
+<p>AI VIDEO STUDIO は、Google フォトで選んだ動画を読み取り、この PC の作業フォルダにコピーします。編集と書き出しはこの PC 内で行います。</p>
 <p id="google-photos-status" class="muted" role="status"></p>
 <div class="tools"><button id="google-photos-start" class="primary" hidden>Google フォトで選んで下書きを作る</button><button id="google-photos-cancel" hidden>取り込みをキャンセル</button></div>
 <div class="tools"><a class="file-label" href="https://photos.google.com/" target="_blank" rel="noopener noreferrer">Google フォトを開く</a><button id="google-photos-local">ダウンロードした動画を追加して下書きを作る</button><input id="google-photos-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm" hidden></div>
@@ -90,7 +90,7 @@ function showGooglePhotos(){
  $('google-photos-cancel').hidden=!active||google.status==='STARTING_DRAFT';
  const messages={
   SETUP_REQUIRED:'直接取り込みには初回の Google 接続設定が必要です。今すぐ使う場合は、Google フォトで動画を選び、メニューからダウンロードして追加してください。',
-  SETUP_INVALID:'Mac のデスクトップ OAuth 設定ファイルを確認してください。ダウンロードした動画はすぐに追加できます。',
+  SETUP_INVALID:'この PC のデスクトップ OAuth 設定ファイルを確認してください。ダウンロードした動画はすぐに追加できます。',
   UNAVAILABLE:'この端末ではダウンロードした Google フォトの動画を追加できます。',
   READY:'Google の画面で動画を選び、「完了」を押すと取り込みと下書き作成が始まります。',
   EXPIRED:'選択の有効期限が切れました。動画を選び直してください。',
@@ -107,7 +107,7 @@ function showGooglePhotos(){
   draftMessages[result.draft]??'',
  ].join(''):'';
  const progress={WAITING_FOR_EDITOR:'選択した動画を受け取りました。現在の編集処理の完了を待っています。',
-  IMPORTING:'選んだ動画をこの Mac に取り込んでいます。',STARTING_DRAFT:'取り込みが完了し、下書き作成を始めています。'};
+  IMPORTING:'選んだ動画をこの PC に取り込んでいます。',STARTING_DRAFT:'取り込みが完了し、下書き作成を始めています。'};
  $('google-photos-status').textContent=active
   ? (progress[google.status]??'Google フォトで動画を選び、「完了」を押してください。')
   : (localGoogleMessage||google.error||resultMessage||messages[phase]||'');
