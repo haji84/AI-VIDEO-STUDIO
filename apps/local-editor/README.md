@@ -69,9 +69,11 @@ ZBook 上のブラウザで開き、動画の処理と MP4 の保存は ZBook �
 MacBook Pro（Apple Silicon）では macOS 26.6.2 / Node24.21.0 / Python3.14.7 /
 FFmpeg 8.0.3 で合成素材の取り込み、下書き編集、MP4 の書き出しと再生を確認しました。
 Windows Server 2025 の CI では、WinGet 配布物の FFmpeg／ffprobe 9.0.2 で
-日本語を含むパスの取り込み復旧、下書き編集、MP4 の再生と再起動後の取得を確認しました。
-ZBook 実機は確認待ちです。追加課金・アカウント登録なし。
+日本語を含むパスの取り込み復旧、Google フォトを模擬した動画選択、下書き編集、
+MP4 の再生と再起動後の取得を確認しました。
+ZBook 実機での起動と保存先は確認待ちです。
 [Windows ランナー検証](../../docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md) ·
+[Windows の Google フォト検証](../../docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md) ·
 [MacBook 検証記録](../../docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md)
 
 字幕を書き出す場合は、同じPythonへローカル描画用の依存を導入します。

@@ -17,6 +17,8 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.
 - [x] MacBook Google Photos panel accepts downloaded videos. Optional Photos Picker passes simulated Google selection through actual local editing, MP4 export and replay. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
 - [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)
+- [x] Windows runner confirms the desktop launcher, simulated Picker selection and local file import, automatic first-cut preparation, reviewed export, complete playback and restart readback. [Verification](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
+- [ ] Use the ZBook's Codex connection to verify launching the GitHub version, importing from downloaded video and exporting to approved storage on the physical machine.
 - [ ] Confirm live Google Photos selection and download after the owner configures the Desktop OAuth client and consents to read selected media.
 
 Product and remote acceptance remain open. See the

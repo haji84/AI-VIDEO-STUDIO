@@ -2,6 +2,17 @@
 Updated: 2026-11-24 JST
 Status: IN_PROGRESS. Windows runner and physical MacBook with generated media are TESTED_SYNTHETIC.
 
+**Google Photos on Windows and ZBook, 2026-11-24 JST.** Tested source
+`fd52522abea17595d3273245fa3ef7b26405cce2` in Draft #51 includes a Windows launcher
+and uses the default browser for the editor and Google sign-in. On Windows Server
+2025, the native launcher, tool discovery, saved local file and simulated Picker
+imports, automatic draft, Chrome playback, full decode and restart hash match passed.
+The physical test starts from a Codex chat with the ZBook selected as its host.
+Launch this branch with `start-windows.cmd`, verify the installed FFmpeg pair and
+use synthetic video in an approved workspace on the external SSD. Complete the
+live Picker test after the app's Desktop OAuth setup and the owner's consent.
+[Windows Google Photos evidence](../validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
+
 **Google Photos on the MacBook, 2026-11-24 JST.** Implementation
 `678485710ed22574b41144fb82668d1afa87bbfe` adds a Google Photos entry to the
 everyday editor. The download and local file route is ready. Chrome with a

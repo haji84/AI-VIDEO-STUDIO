@@ -7,6 +7,16 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Google Photos on Windows and ZBook (2026-11-24 JST)
+
+**TESTED_SYNTHETIC on Windows Server 2025. Physical ZBook verification is pending.**
+`start-windows.cmd` opens the local editor and finds an installed Desktop OAuth
+configuration. Windows Chrome confirmed local video selection and a simulated
+Photos Picker selection through automatic draft preparation, reviewed edit,
+H.264/AAC export, full playback, and SHA-256 readback after restart. The ZBook
+launch, approved external storage, and the live Google account remain to be verified.
+[Windows evidence](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
+
 ## Google Photos on MacBook (2026-11-24 JST)
 
 **TESTED_SYNTHETIC in the Mac editor.** Google Photos download guidance and
