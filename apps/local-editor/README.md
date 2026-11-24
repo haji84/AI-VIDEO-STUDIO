@@ -37,6 +37,7 @@ python3 -m venv .venv
 リポジトリ直下の `start-windows.cmd` をダブルクリックします。Windows の既定ブラウザが
 `http://127.0.0.1:8765/` を開きます。既定の保存先は `%USERPROFILE%\AI_VIDEO_STUDIO_DATA` です。
 終了は起動に使ったターミナルで Control+C を押し、終了するまで待ちます。
+起動済みの場合は、同じ Windows PC のブラウザで [編集画面](http://127.0.0.1:8765/) を開きます。
 
 Node.js 22 以上、Python 3.11 以上、FFmpeg／ffprobe を用意します。WinGet で導入済みの
 Gyan.FFmpeg は、起動時の PATH に見えない場合も既知のユーザー用インストール先を確認します。

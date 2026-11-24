@@ -26,6 +26,11 @@ owner authentication in GitHub, dispatch `manual-smoke.yml` on
 fixture limitation. Dedicated Photos Desktop OAuth setup separately needs owner
 authorization and account consent. The current editor is running from the desktop
 shortcut with the verified source and the external SSD workspace.
+The optional running-editor desktop reopen helper was not created: local automatic
+approval review rejected both the embedded-script shortcut and a passive URL-link
+addition with only `blocked by policy` given as the reason. The existing startup
+shortcut and running editor were preserved. Reopen the already-running editor in
+the ZBook browser at `http://127.0.0.1:8765/`; do not claim same-shortcut reopen was verified.
 Large-file replay cost, off-network phones, interrupted transfers and real-media
 acceptance remain separate gates. Keep this checkpoint ahead of the historical notes below.
 
