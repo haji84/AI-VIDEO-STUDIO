@@ -21,7 +21,9 @@ captions and original-audio MP4, full playback/decode and restart SHA readback. 
 simulated Google Picker flow and saved-project/media recovery also passed. Python 28
 passed. The complete native editor suite reported 102 passed, 11 skipped and 6 failures
 while creating unsupported symlink fixtures on exFAT; this is not an all-green suite.
-The targeted storage and output-integrity regressions passed. New hosted CI is NOT_RUN.
+The targeted storage and output-integrity regressions passed. New hosted CI is NOT_RUN:
+the connected GitHub tools expose no workflow-dispatch operation, and the physical
+ZBook browser is signed out of GitHub. No new workflow was started.
 
 The original v2.2/v2.2.1 archives are now found and match the handoff digests, but the
 old runtime's exact exception call site and repair acceptance remain unverified.

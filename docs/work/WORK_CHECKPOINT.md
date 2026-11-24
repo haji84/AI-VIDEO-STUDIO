@@ -16,12 +16,16 @@ external SSD. Native Chrome passed retained two-upload recovery, reviewed first 
 caption/source-audio MP4, full playback/decode/restart readback, simulated Google
 Photos import and cross-workspace project recovery. Python 28 passed; native full
 editor tests were 102 pass, 11 skip, 6 unsupported-symlink-fixture failures. Do not call
-the full suite green. The new hosted CI is NOT_RUN at this checkpoint.
+the full suite green. The new hosted CI is NOT_RUN: connected tools cannot dispatch
+it, and the ZBook browser is signed out of GitHub. No new run was started.
 
 The two original v2.x archives were found and their handoff digests verified; the
-original failing call site and old-runtime repair are still unverified. Next: run
-hosted Linux/Windows checks on this source, preserve the native fixture limitation,
-then complete the dedicated Photos Desktop OAuth setup with owner authorization.
+original failing call site and old-runtime repair are still unverified. Next: after
+owner authentication in GitHub, dispatch `manual-smoke.yml` on
+`fix/zbook-media-preflight-20261115` and inspect all three jobs. Preserve the native
+fixture limitation. Dedicated Photos Desktop OAuth setup separately needs owner
+authorization and account consent. The current editor is running from the desktop
+shortcut with the verified source and the external SSD workspace.
 Large-file replay cost, off-network phones, interrupted transfers and real-media
 acceptance remain separate gates. Keep this checkpoint ahead of the historical notes below.
 

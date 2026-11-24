@@ -78,7 +78,9 @@ Python は `engine.test_media_tools`、`engine.test_saved_first_cut`、
 
 これらのリンク試験は対応する保存装置 / CI で別に確認する必要がある。
 Windows の出力確定・改変検出の回帰は既存の手動 CI に追加した。
-このチェックポイント時点の新コミットの hosted CI は **NOT_RUN**。
+新コミットの hosted CI は **NOT_RUN**。接続ツールに workflow dispatch 操作がなく、
+ZBook のブラウザは GitHub 未ログインだったため、新しい試験は起動していない。
+所有者の認証後に `fix/zbook-media-preflight-20261115` の手動試験 3 ジョブを確認する。
 独立した静的レビューでは、今回の保存・復元・照合の変更に未解決の指摘はなかった。
 
 ## 配布 ZIP と残る受入

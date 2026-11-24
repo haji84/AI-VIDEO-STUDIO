@@ -35,7 +35,8 @@
     "desktopShortcutCreated": true,
     "editorBind": "127.0.0.1",
     "editorPort": 8765,
-    "restrictedLaunchPathMediaDiscovery": "PASS"
+    "restrictedLaunchPathMediaDiscovery": "PASS",
+    "finalEverydayLaunchObserved": true
   },
   "tests": {
     "python": {
@@ -72,7 +73,9 @@
       ]
     },
     "hostedCI": "NOT_RUN",
-    "staticReview": "NO_UNRESOLVED_FINDINGS"
+    "staticReview": "NO_UNRESOLVED_FINDINGS",
+    "hostedCIBlocker": "Connected tools have no workflow dispatch operation; the physical ZBook browser is signed out of GitHub. No run started.",
+    "hostedCIAttemptedHead": "768707cc32b0b6829d949993066607c5affb3c17"
   },
   "browser": {
     "recovery": {
