@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from owner_photo_selection import SCHEMA, Hold, confirm, preview, main
+from owner_photo_selection import SCHEMA, Hold, confirm, preview, main, verify_readback
 
 
 @unittest.skipUnless(os.name == "posix", "owner ACL gate is POSIX-only")
@@ -120,6 +120,47 @@ class OwnerPhotoSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(Hold, "PHOTO_SELECTION_PATH_UNSAFE"):
             preview(self.selection)
         self.assertFalse(self.receipt.exists())
+
+    def test_readback_matches_separate_bytes_without_claiming_provider(self):
+        expected = hashlib.sha256(self.a.read_bytes()).hexdigest()
+        with mock.patch("socket.socket", side_effect=AssertionError("network forbidden")):
+            result = verify_readback(self.a, self.b, expected)
+        self.assertEqual(result["status"], "LOCAL_READBACK_BYTES_MATCH")
+        self.assertEqual(result["providerProvenance"], "NOT_VERIFIED")
+        self.assertEqual(result["unattendedArrival"], "NOT_VERIFIED")
+        self.assertEqual(result["publishing"], "NOT_PERFORMED")
+        self.assertNotIn(expected, json.dumps(result))
+        self.assertEqual(len(list(self.root.iterdir())), 3)
+
+    def test_readback_refuses_same_path_and_hardlink(self):
+        expected = hashlib.sha256(self.a.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(Hold, "PHOTO_READBACK_NOT_SEPARATE"):
+            verify_readback(self.a, self.a, expected)
+        linked = self.root / "linked.mp4"
+        os.link(self.a, linked)
+        with self.assertRaisesRegex(Hold, "PHOTO_READBACK_NOT_SEPARATE"):
+            verify_readback(self.a, linked, expected)
+
+    def test_readback_refuses_changed_source_and_changed_copy(self):
+        expected = hashlib.sha256(self.a.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(Hold, "PHOTO_READBACK_SOURCE_SHA_MISMATCH"):
+            verify_readback(self.a, self.b, "0" * 64)
+        self.b.write_bytes(b"changed synthetic bytes")
+        with self.assertRaisesRegex(Hold, "PHOTO_READBACK_COPY_SHA_MISMATCH"):
+            verify_readback(self.a, self.b, expected)
+        with self.assertRaisesRegex(Hold, "PHOTO_READBACK_EXPECTED_SHA_REQUIRED"):
+            verify_readback(self.a, self.b, "PRIVATE_FAKE_TOKEN")
+
+    def test_readback_cli_does_not_echo_private_inputs(self):
+        expected = hashlib.sha256(self.a.read_bytes()).hexdigest()
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["verify-readback", "--source-file", str(self.a),
+                                   "--readback-file", str(self.b),
+                                   "--expected-sha256", expected]), 0)
+        answer = output.getvalue()
+        self.assertNotIn(str(self.root), answer)
+        self.assertNotIn(expected, answer)
+        self.assertEqual(json.loads(answer)["status"], "LOCAL_READBACK_BYTES_MATCH")
 
     def test_cli_is_network_free_and_does_not_echo_private_paths(self):
         with mock.patch("socket.socket", side_effect=AssertionError("network forbidden")):
