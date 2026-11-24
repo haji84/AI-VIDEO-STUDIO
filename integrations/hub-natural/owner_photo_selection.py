@@ -180,15 +180,59 @@ def confirm(selection_file, receipt_file, expected_sha256):
             "mediaTransfer": "NOT_PERFORMED", "publishing": "NOT_PERFORMED"}
 
 
+def verify_readback(source_file, readback_file, expected_sha256):
+    """Compare separately stored bytes to an independently pinned expected SHA.
+
+    This checks local bytes only. It cannot establish that a copy came from
+    Drive, that a remote object is new, or that the producer was unattended.
+    """
+    if not isinstance(expected_sha256, str) or SHA.fullmatch(expected_sha256) is None:
+        raise Hold("PHOTO_READBACK_EXPECTED_SHA_REQUIRED")
+    original = _private_path(source_file)
+    downloaded = _private_path(readback_file)
+    try:
+        if original == downloaded or os.path.samefile(original, downloaded):
+            raise Hold("PHOTO_READBACK_NOT_SEPARATE")
+    except OSError as exc:
+        raise Hold("PHOTO_READBACK_FILE_UNAVAILABLE") from exc
+    source = _fingerprint(original)
+    if source["sha256"] != expected_sha256:
+        raise Hold("PHOTO_READBACK_SOURCE_SHA_MISMATCH")
+    copy = _fingerprint(downloaded)
+    if copy["sha256"] != expected_sha256 or copy["bytes"] != source["bytes"]:
+        raise Hold("PHOTO_READBACK_COPY_SHA_MISMATCH")
+    try:
+        if os.path.samefile(original, downloaded):
+            raise Hold("PHOTO_READBACK_NOT_SEPARATE")
+    except OSError as exc:
+        raise Hold("PHOTO_READBACK_FILE_UNAVAILABLE") from exc
+    return {
+        "status": "LOCAL_READBACK_BYTES_MATCH",
+        "verifiedCopies": 1,
+        "providerProvenance": "NOT_VERIFIED",
+        "unattendedArrival": "NOT_VERIFIED",
+        "publishing": "NOT_PERFORMED",
+    }
+
+
 def main(argv=None):
     parser = _RedactingParser(description="Offline opt-in exported-video owner selection")
-    parser.add_argument("command", choices=("preview", "confirm"))
-    parser.add_argument("--selection-file", required=True)
+    parser.add_argument("command", choices=("preview", "confirm", "verify-readback"))
+    parser.add_argument("--selection-file")
+    parser.add_argument("--source-file")
+    parser.add_argument("--readback-file")
     parser.add_argument("--receipt-file")
     parser.add_argument("--expected-sha256")
     try:
         args = parser.parse_args(argv)
-        if args.command == "confirm":
+        if args.command == "verify-readback":
+            if (not args.source_file or not args.readback_file
+                    or args.selection_file or args.receipt_file):
+                raise Hold("PHOTO_SELECTION_ARGUMENTS_INVALID")
+            result = verify_readback(args.source_file, args.readback_file, args.expected_sha256)
+        elif not args.selection_file or args.source_file or args.readback_file:
+            raise Hold("PHOTO_SELECTION_ARGUMENTS_INVALID")
+        elif args.command == "confirm":
             if not args.receipt_file:
                 raise Hold("PHOTO_SELECTION_RECEIPT_PATH_INVALID")
             result = confirm(args.selection_file, args.receipt_file, args.expected_sha256)

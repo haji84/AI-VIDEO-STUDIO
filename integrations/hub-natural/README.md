@@ -846,3 +846,37 @@ bytes only; Windows ownership ACL behavior is not yet verified.
 The separate owner-authorized Drive transport remains blocked pending
 approved private host and OAuth, and independent Drive readback must be
 proven there before any migration acceptance.
+
+### Stage 1: independently stored byte-readback gate (proposal, 2026-11-24)
+
+Reuse the editor's owner-driven Photos Picker path proposed in Draft PR #51,
+not a second Photos API implementation. Picker's downloaded high-quality
+rendition need not equal the pre-upload camera original. Freeze the bytes of
+an explicitly selected export (or the actual Picker rendition) before transfer;
+keep those two provenance types distinct. The Drive adapter remains read-only;
+no upload or future-photo sync has been enabled by this change. Picker requires
+explicit user selection, not unattended library enumeration.
+
+Once an approved private media-capable host and upload route exist, independently
+download a genuinely new private Drive INBOX object to a different private
+file (not a hardlink), then on that host compare it with the originally pinned
+export/rendition. The expected SHA must be taken from the earlier private
+receipt, not calculated from the downloaded copy. Example, placeholders only:
+
+```sh
+python integrations/hub-natural/owner_photo_selection.py verify-readback \\
+  --source-file /owner-private/source/selected.mp4 \\
+  --readback-file /owner-private/independent-readback/received.mp4 \\
+  --expected-sha256 '<SHA256 from original private receipt>'
+```
+
+The command reads only owner-private local files, refuses same inode/path,
+recomputes both hashes, and returns a sanitized byte-match status, never a path
+or SHA. It is POSIX-only under the existing owner ACL gate. A local byte match
+alone cannot prove that the file came from Drive, that it was newly uploaded,
+that the source receipt was authentic, or that an unattended pipeline ran.
+Retain independent provider metadata, timestamps, pre-run baseline, OAuth/host
+approval, fresh-process state recovery and no duplicate imports in private
+evidence; do not publish them. Current default Drive intake size limit is
+512 MiB; use a compatible small file for the first live proof. No limit,
+permissions, runtime settings, main, or posting changed here.
