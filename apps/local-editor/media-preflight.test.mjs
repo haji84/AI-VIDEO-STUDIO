@@ -12,17 +12,35 @@ import {startServer} from './server.mjs';
 const exec=promisify(execFile);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
-test('a target without hard-link support finalizes a verified copy without overwriting data',async t=>{
+for(const code of ['ENOTSUP','EISDIR'])test(`a target without hard-link support finalizes a verified copy without overwriting data (${code})`,async t=>{
  const dir=await mkdtemp(join(tmpdir(),'aivs-no-hardlinks-'));let server;
  try{
   const source=join(dir,'synthetic.mp4');await exec('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=10:d=1','-c:v','libx264',source]);const bytes=await readFile(source);
-  t.mock.method(fs,'link',async()=>{throw Object.assign(new Error('hard links unavailable'),{code:'ENOTSUP'});});
+  t.mock.method(fs,'link',async()=>{throw Object.assign(new Error('hard links unavailable'),{code});});
   syncBuiltinESMExports();
   server=await startServer({workspace:join(dir,'data'),port:0});
   const response=await fetch(server.url+'/api/import?kind=video',{method:'POST',body:bytes,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':'0','X-File-Name':'synthetic.mp4'}});
   assert.equal(response.status,200,await response.clone().text());const state=await response.json();assert.equal(state.pendingImports.length,0);
   const registry=JSON.parse(await readFile(join(dir,'data','media.json'),'utf8'));
   assert.deepEqual(await readFile(join(dir,'data','assets',registry[0].file)),bytes);assert.deepEqual(await readFile(source),bytes);
+ }finally{if(server)await server.close();t.mock.restoreAll();syncBuiltinESMExports();await rm(dir,{recursive:true,force:true});}
+});
+
+test('exFAT copy fallback preserves a conflicting destination and the retained upload',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'aivs-exfat-conflict-')),workspace=join(dir,'data');let server,destination;
+ const conflicting='synthetic pre-existing destination';
+ try{
+  const source=join(dir,'synthetic.mp4');await exec('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=160x90:r=10:d=1','-c:v','libx264',source]);const bytes=await readFile(source);
+  t.mock.method(fs,'link',async(_from,to)=>{destination=to;await writeFile(to,conflicting,{flag:'wx'});throw Object.assign(new Error('exFAT hard links unavailable'),{code:'EISDIR'});});
+  syncBuiltinESMExports();
+  server=await startServer({workspace,port:0});
+  const response=await fetch(server.url+'/api/import?kind=video',{method:'POST',body:bytes,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':'0','X-File-Name':'synthetic.mp4'}});
+  assert.equal(response.status,400);const state=await response.json();assert.match(state.error,/IMPORT_FINAL_CONFLICT/);assert.equal(state.pendingImports.length,1);
+  assert.equal(await readFile(destination,'utf8'),conflicting);
+  const pending=JSON.parse(await readFile(join(workspace,'pending-imports.json'),'utf8'));
+  assert.deepEqual(await readFile(join(workspace,'assets',pending[0].file+'.tmp')),bytes);
+  assert.deepEqual(await readFile(source),bytes);
+  assert.equal(JSON.parse(await readFile(join(workspace,'project.aivs.json'),'utf8')).project.sourceRefs.length,0);
  }finally{if(server)await server.close();t.mock.restoreAll();syncBuiltinESMExports();await rm(dir,{recursive:true,force:true});}
 });
 

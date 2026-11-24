@@ -82,7 +82,9 @@ export async function openRecordedOutput({folder,receipt,cache}){
   output=await checkedOpen(root,p.output);
   if(output.stat.size!==BigInt(receipt.outputBytes))fail('OUTPUT_CHANGED');
   reportFile=await checkedOpen(root,p.report,REPORT_BYTES);
-  const stamp=JSON.stringify(receipt)+'|'+output.stamp+'|'+reportFile.stamp,cached=cache?.get(receipt.id);
+  // Windows/exFAT can retain the same timestamps after a same-length rewrite.
+  // Rehash on Windows; cached metadata alone cannot certify those bytes.
+  const stamp=JSON.stringify(receipt)+'|'+output.stamp+'|'+reportFile.stamp,cached=process.platform==='win32'?undefined:cache?.get(receipt.id);
   let report;
   if(cached?.stamp===stamp)report=cached.report;
   else{

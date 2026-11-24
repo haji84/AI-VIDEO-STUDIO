@@ -53,14 +53,19 @@ def _tempo(speed:float) -> str:
 
 
 def _install_new(candidate:Path,output:Path) -> None:
-    """Exclusive temporary file + no-clobber atomic link on the destination FS."""
+    """Stage on the destination FS, then publish without replacing existing data."""
     staged=None
     try:
         with tempfile.NamedTemporaryFile(prefix=output.name+'.',suffix='.new',dir=output.parent,delete=False) as handle:
             staged=Path(handle.name)
             with candidate.open('rb') as source:shutil.copyfileobj(source,handle)
             handle.flush();os.fsync(handle.fileno())
-        os.link(staged,output)  # existing names/symlinks fail, never follow them
+        if os.name == 'nt':
+            # Windows rename refuses existing names and supports exFAT, which
+            # cannot publish through hard links. Both paths share a directory.
+            os.rename(staged,output)
+        else:
+            os.link(staged,output)  # existing names/symlinks fail, never follow them
     finally:
         if staged is not None:staged.unlink(missing_ok=True)
 

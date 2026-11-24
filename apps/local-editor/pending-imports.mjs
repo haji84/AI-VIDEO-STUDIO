@@ -41,7 +41,8 @@ export async function createPendingImports({folder,assets,atomicJson}){
   if(verified.file!==verified.final){
    try{await link(verified.file,verified.final);}
    catch(error){
-    if(['ENOTSUP','EOPNOTSUPP','EPERM','EXDEV','ENOSYS','EINVAL'].includes(error.code)){
+    // Windows may report EISDIR when exFAT does not support hard links.
+    if(['ENOTSUP','EOPNOTSUPP','EPERM','EXDEV','ENOSYS','EINVAL','EISDIR'].includes(error.code)){
      const disk=await statfs(assets);
      if(Number(disk.bavail)*Number(disk.bsize)<verified.record.bytes+600*1024**2)fail('IMPORT_FINALIZE_SPACE_NEEDED: 保存先の空き容量を増やしてから再試行してください。送信済みコピーは保持しています。');
      try{await copyFile(verified.file,verified.final,constants.COPYFILE_EXCL);}

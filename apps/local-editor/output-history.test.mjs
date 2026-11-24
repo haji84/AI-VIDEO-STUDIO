@@ -79,7 +79,7 @@ test('report and output tampering invalidate even a previously selected cached p
  await writeFile(f.reportFile,JSON.stringify({...f.report,projectRevision:99}));await assert.rejects(()=>history.open(f.id),/REPORT_CHANGED/);
  await writeFile(f.reportFile,originalReport);await (await history.open(f.id)).handle.close();
  const before=await stat(f.output);await writeFile(f.output,Buffer.from('X'.repeat(f.bytes.length)));await utimes(f.output,before.atime,before.mtime);
- await assert.rejects(()=>history.open(f.id),/OUTPUT_CHANGED/);await writeFile(f.output,f.bytes);
+ await assert.rejects(async()=>{const unexpected=await history.open(f.id);await unexpected.handle.close();},/OUTPUT_CHANGED/);await writeFile(f.output,f.bytes);
  const mismatch={...f.receipt,projectRevision:9};await assert.rejects(()=>openRecordedOutput({folder,receipt:mismatch}),/REPORT_IDENTITY_MISMATCH/);
  await unlink(f.reportFile);await assert.rejects(()=>history.open(f.id),/OUTPUT_EVIDENCE_UNAVAILABLE/);
 }));
