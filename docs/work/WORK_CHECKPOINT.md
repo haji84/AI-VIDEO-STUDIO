@@ -2,6 +2,22 @@
 Updated: 2026-11-25 JST
 Status: IN_PROGRESS. Physical ZBook, physical MacBook and Windows runner with generated media are TESTED_SYNTHETIC.
 
+**ZBook Google Photos authentication, 2026-11-25 JST.** The owner requested setup
+and direct import. A dedicated project was created in the owner's existing Google
+Cloud session; Photos Picker API is visibly enabled. Google Auth setup has app name
+`AI VIDEO STUDIO`, external/testing audience and owner support/contact prepared.
+The final user-data-policy agreement is unchecked and unsubmitted; an action-time
+confirmation question is pending. Do not repeat project creation or API enablement.
+No Desktop OAuth credential exists yet and the default local client JSON is absent.
+Next: after policy confirmation, finish this form, prepare the Desktop OAuth client
+and request the required credential-creation confirmation, register only the owner
+as test user, save its JSON privately outside the repo, then safely restart the
+existing editor against the same SSD workspace. Finish account consent and verify
+an owner-selected short video actually downloads and enters a draft on the SSD.
+Live import remains NOT_RUN. No billing/upgrade, private-media transfer or GORIQ
+credential access occurred. Keep account/project IDs and secrets out of this public
+repository. [Setup receipt](../validation/GOOGLE_PHOTOS_ZBOOK_SETUP_2026-11-25.md)
+
 **Physical ZBook / external SSD, 2026-11-25 JST.** Main remains
 `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`; active implementation is Draft #51,
 source `4253284038f2e49aeb4c8061b8459f97fe610235`. The native USB/exFAT target exposed

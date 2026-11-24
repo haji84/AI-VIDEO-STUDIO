@@ -7,6 +7,18 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## ZBook Google Photos authentication setup (2026-11-25 JST)
+
+**IMPLEMENTING; live import NOT_RUN.** At the owner's request, a dedicated Google
+Cloud project was created and its Photos Picker API enabled. Google Auth setup is
+prepared for `AI VIDEO STUDIO` in testing mode, using the owner's existing account
+for support/contact. The final user-data-policy agreement awaits the owner's
+action-time confirmation. Desktop OAuth credentials, local configuration, account
+consent and an owner-selected video download are not yet complete. No billing
+upgrade, credential reuse, private-media transfer or public deployment occurred.
+Media remains targeted to the external SSD.
+[Configuration progress and exact remaining steps](docs/validation/GOOGLE_PHOTOS_ZBOOK_SETUP_2026-11-25.md)
+
 ## Physical ZBook with an external SSD (2026-11-25 JST)
 
 **TESTED_SYNTHETIC on the physical ZBook.** Source `4253284038f2e49aeb4c8061b8459f97fe610235`

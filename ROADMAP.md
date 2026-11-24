@@ -22,7 +22,8 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)
 - [x] Windows runner confirms the desktop launcher, simulated Picker selection and local file import, automatic first-cut preparation, reviewed export, complete playback and restart readback. [Verification](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
 - [x] Use the ZBook's Codex connection to verify launching the GitHub version, importing downloaded synthetic video and exporting to the owner-requested external SSD on the physical machine. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
-- [ ] Confirm live Google Photos selection and download after the owner configures the Desktop OAuth client and consents to read selected media.
+- [x] At the owner's request, create a dedicated Google Cloud project and enable Photos Picker API for ZBook direct import. [Setup receipt](docs/validation/GOOGLE_PHOTOS_ZBOOK_SETUP_2026-11-25.md)
+- [ ] Finish the prepared Google Auth setup after owner agreement to the displayed user-data policy; create the Desktop OAuth client with action-time confirmation, configure it privately on ZBook, then verify owner-selected live Photos download to the external SSD.
 
 Product and remote acceptance remain open. See the
 [MacBook receipt](docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md) and
