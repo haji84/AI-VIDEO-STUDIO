@@ -128,13 +128,8 @@ def evaluated_detections(truth, predictions, *, min_overlap=.4):
     Predicted labels are matched 1-to-1 by event and temporal IoU.
     A short biased holdout yields metrics marked insufficient, not a PASS.
     """
-    if not 0 < min_overlap <= 1:
+    if not _bounded(min_overlap, 0, 1) or min_overlap == 0:
         raise ReviewHold("IOU_THRESHOLD_INVALID")
-    # Every truth label must be an independently checked human annotation.
-    # A model's own suggestions cannot serve as ground truth.
-    if any(x.get('reviewed') is not True or x.get('eventEvidence') != 'human_checked'
-           for x in truth if isinstance(x,dict)):
-        raise ReviewHold('UNVERIFIED_GROUND_TRUTH')
     for seq in (truth, predictions):
         if not isinstance(seq, list) or len(seq)>10000:
             raise ReviewHold("EVAL_INPUT_INVALID")
@@ -145,6 +140,29 @@ def evaluated_detections(truth, predictions, *, min_overlap=.4):
                 raise ReviewHold("EVAL_EVENT_INVALID")
             if not (_bounded(x.get('start'),0,14400) and _bounded(x.get('end'),0,14400) and x['end'] > x['start']):
                 raise ReviewHold("EVAL_INTERVAL_INVALID")
+    # Human-check declarations are necessary, but cannot prove independence.
+    seen_truth = set()
+    source_nights = {}
+    declared_nights = set()
+    missing_nights = 0
+    for x in truth:
+        if x.get('reviewed') is not True or x.get('eventEvidence') != 'human_checked':
+            raise ReviewHold('UNVERIFIED_GROUND_TRUTH')
+        key = (x['sourceSha256'], x['start'], x['end'], x['event'])
+        if key in seen_truth:
+            raise ReviewHold('DUPLICATE_EVAL_TRUTH')
+        seen_truth.add(key)
+        night = x.get('reviewNight')
+        if night is None:
+            missing_nights += 1
+            continue
+        if not isinstance(night, str) or not night.strip() or night != night.strip():
+            raise ReviewHold('EVAL_NIGHT_INVALID')
+        previous = source_nights.setdefault(x['sourceSha256'], night)
+        if previous != night:
+            raise ReviewHold('EVAL_SOURCE_NIGHT_CONFLICT')
+        if x['event'] != 'unknown':
+            declared_nights.add(night)
     positives=[x for x in truth if x['event'] not in ('no_event','unknown')]
     detected=[x for x in predictions if x['event'] not in ('no_event','unknown')]
     matches=[]
@@ -162,20 +180,36 @@ def evaluated_detections(truth, predictions, *, min_overlap=.4):
     for _,p,t in matches:
         if p not in seenp and t not in seent:
             seenp.add(p); seent.add(t)
-    tp=len(seenp); fp=len(detected)-tp; fn=len(positives)-tp
-    precision=round(tp/(tp+fp),4) if tp+fp else None
-    recall=round(tp/(tp+fn),4) if tp+fn else None
-    f1=round(2*precision*recall/(precision+recall),4) if precision is not None and recall is not None and precision+recall else (0.0 if precision is not None and recall is not None else None)
-    unique_nights=len(set(x.get('reviewNight') for x in truth if isinstance(x.get('reviewNight'),str)))
-    negatives=sum(x['event']=='no_event' for x in truth)
-    # Thresholds are a deliberately conservative test protocol, not a scientific standard.
-    enough=bool(len(positives)>=30 and negatives>=30 and unique_nights>=5)
-    return {"status":"RESEARCH_VALIDATION" if enough else "INSUFFICIENT_INDEPENDENT_HOLDOUT",
-            "truePositive":tp, "falsePositive":fp, "falseNegative":fn,
-            "precision":precision, "recall":recall, "f1":f1,
-            "labeledPositive":len(positives),"labeledNegative":negatives,
-            "independentNights":unique_nights,
-            "note":"TEMPORAL_IOU_EVENT_MATCH_ONLY_NOT_PROOF_OF_VIRAL_SUCCESS"}
+    def counts(tp, fp, fn):
+        return {
+            "truePositive": tp, "falsePositive": fp, "falseNegative": fn,
+            "precision": round(tp / (tp + fp), 4) if tp + fp else None,
+            "recall": round(tp / (tp + fn), 4) if tp + fn else None,
+            "f1": round(2 * tp / (2 * tp + fp + fn), 4) if 2 * tp + fp + fn else None,
+        }
+
+    per_event = {}
+    for event in sorted(TAGS - {'no_event', 'unknown'}):
+        p_indices = [i for i, p in enumerate(detected) if p['event'] == event]
+        t_indices = [i for i, t in enumerate(positives) if t['event'] == event]
+        tp = sum(i in seenp for i in p_indices)
+        per_event[event] = {
+            **counts(tp, len(p_indices) - tp, len(t_indices) - tp),
+            "labeledPositive": len(t_indices), "predictedPositive": len(p_indices),
+        }
+    negatives = sum(x['event'] == 'no_event' for x in truth)
+    # Count coverage, never certify independent nights from self-reported IDs.
+    enough = len(positives) >= 30 and negatives >= 30 and len(declared_nights) >= 5 and missing_nights == 0
+    return {
+        "status": "COVERAGE_ONLY_INDEPENDENCE_NOT_VERIFIED" if enough else "INSUFFICIENT_INDEPENDENT_HOLDOUT",
+        **counts(len(seenp), len(detected) - len(seenp), len(positives) - len(seent)),
+        "perEvent": per_event,
+        "labeledPositive": len(positives), "labeledNegative": negatives,
+        "declaredNights": len(declared_nights), "missingNightLabels": missing_nights,
+        "independentNights": None, "holdoutIndependence": "NOT_VERIFIED",
+        "speciesPresenceAccuracy": "NOT_EVALUATED",
+        "note": "TEMPORAL_IOU_EVENT_MATCH_ONLY_NOT_PROOF_OF_VIRAL_SUCCESS",
+    }
 
 
 def rank_private_file(input_path, output_path):

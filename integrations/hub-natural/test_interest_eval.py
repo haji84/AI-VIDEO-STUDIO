@@ -78,4 +78,46 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewHold, 'UNVERIFIED_GROUND_TRUTH'):
             evaluated_detections(truth,predictions)
 
+
+    def test_event_metrics_expose_missing_class_despite_perfect_capture(self):
+        truth=[scene(SHA1,1,4,'capture'),scene(SHA1,5,8,'discovery'),
+               scene(SHA2,0,9,'no_event')]
+        result=evaluated_detections(truth,[scene(SHA1,1,4,'capture')])
+        self.assertEqual(result['perEvent']['capture']['f1'],1.0)
+        self.assertEqual(result['perEvent']['discovery']['recall'],0.0)
+        self.assertEqual(result['perEvent']['discovery']['f1'],0.0)
+        self.assertIsNone(result['perEvent']['observation']['f1'])
+        self.assertEqual(result['speciesPresenceAccuracy'],'NOT_EVALUATED')
+
+    def test_duplicate_truth_and_conflicting_nights_are_rejected(self):
+        a=dict(scene(),reviewNight='night-1')
+        with self.assertRaisesRegex(ReviewHold,'DUPLICATE_EVAL_TRUTH'):
+            evaluated_detections([a,dict(a)],[])
+        b=dict(scene(start=5,end=8),reviewNight='night-2')
+        with self.assertRaisesRegex(ReviewHold,'EVAL_SOURCE_NIGHT_CONFLICT'):
+            evaluated_detections([a,b],[])
+
+    def test_coverage_never_certifies_independence(self):
+        truth=[]
+        for i in range(30):
+            sha=hashlib.sha256(('synthetic-'+str(i)).encode()).hexdigest()
+            night='night-'+str(i%5)
+            truth.extend([dict(scene(sha,1,4,'capture'),reviewNight=night),
+                          dict(scene(sha,5,8,'no_event'),reviewNight=night)])
+        result=evaluated_detections(truth,truth)
+        self.assertEqual(result['status'],'COVERAGE_ONLY_INDEPENDENCE_NOT_VERIFIED')
+        self.assertEqual(result['declaredNights'],5)
+        self.assertIsNone(result['independentNights'])
+        self.assertEqual(result['holdoutIndependence'],'NOT_VERIFIED')
+        truth[0].pop('reviewNight')
+        result=evaluated_detections(truth,truth)
+        self.assertEqual(result['status'],'INSUFFICIENT_INDEPENDENT_HOLDOUT')
+        self.assertEqual(result['missingNightLabels'],1)
+
+    def test_invalid_night_and_truth_container_fail_closed(self):
+        with self.assertRaisesRegex(ReviewHold,'EVAL_NIGHT_INVALID'):
+            evaluated_detections([dict(scene(),reviewNight=' ')],[])
+        with self.assertRaisesRegex(ReviewHold,'EVAL_INPUT_INVALID'):
+            evaluated_detections(None,[])
+
 if __name__=='__main__': unittest.main()
