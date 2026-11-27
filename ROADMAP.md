@@ -2,7 +2,7 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
-## Current Issue #37 Gate A — 2026-11-25 JST
+## Current Issue #37 Gate A — 2026-11-27 JST
 
 - [x] Reproduce main-equivalent missing ffprobe/invalid JSON failures; share tool discovery and bounded response validation.
 - [x] Retain completed validation-failed transfers; explicit authenticated retry after restart without re-upload, with integrity and duplicate/stale protections.
@@ -16,7 +16,8 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [ ] Obtain the original exception call-site evidence and independently verify the distributed v2.x runtime repair.
 - [x] On the physical ZBook, verify WinGet FFmpeg/ffprobe 9.0.2 with a restricted launch PATH and launch the editor against the owner-requested USB/exFAT SSD. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
 - [x] Fix native exFAT import/output publication, source restoration after rename, and Windows output integrity checks; verify synthetic MP4 playback, full decode and restart readback. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
-- [ ] After owner GitHub authentication, dispatch hosted Linux/Windows checks for the SSD fixes; connected tools cannot dispatch and the ZBook browser is signed out. Retain the six unsupported native symlink-fixture results; do not claim the full native suite passed.
+- [x] Run hosted Linux/Windows checks on the branch with the SSD fixes. [All three jobs passed on `7c0addc19`](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589)
+- [ ] Resolve the six native symlink-fixture failures on exFAT or verify the supported native suite with equivalent coverage on that filesystem.
 - [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.
 - [x] MacBook Google Photos panel accepts downloaded videos. Optional Photos Picker passes simulated Google selection through actual local editing, MP4 export and replay. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
 - [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)

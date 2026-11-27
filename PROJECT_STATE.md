@@ -1,11 +1,20 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-11-25 JST
+Updated: 2026-11-27 JST
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
+
+## Hosted Windows launcher and media checks (2026-11-27 JST)
+
+**TESTED_SYNTHETIC.** The Windows runner verified cmd startup, its Japanese
+workspace, native browser dispatch and cleanup on Draft #51 source `7c0addc19`.
+The Linux browser and offline smoke jobs also passed. The separate physical
+ZBook and Mac evidence below remains the basis for device-level observations.
+Live Photos, off-network phones, long real media and the product DoD remain open.
+[Hosted verification](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589)
 
 ## ZBook Google Photos authentication setup (2026-11-25 JST)
 
@@ -33,9 +42,8 @@ captions and original-audio MP4, full playback/decode and restart SHA readback. 
 simulated Google Picker flow and saved-project/media recovery also passed. Python 28
 passed. The complete native editor suite reported 102 passed, 11 skipped and 6 failures
 while creating unsupported symlink fixtures on exFAT; this is not an all-green suite.
-The targeted storage and output-integrity regressions passed. New hosted CI is NOT_RUN:
-the connected GitHub tools expose no workflow-dispatch operation, and the physical
-ZBook browser is signed out of GitHub. No new workflow was started.
+The targeted storage and output-integrity regressions passed. The hosted
+validation recorded on 2026-11-27 followed this physical run.
 
 The original v2.2/v2.2.1 archives are now found and match the handoff digests, but the
 old runtime's exact exception call site and repair acceptance remain unverified.

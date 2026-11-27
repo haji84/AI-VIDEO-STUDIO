@@ -1,6 +1,17 @@
 # AI VIDEO STUDIO — Work continuation checkpoint
-Updated: 2026-11-25 JST
+Updated: 2026-11-27 JST
 Status: IN_PROGRESS. Physical ZBook, physical MacBook and Windows runner with generated media are TESTED_SYNTHETIC.
+
+**Hosted Windows launcher and media checks, 2026-11-27 JST.** Draft #51 code
+`7c0addc19a7011b1c81cd83e1eec0e00d2274464` passed all three
+[manual smoke jobs](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589).
+The Windows job tested the cmd launcher, a Japanese fixture path, HTTP and
+workspace checks, a real system-browser launch, and bounded cleanup. The test
+disables browser autostart inside its temporary profile and verifies the browser
+from the runner's normal profile. The Mac smoke used generated media for import,
+editing, MP4 playback and reopening. Continue the transfer and device gates from
+the roadmap. Live Photos requires the owner's policy and account consent. The
+original v2.x call site and six exFAT symlink-fixture failures remain open.
 
 **ZBook Google Photos authentication, 2026-11-25 JST.** The owner requested setup
 and direct import. A dedicated project was created in the owner's existing Google
@@ -36,10 +47,9 @@ the full suite green. The new hosted CI is NOT_RUN: connected tools cannot dispa
 it, and the ZBook browser is signed out of GitHub. No new run was started.
 
 The two original v2.x archives were found and their handoff digests verified; the
-original failing call site and old-runtime repair are still unverified. Next: after
-owner authentication in GitHub, dispatch `manual-smoke.yml` on
-`fix/zbook-media-preflight-20261115` and inspect all three jobs. Preserve the native
-fixture limitation. Dedicated Photos Desktop OAuth setup separately needs owner
+original failing call site and old-runtime repair are still unverified. The
+2026-11-27 hosted verification above now covers the branch, and the native
+fixture limitation remains open. Dedicated Photos Desktop OAuth setup needs owner
 authorization and account consent. The current editor is running from the desktop
 shortcut with the verified source and the external SSD workspace.
 The optional running-editor desktop reopen helper was not created: local automatic
