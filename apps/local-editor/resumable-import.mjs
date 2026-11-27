@@ -13,7 +13,9 @@ const fail = (code, status=400) => {throw Object.assign(new Error(code),{status}
 const extension = name => extname(name).toLowerCase();
 const validName = name => typeof name==='string' && name.length<=255 &&
   !/[\/\\\x00-\x1f\x7f]/.test(name) && videoExtensions.has(extension(name));
-const position = record => Math.min(record.totalBytes,record.chunkHashes.length*chunkBytes);
+const position = record => Math.min(record.totalBytes,record.acceptedChunks*chunkBytes);
+const validManifest = (hashes, bytes) => Array.isArray(hashes) && hashes.length===Math.ceil(bytes/chunkBytes) &&
+  hashes.every(value=>typeof value==='string' && hashPattern.test(value));
 const exactKeys = (object, keys) => object && Object.getPrototypeOf(object)===Object.prototype &&
   Object.keys(object).length===keys.length && keys.every(key=>Object.hasOwn(object,key));
 const stamp = value => [value.dev,value.ino,value.size,value.mtimeMs,value.ctimeMs].join(':');
@@ -60,12 +62,11 @@ export async function createResumableImport({
       try { saved=JSON.parse(await handle.readFile('utf8')); }
       catch { fail('RESUMABLE_IMPORT_INVALID_JOURNAL'); }
     } finally { await handle.close(); }
-    if(saved!==null&&(!exactKeys(saved,['uploadId','projectId','name','totalBytes','chunkHashes'])||
+    if(saved!==null&&(!exactKeys(saved,['uploadId','projectId','name','totalBytes','acceptedChunks','chunkHashes'])||
       typeof saved.uploadId!=='string'||!idPattern.test(saved.uploadId)||
       typeof saved.projectId!=='string'||!projectPattern.test(saved.projectId)||
-      !validName(saved.name)||!validSize(saved.totalBytes)||!Array.isArray(saved.chunkHashes)||
-      saved.chunkHashes.length>Math.ceil(saved.totalBytes/chunkBytes)||
-      !saved.chunkHashes.every(value=>typeof value==='string'&&hashPattern.test(value)))) {
+      !validName(saved.name)||!validSize(saved.totalBytes)||!validManifest(saved.chunkHashes,saved.totalBytes)||
+      !Number.isSafeInteger(saved.acceptedChunks)||saved.acceptedChunks<0||saved.acceptedChunks>saved.chunkHashes.length)) {
       fail('RESUMABLE_IMPORT_INVALID_JOURNAL');
     }
   }
@@ -107,13 +108,14 @@ export async function createResumableImport({
     active,
     view:()=>active()&&saved.projectId===getProjectId()?present(saved):null,
     async start(body) {
-      if(!exactKeys(body,['name','totalBytes'])||!validName(body.name))fail('RESUMABLE_IMPORT_INVALID_VIDEO');
+      if(!exactKeys(body,['name','totalBytes','chunkHashes'])||!validName(body.name))fail('RESUMABLE_IMPORT_INVALID_VIDEO');
       if(!validSize(body.totalBytes))fail('RESUMABLE_IMPORT_SIZE_LIMIT',413);
+      if(!validManifest(body.chunkHashes,body.totalBytes))fail('RESUMABLE_IMPORT_INVALID_MANIFEST');
       if(active())fail('RESUMABLE_IMPORT_ALREADY_ACTIVE',409);
       requireImportSpace();
       if(body.totalBytes>await availableImportBytes())fail('保存先の空き容量が不足しています');
       const record={uploadId:'asset_'+randomUUID().replaceAll('-',''),projectId:getProjectId(),
-        name:body.name,totalBytes:body.totalBytes,chunkHashes:[]};
+        name:body.name,totalBytes:body.totalBytes,acceptedChunks:0,chunkHashes:[...body.chunkHashes]};
       await update(record);
       return present(record);
     },
@@ -129,9 +131,9 @@ export async function createResumableImport({
       if(length!==Math.min(chunkBytes,record.totalBytes-offset))fail('RESUMABLE_IMPORT_CHUNK_LENGTH');
       if(typeof digest!=='string'||!hashPattern.test(digest))fail('RESUMABLE_IMPORT_CHUNK_HASH');
       const index=offset/chunkBytes;
-      if(index<record.chunkHashes.length&&record.chunkHashes[index]!==digest)fail('RESUMABLE_IMPORT_OFFSET_CONFLICT',409);
+      if(record.chunkHashes[index]!==digest)fail('RESUMABLE_IMPORT_CHUNK_MISMATCH',409);
       const bytes=await collectChunk(body,length,digest);
-      if(index<record.chunkHashes.length)return present(record);
+      if(index<record.acceptedChunks)return present(record);
 
       const file=staged(record), info=await stagedInfo(file);
       if((!info&&offset!==0)||(info&&(info.size<offset||info.size>offset+length)))fail('RESUMABLE_IMPORT_BYTES_CHANGED',409);
@@ -147,7 +149,7 @@ export async function createResumableImport({
         }
         await handle.sync();
       } finally { await handle.close(); }
-      const next={...record,chunkHashes:[...record.chunkHashes,digest]};
+      const next={...record,acceptedChunks:record.acceptedChunks+1};
       await update(next);
       return present(next);
     },

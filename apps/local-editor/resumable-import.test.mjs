@@ -34,11 +34,14 @@ test('video resumes after an interrupted HTTP chunk and editor restart without r
       method:'POST',body,headers:{'X-AIVS-Token':app.token,'X-AIVS-Revision':'0',...headers},
     });
     assert.equal((await state()).resumableImport,null);
-    const start = await post('start', JSON.stringify({name:'合成動画.mp4',totalBytes:file.length}));
+    const chunkHashes = [hash(prefix),hash(suffix)];
+    const start = await post('start', JSON.stringify({name:'合成動画.mp4',totalBytes:file.length,chunkHashes}));
     assert.equal(start.status,200,await start.clone().text());
     const first = await start.json();
     const {uploadId} = first;
-    assert.deepEqual(first,{uploadId,name:'合成動画.mp4',totalBytes:file.length,offset:0,chunkBytes,chunkHashes:[]});
+    assert.deepEqual(first,{uploadId,name:'合成動画.mp4',totalBytes:file.length,offset:0,chunkBytes,chunkHashes});
+    const journal=()=>readFile(join(workspace,'resumable-import.json'),'utf8').then(JSON.parse);
+    assert.equal((await journal()).acceptedChunks,0);
     const chunkHeaders = (offset, bytes) => ({
       'Content-Length':String(bytes.length),'X-AIVS-Upload-Id':uploadId,'X-AIVS-Upload-Offset':String(offset),'X-AIVS-Chunk-SHA256':hash(bytes),
     });
@@ -48,7 +51,10 @@ test('video resumes after an interrupted HTTP chunk and editor restart without r
     assert.equal(firstResponse.status,200,await firstResponse.clone().text());
     const accepted = await firstResponse.json();
     assert.equal(accepted.offset,chunkBytes);
-    assert.deepEqual(accepted.chunkHashes,[hash(prefix)]);
+    assert.deepEqual(accepted.chunkHashes,chunkHashes);
+    const saved=await journal();
+    assert.equal(saved.acceptedChunks,1);
+    assert.deepEqual(saved.chunkHashes,chunkHashes);
 
     const broken = request(app.url+'/api/import/resume/chunk',{
       method:'POST',headers:{'X-AIVS-Token':app.token,'X-AIVS-Revision':'0',...chunkHeaders(chunkBytes,suffix)},
@@ -57,7 +63,7 @@ test('video resumes after an interrupted HTTP chunk and editor restart without r
     broken.on('error',()=>{});
     broken.write(suffix.subarray(0,512));
     await delay(75);
-    const blocked = await post('start',JSON.stringify({name:'other.mp4',totalBytes:128}));
+    const blocked = await post('start',JSON.stringify({name:'other.mp4',totalBytes:128,chunkHashes:[hash(Buffer.alloc(128))]}));
     assert.equal(blocked.status,409);
     assert.match((await blocked.json()).error,/処理が終わるまで/);
     broken.destroy();
@@ -76,6 +82,13 @@ test('video resumes after an interrupted HTTP chunk and editor restart without r
     assert.equal(discardedWrongId.status,404);
     const finishEarly = await post('finish',JSON.stringify({uploadId}));
     assert.equal(finishEarly.status,409);
+    // A different selection can match the filename, size and confirmed prefix.
+    const substitutedSuffix=Buffer.from(suffix);substitutedSuffix[substitutedSuffix.length-1]^=1;
+    const mismatch=await post('chunk',substitutedSuffix,chunkHeaders(chunkBytes,substitutedSuffix));
+    assert.equal(mismatch.status,409);
+    assert.match((await mismatch.json()).error,/RESUMABLE_IMPORT_CHUNK_MISMATCH/);
+    assert.deepEqual((await state()).resumableImport,accepted);
+    assert.equal((await stat(staged)).size,chunkBytes+64);
     const last = await post('chunk',suffix,chunkHeaders(chunkBytes,suffix));
     assert.equal(last.status,200,await last.clone().text());
     const complete = await last.json();
@@ -121,11 +134,12 @@ test('checked complete bytes survive a media validation failure for the ordinary
     });
     const state=()=>fetch(app.url+'/api/state',{headers:{'X-AIVS-Token':app.token}}).then(res=>res.json());
     const suffix='import/resume/';
-    const start=await call(suffix+'start',JSON.stringify({name:'検査用.mov',totalBytes:bytes.length}));
+    const start=await call(suffix+'start',JSON.stringify({name:'検査用.mov',totalBytes:bytes.length,chunkHashes:[hash(bytes)]}));
     assert.equal(start.status,200,await start.clone().text());
     const {uploadId}=await start.json();
     const headers={'Content-Length':String(bytes.length),'X-AIVS-Upload-Id':uploadId,'X-AIVS-Upload-Offset':'0'};
-    const badChunk=await call(suffix+'chunk',bytes,{...headers,'X-AIVS-Chunk-SHA256':'0'.repeat(64)});
+    const different=Buffer.from(bytes);different[different.length-1]^=1;
+    const badChunk=await call(suffix+'chunk',different,{...headers,'X-AIVS-Chunk-SHA256':hash(bytes)});
     assert.equal(badChunk.status,400);
     assert.equal((await state()).resumableImport.offset,0);
     const goodChunk=await call(suffix+'chunk',bytes,{...headers,'X-AIVS-Chunk-SHA256':hash(bytes)});
@@ -175,19 +189,24 @@ test('resume endpoints enforce authorization, project ownership, limits and safe
     const state=()=>fetch(app.url+'/api/state',{headers:{'X-AIVS-Token':app.token}}).then(res=>res.json());
     const suffix='import/resume/';
     const name='記'.repeat(164)+'.mp4';
-    const input=JSON.stringify({name,totalBytes:32});
+    const bytes=Buffer.alloc(32,0x2b);
+    const input=JSON.stringify({name,totalBytes:bytes.length,chunkHashes:[hash(bytes)]});
     const original=(await state()).session;
     assert.equal((await call(suffix+'start',input,{Origin:'https://example.invalid'})).status,403);
     assert.equal((await call(suffix+'start',input,{'X-AIVS-Token':'bad'})).status,403);
     assert.equal((await call(suffix+'start',input,{'X-AIVS-Revision':'-1'})).status,409);
-    assert.equal((await call(suffix+'start',JSON.stringify({name:'a.mp4',totalBytes:16*1024**3+1}))).status,413);
-    assert.equal((await call(suffix+'start',JSON.stringify({name:'../a.mp4',totalBytes:32}))).status,400);
+    assert.equal((await call(suffix+'start',JSON.stringify({name:'a.mp4',totalBytes:16*1024**3+1,chunkHashes:[hash(bytes)]}))).status,413);
+    assert.equal((await call(suffix+'start',JSON.stringify({name:'../a.mp4',totalBytes:32,chunkHashes:[hash(bytes)]}))).status,400);
+    for(const chunkHashes of [[],['invalid'],[hash(bytes),hash(bytes)]]) {
+      const invalid=await call(suffix+'start',JSON.stringify({name,totalBytes:bytes.length,chunkHashes}));
+      assert.equal(invalid.status,400);
+      assert.match((await invalid.json()).error,/RESUMABLE_IMPORT_INVALID_MANIFEST/);
+    }
     const start=await call(suffix+'start',input);
     assert.equal(start.status,200,await start.clone().text());
     const record=await start.json();
     assert.equal(record.name,name);
     const {uploadId}=record;
-    const bytes=Buffer.alloc(32,0x2b);
     const headers={'Content-Length':String(bytes.length),'X-AIVS-Upload-Id':uploadId,'X-AIVS-Upload-Offset':'0','X-AIVS-Chunk-SHA256':hash(bytes)};
     const other=new EditSession(createProject({projectId:'project_unrelated'}));
     const opened=await call('open',other.serialize());
