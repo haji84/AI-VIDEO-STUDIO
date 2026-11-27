@@ -12,7 +12,7 @@ def analyse_first_cut(project_file,bindings_file,request_file,workspace,output):
     if output.exists() or output.is_symlink():raise FileExistsError('FIRST_CUT_REPORT_ALREADY_EXISTS')
     workspace.mkdir(parents=True,exist_ok=False);bundle_file=workspace/'checked-first-cut.json'
     _run(['node',str(ROOT/'tools/project-first-cut.mjs'),'--project',str(project_file),'--bindings',str(bindings_file),'--request',str(request_file),'--output',str(bundle_file)],timeout=3600)
-    bundle=json.loads(bundle_file.read_text());signals=[];analysis=[]
+    bundle=json.loads(bundle_file.read_text(encoding='utf-8'));signals=[];analysis=[]
     for source in bundle['sourceIdentities']:
         if source['syncStatus'] not in ('master','verified'):
             # Exclusion remains visible to the existing planner; never extract it.
@@ -28,7 +28,7 @@ def analyse_first_cut(project_file,bindings_file,request_file,workspace,output):
     for source in bundle['sources']:
         with Path(source['path']).open('rb') as handle:digest=hashlib.file_digest(handle,'sha256').hexdigest()
         if digest!=source['sha256']:raise ManifestError('SOURCE_CHANGED_DURING_FIRST_CUT')
-    report={'schema':'aivs-first-cut-report-v1','projectId':bundle['projectId'],'projectRevision':bundle['projectRevision'],'sourceIdentities':bundle['sourceIdentities'],'analysis':analysis,'proposal':json.loads(proposal_file.read_text())}
+    report={'schema':'aivs-first-cut-report-v1','projectId':bundle['projectId'],'projectRevision':bundle['projectRevision'],'sourceIdentities':bundle['sourceIdentities'],'analysis':analysis,'proposal':json.loads(proposal_file.read_text(encoding='utf-8'))}
     checked=workspace/'report.json';checked.write_text(json.dumps(report,allow_nan=False))
     _run(['node',str(ROOT/'tools/project-first-cut.mjs'),'--report',str(checked)],timeout=240)
     output.parent.mkdir(parents=True,exist_ok=True)

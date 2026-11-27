@@ -1,0 +1,245 @@
+{
+  "schema": "aivs-windows-hosted-synthetic-gate-a-v1",
+  "dateJST": "2026-11-24",
+  "status": "TESTED_SYNTHETIC",
+  "mainAtResume": "e1bf222dfe0043e307e3fc3c122e2fe52423dac8",
+  "resumedBranchHead": "a515727df05f424f755bce70ef80324f49ad0fba",
+  "testedCodeCommit": "d763e9e1507ae2b42fd9bc8245a34f06599b9183",
+  "implementationPR": "https://github.com/haji84/AI-VIDEO-STUDIO/pull/51",
+  "checkedSourceSha256": {
+    ".github/workflows/manual-smoke.yml": "8341bf62ce32d74dd76716c0e4acc7ad2e4d902ff2408143d4edb25e1123d04c",
+    "apps/local-editor/browser-import-recovery-acceptance.mjs": "924102f0b027a05f618ff6b4c0db1d4e7dc273496e689d0833b97a9d47b39a27",
+    "engine/first_cut_saved_project.py": "751b36c1b823d7d1d43e2af861cd0bd80aa166671aa7f14b78aea2d9d4cf0f27",
+    "engine/media_tools.py": "dec37d36010077068d647a25d32f756d8583d11b2ed649015275c6f51e7d2e1f",
+    "engine/sync_saved_project.py": "dcdc6190aaf442a4ac4974fda48e1b5724c363dd662fae5824b77b2d953fc901",
+    "engine/test_media_tools.py": "606dcc26601781e42d591fa82cd69b2728cb0caad6b6192bde5763cea98a83ab",
+    "engine/test_saved_first_cut.py": "fbe3f8702fa03e05e7f967b51aeacf4a39b0998cca164c0a762ddd0ae8fd8f6e",
+    "engine/test_saved_sync.py": "27c643be67baa116dc2b003713e8103dd6f76ea48482a32a353490f660812f14"
+  },
+  "windows": {
+    "host": "GitHub-hosted Windows Server 2025 x64",
+    "runnerImage": "win25-vs2026 20261116.315.1",
+    "python": "3.11.9",
+    "playwright": "1.64.1",
+    "winGetPackage": "Gyan.FFmpeg 9.0.2 x64 full_build",
+    "winGetArchiveSha256": "759d0a9831c436a0eb331ad36f236c06cb04aaa0005da46571f0e9d3d9206f6b",
+    "winGetFallbackWithRestrictedPath": "RESOLVED_AND_EXECUTED_BOTH",
+    "japaneseErrorJsonWithCp932": "PASS",
+    "utf8ProjectJsonWithJapanesePaths": "FIRST_CUT_AND_SYNC_PASS",
+    "pythonTestsPassed": 24,
+    "nodeHttp": {
+      "passed": 5,
+      "skippedPosixFixture": 1
+    },
+    "browser": {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "import-recovery-first-cut",
+      "runtime": {
+        "node": "v24.22.1",
+        "platform": "win32",
+        "arch": "x64",
+        "browser": "157.0.8103.79",
+        "ffmpeg": "ffmpeg version 9.0.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+        "ffprobe": "ffprobe version 9.0.2-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers"
+      },
+      "inputsSha256": [
+        "dafd6cd13a1f00a050554eaef19045630e8816ed12fa2ff4aa4d2a2b9d0b56df",
+        "e486dd8c89139f030d59936891df9d36e151c6dab698b1763912c2e16ee832ea"
+      ],
+      "uploadRequests": 2,
+      "retryRequests": 2,
+      "mediaResentOnRetry": false,
+      "savedProjectSha256": "7f8aa97250296d16b86f0042539b6ddc0bb68b0f7142752f299c2b5098f7ef73",
+      "outputSha256": "68c8afddf8766bfb169e177c2f083dae0fdc95ef2b78a97f69779f14d1277e7b",
+      "qaSha256": "9eafe4dd548295778bfcb1435c2cbff81db1e3c632bcc1d8fa0ce94b0f857605",
+      "bytes": 414010,
+      "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+      "originalAudio440": 0.12460506830830695,
+      "otherCamera660": 5.255980708708603e-07,
+      "media": {
+        "videoCodec": "h264",
+        "audioCodec": "aac",
+        "durationSec": 4.021322,
+        "videoFrames": 96
+      },
+      "playback": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.021322
+      },
+      "replayAfterRestart": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.021322
+      },
+      "caption": {
+        "glyphCoverage": "CMAP_VERIFIED",
+        "glyphCodepointsChecked": 9
+      },
+      "restartReadback": "SHA256_MATCH",
+      "wholeFileDecode": "PASS",
+      "physicalZBook": "NOT_RUN",
+      "zipSource": "UNAVAILABLE",
+      "chunkedUpload": "NOT_IMPLEMENTED",
+      "remotePhone": "NOT_RUN"
+    }
+  },
+  "macOS": {
+    "nodePassed": 187,
+    "nodeSkippedLinuxWorkers": 10,
+    "pythonPassed": 69,
+    "pythonSkippedDejaVuClass": 1,
+    "legacyLocaleWithJapaneseWorkspace": {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "import-recovery-first-cut",
+      "runtime": {
+        "node": "v24.21.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "browser": "157.0.8103.79",
+        "ffmpeg": "ffmpeg version n8.0.3 Copyright (c) 2000-2026 the FFmpeg developers",
+        "ffprobe": "ffprobe version n8.0.3 Copyright (c) 2007-2026 the FFmpeg developers"
+      },
+      "inputsSha256": [
+        "036c545fa189c41186a6f90cf991df022935e114c809b2ae7841546e9fa440cd",
+        "0e30883bb3484b9b3fccc105b53cdcc385deeae7c1dad53523273b67817b1718"
+      ],
+      "uploadRequests": 2,
+      "retryRequests": 2,
+      "mediaResentOnRetry": false,
+      "savedProjectSha256": "2fe5cca3aa21a020a22369c121c8ddbf514a07372dee3058cf17a4d350685f77",
+      "outputSha256": "7d695213dd8e99dc333011b4f1ad8cefde445fb8e6abe90136672b4b3364da76",
+      "qaSha256": "b9079c79e8e53b51d421794144cbed430093dd1a61b2db69acbf21dd85cf9b5a",
+      "bytes": 423828,
+      "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+      "originalAudio440": 0.1242773176077732,
+      "otherCamera660": 8.251525833302578e-07,
+      "media": {
+        "videoCodec": "h264",
+        "audioCodec": "aac",
+        "durationSec": 4.02002,
+        "videoFrames": 96
+      },
+      "playback": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.02002
+      },
+      "replayAfterRestart": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.02002
+      },
+      "caption": {
+        "glyphCoverage": "CMAP_VERIFIED",
+        "glyphCodepointsChecked": 9
+      },
+      "restartReadback": "SHA256_MATCH",
+      "wholeFileDecode": "PASS",
+      "physicalZBook": "NOT_RUN",
+      "zipSource": "UNAVAILABLE",
+      "chunkedUpload": "NOT_IMPLEMENTED",
+      "remotePhone": "NOT_RUN"
+    },
+    "pinnedFontBrowser": [
+      {
+        "scope": "existing-editor",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "1852aaa7c12446b26d5220a229889670384502e2fe3fa4f6daa1a0217ee6802c"
+      },
+      {
+        "scope": "two-workspace-source-relink",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "f9d93f9d50be9be301bb8883c935320adc6d2102baac61215bd2336e92cc76e2"
+      },
+      {
+        "scope": "import-recovery-first-cut",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "218321b0c3c893d6957ccd925c2db10328d049d38a237410625503b9e89d7951"
+      }
+    ]
+  },
+  "earlierRuns": [
+    {
+      "runId": 45208983041,
+      "windows": "SETUP_FAILED_AMBIGUOUS_PYTHON_COMMAND"
+    },
+    {
+      "runId": 45209467169,
+      "windows": "DISCOVERY_AND_HTTP_PASS_FIRST_CUT_PENDING_TIMED_OUT"
+    },
+    {
+      "runId": 45210720565,
+      "windows": "PASS_SYNTHETIC_BROWSER",
+      "offline": "POSIX_ASCII_FILESYSTEM_TEST_FAILURE",
+      "linuxBrowser": "DEPENDENCY_INSTALL_TIMED_OUT"
+    },
+    {
+      "runId": 45211275966,
+      "windows": "PASS_SYNTHETIC_BROWSER",
+      "outputSha256": "344250368297e0c07c35fd133402d1c958abac923fa672af6c094f64271f646f",
+      "offline": "SUCCESS",
+      "linuxBrowser": "CANCELLED"
+    }
+  ],
+  "remaining": [
+    "PHYSICAL_ZBOOK_AND_CONFIRMED_DEVICE_ENDPOINT",
+    "DISTRIBUTED_V2_ZIP_AND_ORIGINAL_EXCEPTION_LOCATION",
+    "ZBOOK_LAUNCH_METHODS_AND_APPROVED_EXTERNAL_DRIVE",
+    "OFF_NETWORK_IPHONE_ANDROID_AND_LARGE_AUTHORIZED_MEDIA"
+  ],
+  "captionFontSha256": "68a3fc98800b2a27b371f2fb79991daf3633bd89309d4ffaa6946fd587f375b5",
+  "hostedCI": {
+    "runId": 45213580681,
+    "url": "https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45213580681",
+    "attempt": 1,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "synthetic-browser-acceptance",
+        "id": 137828581851,
+        "conclusion": "success"
+      },
+      {
+        "name": "windows-synthetic-media-acceptance",
+        "id": 137828581896,
+        "conclusion": "success"
+      },
+      {
+        "name": "offline-prototype-smoke",
+        "id": 137828582125,
+        "conclusion": "success"
+      }
+    ],
+    "linuxBrowser": [
+      {
+        "scope": "existing-editor",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "ef867951a413ebca67a511c21f05cc048bd810a3516a7ac6fa1bcd0a95df572c"
+      },
+      {
+        "scope": "two-workspace-source-relink",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "3884487a5752a6a3c0c77a083767efb4257cf2eef1ece2baf2019e84424f4288"
+      },
+      {
+        "scope": "saved-cut-preview",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "13d9cafeeffa724a0834441323c656ac499174c9edc40499f5e1a2655e6bde93"
+      },
+      {
+        "scope": "import-recovery-first-cut",
+        "status": "PASS_SYNTHETIC_BROWSER",
+        "outputSha256": "fe8a0e5e915c98639d28f320899c5b871506802c009b18da7e44bfb16618fd85"
+      }
+    ]
+  }
+}

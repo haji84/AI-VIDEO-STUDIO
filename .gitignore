@@ -8,6 +8,8 @@ venv/
 .env
 .env.*
 !.env.example
+google-photos-client.json
+client_secret*.json
 .DS_Store
 Thumbs.db
 *.log

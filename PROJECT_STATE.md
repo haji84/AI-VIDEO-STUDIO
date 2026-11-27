@@ -1,11 +1,156 @@
 # AI VIDEO STUDIO | Project State
 
-Updated: 2026-10-29 JST / 2026-10-29 UTC
+Updated: 2026-11-27 JST
 Product identity: independent repository, not GORIQ.
 Version label: v0.3.1 design and prototype.
 Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
+
+## Local video upload continuation (2026-11-27 JST)
+
+**TESTED_SYNTHETIC on MacBook Chrome.** After interrupting a 16 MiB + 4 KiB
+fixture and reopening the editor, the original file sent only the last 4 KiB.
+The saved SHA-256 matched the selected MP4 and its browser preview opened.
+A second file with the same name, size and first 16 MiB was rejected because its
+tail differed. The local code path passed independent review. Long real media,
+physical exFAT, unattended batching and separate-network devices still need acceptance.
+
+## Hosted Windows launcher and media checks (2026-11-27 JST)
+
+**TESTED_SYNTHETIC.** The Windows runner verified cmd startup, its Japanese
+workspace, native browser dispatch and cleanup on Draft #51 source `7c0addc19`.
+The Linux browser and offline smoke jobs also passed. The separate physical
+ZBook and Mac evidence below remains the basis for device-level observations.
+Live Photos, off-network phones, long real media and the product DoD remain open.
+[Hosted verification](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589)
+
+## ZBook Google Photos authentication setup (2026-11-25 JST)
+
+**IMPLEMENTING; live import NOT_RUN.** At the owner's request, a dedicated Google
+Cloud project was created and its Photos Picker API enabled. Google Auth setup is
+prepared for `AI VIDEO STUDIO` in testing mode, using the owner's existing account
+for support/contact. The final user-data-policy agreement awaits the owner's
+action-time confirmation. Desktop OAuth credentials, local configuration, account
+consent and an owner-selected video download are not yet complete. No billing
+upgrade, credential reuse, private-media transfer or public deployment occurred.
+Media remains targeted to the external SSD.
+[Configuration progress and exact remaining steps](docs/validation/GOOGLE_PHOTOS_ZBOOK_SETUP_2026-11-25.md)
+
+## Physical ZBook with an external SSD (2026-11-25 JST)
+
+**TESTED_SYNTHETIC on the physical ZBook.** Source `4253284038f2e49aeb4c8061b8459f97fe610235`
+in Draft #51 fixes exFAT import, no-clobber MP4 publication, source restoration after
+file-identity changes, and Windows output revalidation despite unchanged timestamps.
+The owner requested external storage. The connected USB/exFAT SSD holds the everyday
+workspace, synthetic fixtures, temporary media and exports. A desktop shortcut opens
+the editor with that storage target.
+
+Chrome verified two retained uploads without resending, reviewed first cut, Japanese
+captions and original-audio MP4, full playback/decode and restart SHA readback. A
+simulated Google Picker flow and saved-project/media recovery also passed. Python 28
+passed. The complete native editor suite reported 102 passed, 11 skipped and 6 failures
+while creating unsupported symlink fixtures on exFAT; this is not an all-green suite.
+The targeted storage and output-integrity regressions passed. The hosted
+validation recorded on 2026-11-27 followed this physical run.
+
+The original v2.2/v2.2.1 archives are now found and match the handoff digests, but the
+old runtime's exact exception call site and repair acceptance remain unverified.
+Live Photos OAuth, off-network phones, large media/performance and product DoD remain open.
+[Physical ZBook evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+
+## Google Photos on Windows and ZBook (2026-11-24 JST)
+
+**TESTED_SYNTHETIC on Windows Server 2025. Physical ZBook verification is pending.**
+`start-windows.cmd` opens the local editor and finds an installed Desktop OAuth
+configuration. Windows Chrome confirmed local video selection and a simulated
+Photos Picker selection through automatic draft preparation, reviewed edit,
+H.264/AAC export, full playback, and SHA-256 readback after restart. The ZBook
+launch, approved external storage, and the live Google account remain to be verified.
+[Windows evidence](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
+
+## Google Photos on MacBook (2026-11-24 JST)
+
+**TESTED_SYNTHETIC in the Mac editor.** Google Photos download guidance and
+local video selection are available in the everyday workspace. The local file
+route starts a first-cut candidate after an eligible import. With Desktop OAuth
+configured, the optional Photos Picker flow waits for the user's selection to
+finish, imports the chosen videos and starts a first-cut candidate in the Mac
+app. Chrome verified this flow with a simulated provider through reviewed edit,
+MP4 output, full decode and playback after restart. The live Google connection
+requires the owner's Desktop OAuth settings and account consent.
+[MacBook evidence and setup](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
+
+## Issue #37 — MacBook everyday launch (2026-11-24 JST)
+
+**TESTED_SYNTHETIC on the physical MacBook.** `start-mac.command` opens the
+local editor from Finder. The app uses the previously verified app-local
+FFmpeg/ffprobe 8.0.3 pair and local Python environment on this Mac. Chrome ran
+a normal one-video import, reviewed first cut, Japanese-captioned MP4 export,
+full playback and restart readback. The two-upload recovery suite also passed.
+The empty everyday workspace is separate from the synthetic tests.
+[MacBook launch and evidence](docs/validation/MACOS_LOCAL_EDITOR_2026-11-24.md)
+
+## Issue #37 — Windows runner verification (2026-11-24 JST)
+
+**TESTED_SYNTHETIC on Windows Server 2025. Physical ZBook is BLOCKED.**
+The existing manual workflow uses the checksum-pinned WinGet Gyan.FFmpeg 9.0.2
+full build in a temporary package layout. Native discovery with a restricted
+launch PATH, Python 24 cases and Node HTTP preflight passed. The Chrome flow
+recovered two uploads without resending, applied the reviewed numerical first cut,
+rendered a Japanese-captioned H.264/AAC MP4 and played to the end before and after
+restart. Full decode and restart SHA-256 readback matched. All three CI jobs
+passed, including four Linux Chrome flows and the offline regression suite.
+[Manual CI](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45213580681)
+
+Tool error JSON preserves Japanese under a legacy console encoding. The first-cut
+and sync workers read Node's UTF-8 JSON explicitly, including when media paths
+contain Japanese and spaces. The Mac's Tailscale client was online. The ZBook
+endpoint, the distributed v2.x ZIP and its original failure location are still
+pending. [Windows runner evidence](docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md) ·
+[Implementation Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51)
+
+## Issue #37 — MacBook verification (2026-11-23 JST)
+
+Status: **TESTED_SYNTHETIC on a physical MacBook Pro / physical ZBook BLOCKED**.
+Base main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`, resumed branch head
+`7aff6b3bd0043c6873ee4c6328da61d45c3112ad`, tested source `de9d303f13500cd4be390748ea8fd57020c236e6`.
+Using one canonical workspace path fixes completed-output recording and recovery
+when macOS supplies a path through `/var`. Repository containment, a shared
+workspace lock and output/report integrity checks passed.
+
+On arm64 macOS 26.6.2, Chrome verified two retained uploads without a resend,
+numerical first-cut review and apply, Japanese captions and original audio,
+full playback, full decode and download SHA-256 after restart. Normal editing and
+cross-workspace relinking also passed. FFmpeg and ffprobe discovery and the JSON
+error cases passed. FFmpeg 8.0.3 was used for the full regression suite because
+8.0 can under-report multichannel true peak. The separate saved-cut preview
+worker stays Linux-only.
+
+The distributed v2.x ZIP and ZBook exception location are still unavailable.
+Actual Windows launches, FFmpeg 9.0.2, the approved storage target and off-network
+phone acceptance remain pending. Product DoD remains open.
+The tested code passed offline, Linux browser and Windows tool fixture CI.
+[MacBook evidence and remaining gates](docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md) ·
+[Implementation Draft #51](https://github.com/haji84/AI-VIDEO-STUDIO/pull/51) ·
+[CI on the tested code](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481)
+
+## Earlier Linux Issue #37 unit — 2026-11-15 JST
+
+Status: **TESTED_SYNTHETIC / physical ZBook and original ZIP BLOCKED**.
+Base main `e1bf222dfe0043e307e3fc3c122e2fe52423dac8`; implementation `f26002df4e5be8fe0d97dee56d36ceed1d85020b` on
+`fix/zbook-media-preflight-20261115`. Main's import/analysis/render tool discovery
+and JSON guards are aligned; completed failed imports persist and can be retried
+without resend. Shutdown drains mutations; unsupported-hard-link targets use a
+no-overwrite copy fallback. Node196/Python78 and four actual Linux browser paths
+passed, including two-upload recovery → reviewed numerical first-cut → Japanese
+caption/source-audio MP4 → replay/full decode/restart SHA readback.
+
+The exact v2.x ZIP and ZBook stack trace are absent, so their call site and physical
+repair remain unverified. Main's latest observed hosted run40811805222 was green;
+new branch/Windows CI is NOT_RUN. No main merge or remote/public deployment.
+Evidence and remaining Gates A–E:
+[validation](docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md).
 
 ## Integrated synthetic browser acceptance — PR24 (2026-10-29)
 

@@ -46,6 +46,27 @@ test('collects immutable source identities across current and both histories wit
  assert.throws(()=>api.collectSessionSources(tooMany),/SOURCE_COUNT_LIMIT/);
 });
 
+for(const corrupt of [false,true])test(`file identity changes during rename require byte verification (${corrupt?'changed':'unchanged'} bytes)`,async t=>{
+ const s=await setup(t),bytes=Buffer.from('verified source contents'),source=ref(1,bytes),before=s.current(),p=await s.manager.prepare(saved([source]));
+ const nativeRename=fs.rename;
+ t.mock.method(fs,'rename',async(from,to)=>{
+  if(!from.endsWith('.mp4.tmp'))return nativeRename(from,to);
+  const moved=await readFile(from);if(corrupt)moved[0]^=1;
+  // A new directory entry can have a different identity on exFAT. Creating
+  // another real file also exercises that transition on NTFS and POSIX CI.
+  await writeFile(to,moved,{flag:'wx'});await fs.unlink(from);
+ });
+ if(corrupt){
+  await assert.rejects(upload(s.manager,p.planId,bytes),/SOURCE_CHANGED/);
+  assert.equal(s.registry().size,0);assert.equal(s.current(),before);assert.equal(s.opened(),0);
+ }else{
+  assert.equal((await upload(s.manager,p.planId,bytes)).ready,true);assert.equal(s.current(),before);
+  assert.deepEqual(await readFile(s.registry().get(source.assetId).path),bytes);
+  await s.manager.open(p.planId);assert.equal(s.opened(),1);
+ }
+ assert.equal(sha(bytes),source.sha256);
+});
+
 test('verified copies keep original asset IDs and current session until explicit Open',async t=>{
  const s=await setup(t),b=Buffer.from('source contents to copy'),a=ref(1,b),before=s.current(),d=saved([a]),p=await s.manager.prepare(d);
  assert.equal(p.missing.length,1);assert.equal(p.ready,false);

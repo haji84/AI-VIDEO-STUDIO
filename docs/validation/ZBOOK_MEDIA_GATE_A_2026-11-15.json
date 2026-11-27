@@ -1,0 +1,157 @@
+{
+  "schema": "aivs-synthetic-zbook-gate-a-v1",
+  "dateJST": "2026-11-15T11:16:12+09:00",
+  "mainAtResume": "e1bf222dfe0043e307e3fc3c122e2fe52423dac8",
+  "testedCodeCommit": "f26002df4e5be8fe0d97dee56d36ceed1d85020b",
+  "status": "TESTED_SYNTHETIC",
+  "physicalZBook": "NOT_RUN",
+  "originalZip": "UNAVAILABLE",
+  "checks": {
+    "node": {
+      "passed": 196,
+      "failed": 0,
+      "skipped": 0
+    },
+    "pythonEngine": {
+      "passed": 75,
+      "failed": 0,
+      "skipped": 0
+    },
+    "pythonAudio": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "lastObservedMainCI": {
+    "id": "40811805222",
+    "conclusion": "SUCCESS",
+    "commit": "e1bf222dfe0043e307e3fc3c122e2fe52423dac8"
+  },
+  "newHostedCI": "NOT_RUN",
+  "browser": [
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "existing-editor",
+      "runtime": {
+        "node": "v24.22.1",
+        "playwright": "1.64.1",
+        "browser": "156.0.8078.79"
+      },
+      "inputs": {
+        "videoSha256": "9a74e4341d6c145cc8aba15a9c861339a9703c4e6db5251b43a9077884aa9dfd",
+        "clearVideoSha256": "2afef910b52b33e3ead74096a4fd64650e46c327a313f24f03a72b0d77577b1f",
+        "bgmSha256": "04cc48bd406484c1e294e955a27a2e98cfaa4ebb9da93515fdede613e1bf0229"
+      },
+      "outputSha256": "21c040adeb35bd0407c0a6d50698d2105a4d6a4a948e66eda25eb85dd68c9141",
+      "playback": {
+        "advanced": true,
+        "width": 960
+      },
+      "wholeFileDecode": "PASS",
+      "bytes": 112378,
+      "physicalDevice": "NOT_RUN"
+    },
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "two-workspace-source-relink",
+      "runtime": {
+        "node": "v24.22.1",
+        "playwright": "1.64.1",
+        "browser": "156.0.8078.79"
+      },
+      "inputs": {
+        "videoSha256": "5c95e57b28dce7dc5c4d287da59afafb06e07e0b99ff0fc732573d9c1b927ca9",
+        "historicalBgmSha256": "deb08de94c3711c321523c48f98f535bd6d44ba825bccee5e26f1ada2ed30e9f",
+        "wrongSameNameBgmSha256": "81349aa4f33e24937778dfdc4e178b3105bf692d74e71aca91a6234f883d4c37"
+      },
+      "outputSha256": "e44168427d02db5d90b2a541c0fdc6a215406b7cd815ec96ff67fb47fbb5c421",
+      "bytes": 42060,
+      "playback": {
+        "advanced": true,
+        "width": 960
+      },
+      "wholeFileDecode": "PASS",
+      "physicalDevice": "NOT_RUN"
+    },
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "saved-cut-preview",
+      "runtime": {
+        "node": "v24.22.1",
+        "playwright": "1.64.1",
+        "browser": "156.0.8078.79"
+      },
+      "inputSha256": "24eb8db23d298c87d52f95394700066e6939cf6d360e48f2cc606b4e2a0e01b9",
+      "outputSha256": "4a375f84ffe4bde59c16ac1265ef0566893658949f90900618ade031bca2dc07",
+      "wholeFileDecode": "PASS",
+      "physicalDevice": "NOT_RUN"
+    },
+    {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "import-recovery-first-cut",
+      "runtime": {
+        "node": "v24.22.1",
+        "browser": "156.0.8078.79",
+        "ffmpeg": "ffmpeg version n6.1.2-9-g4571c80b40-20241023 Copyright (c) 2000-2024 the FFmpeg developers"
+      },
+      "inputsSha256": [
+        "2de3a0212afa10f09f8344a395d09e1f73a230d307b093fd65c618c18f0084a9",
+        "ec12e781218c8e6aefbaeaad38f2c0a6834fc9b2b0051ee39183816c8d61710b"
+      ],
+      "uploadRequests": 2,
+      "retryRequests": 2,
+      "mediaResentOnRetry": false,
+      "outputSha256": "9f80f38ca421538c0ccbc18316af5089cc4a3c11e4a6b5c5ab382947af0d7bcd",
+      "bytes": 416596,
+      "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+      "originalAudio440": 0.12427157424185052,
+      "otherCamera660": 7.532996869989267e-07,
+      "playback": {
+        "advanced": true,
+        "width": 960,
+        "height": 540
+      },
+      "replayAfterRestart": {
+        "advanced": true,
+        "width": 960,
+        "height": 540
+      },
+      "restartReadback": "SHA256_MATCH",
+      "wholeFileDecode": "PASS",
+      "physicalDevice": "NOT_RUN"
+    }
+  ],
+  "sourceSha256": {
+    ".github/workflows/manual-smoke.yml": "6079b5874fef26c61b7c2cf942483b26dcd76dd63bdd536e994d2930564c712a",
+    "apps/local-editor/README.md": "c256ae18572440c2039aefb4b43be90a8ecd4b53be05b9fd050cf84529c26c7b",
+    "apps/local-editor/browser-import-recovery-acceptance.mjs": "15762078a59543c6c964d75c39357d9c505427e5dcb917a94780f160bb38a881",
+    "apps/local-editor/index.html": "7cdaf80b8289f6a79f7e0f4f8e3be97d239efc804b3fbffdcecc86bdca9eee04",
+    "apps/local-editor/media-preflight.test.mjs": "b9ceec0df7fcd1a06b667feca108ac7e350cffe1c4190781cfd1cd9bf61e6c40",
+    "apps/local-editor/pending-imports.mjs": "8b06340fcc91004e0812a0ff911d4aff9f984647039d5e3983bc221178c2058f",
+    "apps/local-editor/server.mjs": "40300189122a9fb442b6a74f94201ade0580ba9acb116068d9151e2342caaf43",
+    "engine/core_v01.py": "44ef4737adc7bd53a0cf69d19323d36299a7c9bcd8b6ee9df05cf8713fce9066",
+    "engine/local_signals.py": "9632ef41bce143574ca44d89ff4e91321622672375494a3d6cd034233b92d120",
+    "engine/media_tools.py": "fd4add503c974a2505455a425e2d23be67c82a21c95610189f8f2f575f28f9c8",
+    "engine/output_qa.py": "3d942fda076a2bcdf23b2852be3a39bab84baccd48676031b883d92695c507f0",
+    "engine/render_saved_project.py": "e568e5cf8c2873f9c4a949cce9f75d1fb495f3e1593fe40ff89d846bfe57ac7f",
+    "engine/test_media_tools.py": "844c516e4ff2b20fc440dca2d95f7d6edc7df8d54989ce661fd937ed50d0dce4"
+  },
+  "remaining": [
+    "ORIGINAL_ZIP_CALL_SITE",
+    "PHYSICAL_WINDOWS_LAUNCHES",
+    "CHUNKED_RESUMABLE_UPLOAD",
+    "UNATTENDED_BATCH",
+    "PRIVATE_REMOTE_PHONES",
+    "GOOGLE_PHOTOS",
+    "SEMANTIC_TRAINING_EDIT",
+    "JAPANESE_ASR_TTS",
+    "ONE_HOUR_TENS_OF_GB",
+    "FOUR_DEVICE_ACCEPTANCE"
+  ],
+  "review": {
+    "importantFindings": 3,
+    "fixedWithRegression": 3,
+    "minorDeferred": "Acceptance script requires explicit absolute AIVS_PYTHON before its PATH simulation."
+  }
+}

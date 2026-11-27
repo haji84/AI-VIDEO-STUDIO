@@ -16,6 +16,7 @@ import re
 import shutil
 import statistics
 import subprocess
+from .media_tools import MediaToolError, parse_probe_json, resolve_tool
 
 WIDTH, HEIGHT = 32, 18
 FRAME_BYTES = WIDTH * HEIGHT
@@ -30,10 +31,10 @@ class SignalsError(Exception):
 
 
 def _program(name):
-    p=shutil.which(name)
-    if not p:
-        raise SignalsError(f'{name.upper()}_UNAVAILABLE')
-    return p
+    try:
+        return resolve_tool(name)
+    except MediaToolError as error:
+        raise SignalsError(str(error)) from error
 
 
 def _run(cmd, timeout):
@@ -42,6 +43,8 @@ def _run(cmd, timeout):
                          stderr=subprocess.PIPE, timeout=timeout, check=False)
     except subprocess.TimeoutExpired as exc:
         raise SignalsError('ANALYSIS_TIMEOUT') from exc
+    except OSError as exc:
+        raise SignalsError('MEDIA_TOOL_START_FAILED') from exc
     if p.returncode:
         raise SignalsError('DECODER_FAILED')
     return p.stdout
@@ -60,8 +63,11 @@ def analyze_file(path, asset_id, *, offset_seconds=0.0, sync_status='master',
     file=Path(path).expanduser().resolve(strict=True)
     if not file.is_file() or file.suffix.lower() not in {'.mp4','.mov','.mkv','.webm','.m4v','.avi'}:
         raise SignalsError('UNSUPPORTED_VIDEO')
-    info=json.loads(_run([_program('ffprobe'),'-v','error',*INPUT_OPTIONS,'-show_entries',
-        'format=duration:stream=codec_type','-of','json',str(file)],timeout))
+    try:
+        info=parse_probe_json(_run([_program('ffprobe'),'-v','error',*INPUT_OPTIONS,'-show_entries',
+            'format=duration:stream=codec_type','-of','json',str(file)],timeout))
+    except MediaToolError as exc:
+        raise SignalsError(str(exc)) from exc
     try:
         duration=float(info['format']['duration'])
     except (KeyError,ValueError,TypeError) as exc:

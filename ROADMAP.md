@@ -2,6 +2,38 @@
 
 Evaluation is based on verified, usable product requirements, not number of commits / PRs / AI calls.
 
+## Current Issue #37 Gate A — 2026-11-27 JST
+
+- [x] Reproduce main-equivalent missing ffprobe/invalid JSON failures; share tool discovery and bounded response validation.
+- [x] Retain completed validation-failed transfers; explicit authenticated retry after restart without re-upload, with integrity and duplicate/stale protections.
+- [x] Guard shutdown ownership and unsupported-hard-link storage targets (synthetic filesystem/process cases).
+- [x] Actual Linux browser two-upload recovery → numerical first-cut review/apply → Japanese-caption/source-audio MP4 → replay/decode/restart readback. Node196/Python78 + four browser scopes passed.
+- [x] Apple Silicon MacBook: tool discovery with restricted PATH, JSON error regression, canonical workspace fix, two-upload recovery without resend, numerical first-cut review/apply, captioned MP4 playback to end, full decode and restart SHA-256 readback.
+- [x] MacBook Finder launch into a dedicated local workspace, standard Japanese font, normal one-video import through first-cut review and MP4 export, and restart from the same workspace. [MacBook launch verification](docs/validation/MACOS_LOCAL_EDITOR_2026-11-24.md)
+- [x] Hosted offline checks, four Linux browser flows and native Windows tool-discovery fixtures passed for the tested code. [CI run](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45177252481)
+- [x] Windows runner: real WinGet FFmpeg/ffprobe 9.0.2 discovery with a restricted PATH, Japanese JSON diagnostics and analysis with Unicode paths, two-upload recovery, reviewed first-cut, captioned export, full playback/decode and restart SHA-256 readback. [Windows verification](docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md)
+- [x] Locate the original v2.2/v2.2.1 ZIPs on the ZBook and verify their handoff SHA-256 digests without overwriting or running the old app.
+- [ ] Obtain the original exception call-site evidence and independently verify the distributed v2.x runtime repair.
+- [x] On the physical ZBook, verify WinGet FFmpeg/ffprobe 9.0.2 with a restricted launch PATH and launch the editor against the owner-requested USB/exFAT SSD. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+- [x] Fix native exFAT import/output publication, source restoration after rename, and Windows output integrity checks; verify synthetic MP4 playback, full decode and restart readback. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+- [x] Run hosted Linux/Windows checks on the branch with the SSD fixes. [All three jobs passed on `7c0addc19`](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589)
+- [ ] Resolve the six native symlink-fixture failures on exFAT or verify the supported native suite with equivalent coverage on that filesystem.
+- [x] Gate B local video transfer resumes from the last confirmed chunk after interruption and editor restart. Verify the complete file identity before sending the remaining bytes.
+- [ ] Gate B: verify long video continuation on the physical exFAT SSD and complete unattended batching.
+- [ ] Gate C: private separate-network phone acceptance. Gates D/E: semantics, ASR, TTS and one-hour or tens-of-GB four-device acceptance.
+- [x] MacBook Google Photos panel accepts downloaded videos. Optional Photos Picker passes simulated Google selection through actual local editing, MP4 export and replay. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
+- [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)
+- [x] Windows runner confirms the desktop launcher, simulated Picker selection and local file import, automatic first-cut preparation, reviewed export, complete playback and restart readback. [Verification](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)
+- [x] Use the ZBook's Codex connection to verify launching the GitHub version, importing downloaded synthetic video and exporting to the owner-requested external SSD on the physical machine. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+- [x] At the owner's request, create a dedicated Google Cloud project and enable Photos Picker API for ZBook direct import. [Setup receipt](docs/validation/GOOGLE_PHOTOS_ZBOOK_SETUP_2026-11-25.md)
+- [ ] Finish the prepared Google Auth setup after owner agreement to the displayed user-data policy; create the Desktop OAuth client with action-time confirmation, configure it privately on ZBook, then verify owner-selected live Photos download to the external SSD.
+
+Product and remote acceptance remain open. See the
+[MacBook receipt](docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md) and
+[prior Linux receipt](docs/validation/ZBOOK_MEDIA_GATE_A_2026-11-15.md).
+
+## Historical checkpoint — 2026-10-29
+
 Current checkpoint: 2026-10-29 JST / UTC. PR24 is integrated at main
 `c6bbd8d6f72d2653f350d6a01f9daf1d5ab31a13`, tree `2175c9bde1a35ab6629c9d8cda95a939ee709dd5`.
 [Main run40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)

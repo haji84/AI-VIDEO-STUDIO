@@ -1,11 +1,18 @@
 <!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI VIDEO STUDIO ローカル編集</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#10141d;color:#edf1fa;font-family:system-ui,sans-serif}main{max-width:1150px;margin:auto;padding:20px}h1{font-size:24px;margin:0}header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.muted{color:#a6b1c4;font-size:13px}section{background:#1b2331;border:1px solid #303b4d;border-radius:14px;padding:16px;margin:16px 0}button,.file-label{background:#2b374b;color:white;border:1px solid #52617a;border-radius:8px;padding:12px 16px;min-height:44px;font:inherit;cursor:pointer;display:inline-block}button.primary{background:#4c63ef;border-color:#7991ff}button:disabled{opacity:.5;cursor:wait}input,select,textarea{background:#111a28;color:white;border:1px solid #52617a;border-radius:7px;padding:10px;font:inherit;max-width:100%}input[type=number]{width:115px}input[type=file]{max-width:100%;font-size:14px}textarea{width:100%;min-height:70px}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.grid{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}label{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}.field{display:block;margin:10px 0}.preview{position:relative;background:black;border-radius:10px;overflow:hidden}video{display:block;width:100%;max-height:390px}.caption{position:absolute;bottom:13%;left:10%;width:80%;text-align:center;color:white;text-shadow:1px 1px black;pointer-events:none}.caption span{background:#000b;padding:4px 10px}#notice{min-height:25px;color:#bcd1ff;white-space:pre-wrap}#clips{list-style:none;padding:0;display:flex;gap:8px;overflow:auto}#clips button{white-space:nowrap}#clips .selected{border:2px solid #899cff}.bus{padding:10px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}.bus input[type=range]{width:120px}.tools{display:flex;gap:8px;flex-wrap:wrap}a{color:#b0c5ff}small{font-size:12px}@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding:12px}section{padding:12px}.bus{flex-wrap:wrap}}
-#saved-cut-preview [hidden]{display:none}
+#saved-cut-preview [hidden],#google-photos [hidden]{display:none}
+#google-photos summary{cursor:pointer}
 </style><main><header><div><h1>AI VIDEO STUDIO</h1><div class="muted">ローカル編集・開発版</div></div><div class="row"><button id="undo">戻す</button><button id="redo">やり直す</button><button id="save-project">プロジェクト保存</button><label>開く<input id="open-project" type="file" accept=".json"></label></div></header>
 <button id="conflict-save" hidden>未保存の変更を保存</button><p id="notice" role="status" aria-live="polite">保存内容を読み込んでいます</p>
-<section id="source-relink" hidden></section>
-<section><div class="row"><label>動画を追加<input id="video-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm"></label><label>名前<input id="project-name" maxlength="160"></label></div><p class="muted">素材はこのPC内の専用フォルダに保存します。元ファイルは変更しません。</p></section>
+<section id="source-relink" hidden></section><section id="resumable-import" hidden></section><section id="pending-imports" hidden></section>
+<section><div class="row"><label>動画を追加<input id="video-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm"></label><label>名前<input id="project-name" maxlength="160"></label></div><p class="muted">素材はこのPC内の専用フォルダに保存します。元ファイルは変更しません。</p>
+<details id="google-photos"><summary>Google フォトから追加</summary>
+<p>AI VIDEO STUDIO は、Google フォトで選んだ動画を読み取り、この PC の作業フォルダにコピーします。編集と書き出しはこの PC 内で行います。</p>
+<p id="google-photos-status" class="muted" role="status"></p>
+<div class="tools"><button id="google-photos-start" class="primary" hidden>Google フォトで選んで下書きを作る</button><button id="google-photos-cancel" hidden>取り込みをキャンセル</button></div>
+<div class="tools"><a class="file-label" href="https://photos.google.com/" target="_blank" rel="noopener noreferrer">Google フォトを開く</a><button id="google-photos-local">ダウンロードした動画を追加して下書きを作る</button><input id="google-photos-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm" hidden></div>
+</details></section>
 <div class="grid"><div><section><h2 id="source-preview-label">素材を確認</h2><div class="preview"><video id="preview" controls playsinline></video><div id="caption-preview" class="caption"></div></div><p class="muted">素材の簡易プレビューです。音量と仕上がりは完成動画で確認できます。</p><ol id="clips"></ol><div class="tools"><button id="add-clip">カット追加</button><button id="split">ここで分割</button><button id="move-left">前へ</button><button id="move-right">後ろへ</button></div></section><section id="saved-cut-preview"></section><section><h2>完成動画</h2><button id="render" class="primary">完成動画を作る</button><span id="render-state" class="muted"></span><video id="output" controls playsinline hidden></video><a id="download" hidden download="aivs-edited.mp4">MP4を保存</a></section></div>
 <div><section><h2>選んだカット</h2><label class="field">カメラ<select id="camera"></select></label><div class="row"><label>開始 秒<input id="trim-start" type="number" min="0" step="0.1"></label><label>使う長さ 秒<input id="duration" type="number" min="0.2" step="0.1"></label><label>速度<select id="speed"><option value="0.5">0.5倍</option><option value="1">1倍</option><option value="2">2倍</option><option value="4">4倍</option></select></label></div><label class="field">テロップ<textarea id="caption" maxlength="200" placeholder="表示する言葉"></textarea></label><button id="apply" class="primary">このカットを保存</button><hr><label>このカメラの同期位置 秒<input id="sync-offset" type="number" step="0.1"></label><label class="field"><input id="sync-confirm" type="checkbox">映像と音で同期位置を確認した</label><button id="apply-sync">同期位置を保存</button><p class="muted">追加カメラは同期確認後に使えます。音声の同期候補を下で調べられます。画面分割の操作は今後対応します。</p></section>
 <section><h2>音声</h2><div id="buses"></div><label class="field">BGM<input id="bgm-file" type="file" accept="audio/*"></label><label class="field">ナレーション音源<input id="narration-file" type="file" accept="audio/*"></label><label class="field">効果音<input id="sfx-file" type="file" accept="audio/*"></label><p class="muted">利用権のある音源を選んでください。読み込んだ音源は先頭へ配置します。音声生成には未対応です。</p></section></div></div></main>
@@ -18,34 +25,66 @@ import {mountFirstCutPanel} from '/first-cut-panel.mjs';
 import {mountOutputHistory} from '/output-history-panel.mjs';
 import {mountSourceRelink} from '/source-relink-panel.mjs';
 import {mountPreviewPanel} from '/preview-panel.mjs';
+import {resumeVideoUpload,resumableVideoThreshold} from '/video-upload.mjs';
 const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll,outputView=0;
+let googlePhotosPoll,localGoogleMessage='';
 const names={source:'元音声',narration:'ナレーション',bgm:'BGM',sfx:'効果音'};
 function notice(message){$('notice').textContent=message;}
-async function api(path,{method='GET',body,headers={}}={}){const r=await fetch(path,{method,body,headers:{'X-AIVS-Token':token,'X-AIVS-Revision':String(state?.session?.project?.revision??0),...headers}});const data=await r.json();if(!r.ok){const e=new Error(data.error||'処理に失敗しました');e.status=r.status;throw e;}return data;}
+async function api(path,{method='GET',body,headers={}}={}){const r=await fetch(path,{method,body,headers:{'X-AIVS-Token':token,'X-AIVS-Revision':String(state?.session?.project?.revision??0),...headers}});const data=await r.json();if(!r.ok){if(state&&Array.isArray(data.pendingImports)){state.pendingImports=data.pendingImports;showPendingImports();}const e=new Error(data.error||'処理に失敗しました');e.status=r.status;throw e;}return data;}
 function sourceUrl(asset){return '/media/'+asset+'?token='+token;}
 const audioContainer=document.createElement('div');audioContainer.id='audio-clips';$('buses').after(audioContainer);
 const audioPanel=mountAudioPanel({container:audioContainer,current:()=>state,commit:edit,act,mediaUrl:sourceUrl});
 const syncContainer=document.createElement('div');syncContainer.id='sync-candidates';$('apply-sync').after(syncContainer);
 const syncPanel=mountSyncPanel({container:syncContainer,current:()=>state,request:api,act,refresh:async()=>{state=await api('/api/state');show();},mediaUrl:sourceUrl,notice});
 const firstCutContainer=document.createElement('section');firstCutContainer.id='first-cut';$('video-files').closest('section').after(firstCutContainer);
-const firstCutPanel=mountFirstCutPanel({container:firstCutContainer,current:()=>state,request:api,act,refresh:async()=>{state=await api('/api/state');show();},mediaUrl:sourceUrl,notice});
+const firstCutPanel=mountFirstCutPanel({container:firstCutContainer,current:()=>state,request:api,act,refresh:async background=>{
+ const next=await api('/api/state');if(background)updateFromBackground(next);else{state=next;show();}
+},mediaUrl:sourceUrl,notice});
 const relinkPanel=mountSourceRelink({container:$('source-relink'),fileInput:$('open-project'),current:()=>state,request:api,notice,onOpen:data=>{state=data;selected=0;show();}});
 const previewPanel=mountPreviewPanel({container:$('saved-cut-preview'),current:()=>state,selected:()=>selected,request:api,mediaURL:path=>path+'?token='+token,
- onJobChange:()=>{$('render').disabled=!state.session.project.timeline.length||state.job.status==='RUNNING'||state.sync?.status==='RUNNING'||state.firstCut?.status==='RUNNING'||state.preview?.status==='RUNNING';}});
+ onJobChange:updateRenderAvailability});
 window.addEventListener('pagehide',()=>previewPanel.close(),{once:true});
-function show(){const p=state.session.project;selected=Math.min(selected,Math.max(0,p.timeline.length-1));$('project-name').value=p.name;
+function showPendingImports(){
+ const panel=$('pending-imports'),pending=state.pendingImports??[];panel.replaceChildren();panel.hidden=!pending.length;if(!pending.length)return;
+ const heading=document.createElement('h2');heading.textContent='送信済み・検査待ち';
+ const message=document.createElement('p');message.textContent='動画の送信は完了しています。検査のエラーを解決してから、再送せずに取り込みを試せます。';panel.append(heading,message);
+ for(const item of pending){const row=document.createElement('p'),label=document.createElement('span'),button=document.createElement('button');
+  label.textContent=item.label+' ';button.textContent='再送せずに取り込みを再試行';button.dataset.uploadId=item.uploadId;
+  button.onclick=()=>act(async()=>{state=await api('/api/import/retry',{method:'POST',body:JSON.stringify({uploadId:item.uploadId})});});row.append(label,button);panel.append(row);
+ }
+}
+function showResumableImport(){
+ const panel=$('resumable-import'),record=state.resumableImport;
+ panel.replaceChildren();panel.hidden=!record;if(!record)return;
+ const title=document.createElement('h2');title.textContent='途中から読み込める動画';
+ const label=document.createElement('p');
+ label.textContent=record.name+' の '+Math.floor(record.offset*100/record.totalBytes)+'% を保存しました。同じ動画を選ぶと続きから読み込みます。';
+ const discard=document.createElement('button');discard.type='button';discard.textContent='読み込みの途中データを削除';
+ discard.onclick=()=>act(async()=>{state=await api('/api/import/resume/discard',{
+  method:'POST',body:JSON.stringify({uploadId:record.uploadId}),
+ });});
+ panel.append(title,label,discard);
+}
+function updateRenderAvailability(){$('render').disabled=!state.session.project.timeline.length||state.job.status==='RUNNING'||state.sync?.status==='RUNNING'||state.firstCut?.status==='RUNNING'||state.preview?.status==='RUNNING';}
+function show({keepForm=false}={}){const p=state.session.project;selected=Math.min(selected,Math.max(0,p.timeline.length-1));
+ if(!keepForm)$('project-name').value=p.name;
+ showResumableImport();
+ showPendingImports();
+ showGooglePhotos();
  $('undo').disabled=!state.session.undo.length;$('redo').disabled=!state.session.redo.length;
  $('clips').replaceChildren();p.timeline.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.textContent=(i+1)+' · '+(c.durationSec/c.speed).toFixed(1)+'秒';b.className=i===selected?'selected':'';b.onclick=()=>{selected=i;show();};li.append(b);$('clips').append(li);});
+ const selectedCamera=$('camera').value;
  $('camera').replaceChildren();for(const s of p.sourceRefs.filter(s=>s.mediaKind==='video')){const o=document.createElement('option');o.value=s.assetId;o.textContent=state.sources.find(x=>x.assetId===s.assetId)?.label||s.assetId;$('camera').append(o);}
+ if(keepForm&&selectedCamera)$('camera').value=selectedCamera;
  const c=p.timeline[selected];for(const id of ['apply','split','add-clip','move-left','move-right','render'])$(id).disabled=!c;
- $('render').disabled=!c||state.job.status==='RUNNING'||state.sync?.status==='RUNNING'||state.firstCut?.status==='RUNNING'||state.preview?.status==='RUNNING';
- if(c){$('camera').value=c.sourceId;$('trim-start').value=c.sourceInSec;$('duration').value=c.durationSec;$('speed').value=String(c.speed);$('caption').value=c.effects.find(e=>e.type==='caption')?.parameters.text||'';
+ updateRenderAvailability();
+ if(c&&!keepForm){$('camera').value=c.sourceId;$('trim-start').value=c.sourceInSec;$('duration').value=c.durationSec;$('speed').value=String(c.speed);$('caption').value=c.effects.find(e=>e.type==='caption')?.parameters.text||'';
  const url=sourceUrl(c.sourceId);if($('preview').getAttribute('src')!==url)$('preview').src=url;
  $('preview').playbackRate=c.speed;try{$('preview').currentTime=c.sourceInSec;}catch{}
  $('caption-preview').replaceChildren();if($('caption').value){const label=document.createElement('span');label.textContent=$('caption').value;$('caption-preview').append(label);}showSync();}
- $('buses').replaceChildren();for(const bus of Object.keys(names)){const row=document.createElement('div');row.className='bus';const label=document.createElement('label');label.textContent=names[bus];const gain=document.createElement('input');gain.type='range';gain.min='-40';gain.max='6';gain.step='1';gain.id='gain-'+bus;gain.value=p.audioBuses[bus].gainDb;gain.setAttribute('aria-label',names[bus]+' 音量');const value=document.createElement('span');value.textContent=gain.value+' dB';gain.oninput=()=>{value.textContent=gain.value+' dB';};gain.onchange=()=>act(async()=>{const q=structuredClone(state.session.project);q.audioBuses[bus].gainDb=Number(gain.value);await edit(q);});
+ if(!keepForm){$('buses').replaceChildren();for(const bus of Object.keys(names)){const row=document.createElement('div');row.className='bus';const label=document.createElement('label');label.textContent=names[bus];const gain=document.createElement('input');gain.type='range';gain.min='-40';gain.max='6';gain.step='1';gain.id='gain-'+bus;gain.value=p.audioBuses[bus].gainDb;gain.setAttribute('aria-label',names[bus]+' 音量');const value=document.createElement('span');value.textContent=gain.value+' dB';gain.oninput=()=>{value.textContent=gain.value+' dB';};gain.onchange=()=>act(async()=>{const q=structuredClone(state.session.project);q.audioBuses[bus].gainDb=Number(gain.value);await edit(q);});
  const mute=document.createElement('input');mute.type='checkbox';mute.id='mute-'+bus;mute.checked=p.audioBuses[bus].muted;const ml=document.createElement('label');ml.append(mute,document.createTextNode('消音'));mute.onchange=()=>act(async()=>{const q=structuredClone(state.session.project);q.audioBuses[bus].muted=mute.checked;await edit(q);});label.append(gain,value);row.append(label,ml);$('buses').append(row);}
- audioPanel.show();
+ audioPanel.show();}
  syncPanel.show();
  firstCutPanel.show();
  relinkPanel.show();
@@ -55,8 +94,136 @@ function showSync(){const s=state.session.project.sourceRefs.find(s=>s.assetId==
 async function act(action){if(working)return;working=true;try{notice('処理中…');await action();show();notice('端末内に保存済み');}catch(e){if(e.status===409&&e.message.includes('REVISION_CONFLICT')){try{state=await api('/api/state');show();if(e.draft){$('conflict-save').hidden=false;$('conflict-save').onclick=()=>downloadJson(e.draft,'unsaved-edit.aivs.json');}notice('別の画面の更新を読み直しました。未保存の変更は保存ボタンから取り出せます。');}catch{notice(e.message);}}else notice(e.message);}finally{working=false;}}
 async function edit(p){try{state=await api('/api/edit',{method:'POST',body:JSON.stringify(p)});}catch(e){e.draft=JSON.stringify({...state.session,project:p},null,2);throw e;}}
 function downloadJson(json,name){const url=URL.createObjectURL(new Blob([json],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-async function upload(input,kind){for(const file of input.files){notice(file.name+' を端末内へ読み込んでいます');state=await api('/api/import?kind='+kind,{method:'POST',headers:{'X-File-Name':encodeURIComponent(file.name)},body:file});}input.value='';}
+async function uploadFile(file,kind){
+ notice(file.name+' を端末内へ読み込んでいます');
+ if(kind!=='video'||(file.size<=resumableVideoThreshold&&state.resumableImport?.name!==file.name)){
+  state=await api('/api/import?kind='+kind,{method:'POST',headers:{'X-File-Name':encodeURIComponent(file.name)},body:file});
+  return;
+ }
+ try{
+  state=await resumeVideoUpload({file,receipt:state.resumableImport,request:api,onProgress:record=>{
+   state.resumableImport=record;showResumableImport();
+  }});
+ }catch(error){
+  const uploadId=state.resumableImport?.uploadId;
+  const current=await api('/api/state').catch(()=>null);
+  if(current){
+   state=current;showResumableImport();showPendingImports();
+   if(uploadId&&state.session.project.sourceRefs.some(source=>source.assetId===uploadId))return;
+  }
+  if(error instanceof TypeError)throw new Error('接続が切れました。画面を開き直し、同じ動画を選ぶと続きから読み込めます。');
+  throw error;
+ }
+}
+async function upload(input,kind){
+ const files=[...input.files];
+ if(kind==='video')input.value='';
+ for(const file of files)await uploadFile(file,kind);
+ input.value='';
+}
 $('video-files').onchange=()=>act(()=>upload($('video-files'),'video'));for(const kind of ['bgm','narration','sfx'])$(kind+'-file').onchange=()=>act(()=>upload($(kind+'-file'),kind));
+function showGooglePhotos(){
+ const google=state.googlePhotos??{phase:'SETUP_REQUIRED'},phase=google.phase;
+ const active=['AUTHORIZING','CONNECTING','SELECTING'].includes(phase)||['WAITING','WAITING_FOR_EDITOR','IMPORTING','STARTING_DRAFT'].includes(google.status);
+ $('google-photos-start').hidden=active||!['READY','EXPIRED'].includes(phase);
+ $('google-photos-cancel').hidden=!active||google.status==='STARTING_DRAFT';
+ const messages={
+  SETUP_REQUIRED:'直接取り込みには初回の Google 接続設定が必要です。今すぐ使う場合は、Google フォトで動画を選び、メニューからダウンロードして追加してください。',
+  SETUP_INVALID:'この PC のデスクトップ OAuth 設定ファイルを確認してください。ダウンロードした動画はすぐに追加できます。',
+  UNAVAILABLE:'この端末ではダウンロードした Google フォトの動画を追加できます。',
+  READY:'Google の画面で動画を選び、「完了」を押すと取り込みと下書き作成が始まります。',
+  EXPIRED:'選択の有効期限が切れました。動画を選び直してください。',
+ };
+ const result=state.googleImport;
+ const skipped=result?result.photosSkipped+result.videosSkipped:0;
+ const draftMessages={STARTED:'自動編集の候補は下の「自動編集の下書き候補」で確認できます。',
+  SYNC_REQUIRED:'追加した動画は、同期位置を確認してから下書きに使えます。',
+  UNAVAILABLE:'下書きを開始できませんでした。下の「自動編集の下書き候補」で条件を確認してください。'};
+ const resultMessage=result?[
+  `動画を ${result.imported} 本追加しました。`,result.pending?`${result.pending} 本は検査待ちから再試行できます。`:'',
+  skipped?'写真と Google で処理中・再生不可の動画は対象外です。':'',
+  result.failed?`${result.failed} 本の取得に失敗しました。${result.error??''}`:'',
+  draftMessages[result.draft]??'',
+ ].join(''):'';
+ const progress={WAITING_FOR_EDITOR:'選択した動画を受け取りました。現在の編集処理の完了を待っています。',
+  IMPORTING:'選んだ動画をこの PC に取り込んでいます。',STARTING_DRAFT:'取り込みが完了し、下書き作成を始めています。'};
+ $('google-photos-status').textContent=active
+  ? (progress[google.status]??'Google フォトで動画を選び、「完了」を押してください。')
+  : (localGoogleMessage||google.error||resultMessage||messages[phase]||'');
+ if(active)watchGooglePhotos();
+}
+function updateFromBackground(next){
+ const previous=state.session.project,project=next.session.project;
+ const projectChanged=previous.projectId!==project.projectId||previous.revision!==project.revision;
+ if(projectChanged&&previous.projectId===project.projectId&&project.sourceRefs.length>previous.sourceRefs.length){
+  const initialLoad=!previous.timeline.length&&!previous.sourceRefs.length;
+  const comparable={...project,revision:previous.revision,sourceRefs:project.sourceRefs.slice(0,previous.sourceRefs.length),
+    ...(initialLoad?{timeline:previous.timeline,audioClips:previous.audioClips}:{})};
+  // Taking the new revision is safe when the existing edit and sources still match.
+  if(JSON.stringify(previous)===JSON.stringify(comparable)){
+   const projectName=$('project-name').value;
+   state=next;show({keepForm:!initialLoad});
+   if(initialLoad&&projectName!==previous.name)$('project-name').value=projectName;
+   return;
+  }
+ }
+ const pendingChanged=next.pendingImports.length!==state.pendingImports.length
+  ||next.pendingImports.some((item,index)=>item.uploadId!==state.pendingImports[index]?.uploadId);
+ state.pendingImports=next.pendingImports;state.googlePhotos=next.googlePhotos;state.googleImport=next.googleImport;
+ if(pendingChanged)showPendingImports();
+ if(!projectChanged&&(next.firstCut?.status!==state.firstCut?.status||next.firstCut?.id!==state.firstCut?.id)){
+  state.firstCut=next.firstCut;firstCutPanel.show();updateRenderAvailability();
+ }
+ showGooglePhotos();
+}
+function watchGooglePhotos(){
+ if(googlePhotosPoll)return;
+ googlePhotosPoll=setTimeout(async()=>{
+  googlePhotosPoll=undefined;
+  if(working){watchGooglePhotos();return;}
+  const before=state;
+  try{
+   const next=await api('/api/state');
+   if(working||state!==before){watchGooglePhotos();return;}
+   updateFromBackground(next);
+  }catch(error){notice(error.message);}
+ },750);
+}
+const requestedDraftMode=()=>$('first-cut-mode').value;
+$('google-photos-start').onclick=async()=>{
+ if(working)return;working=true;localGoogleMessage='';
+ try{updateFromBackground(await api('/api/google-photos/start?draftMode='+encodeURIComponent(requestedDraftMode()),{method:'POST'}));}
+ catch(error){notice(error.message);}
+ finally{working=false;}
+};
+$('google-photos-cancel').onclick=async()=>{
+ const cancel=$('google-photos-cancel');cancel.disabled=true;
+ try{updateFromBackground(await api('/api/google-photos/cancel',{method:'POST'}));notice('Google フォトの取り込みをキャンセルしました。');}
+ catch(error){notice(error.message);}
+ finally{cancel.disabled=false;}
+};
+$('google-photos-local').onclick=()=>$('google-photos-files').click();
+$('google-photos-files').onchange=()=>act(async()=>{
+ const input=$('google-photos-files'),mode=requestedDraftMode();
+ if(!input.files.length)return;
+ localGoogleMessage='';
+ const before=new Set(state.session.project.sourceRefs.map(source=>source.assetId));
+ const errors=[];let added=0;
+ for(const file of input.files){
+  try{await uploadFile(file,'video');added++;}catch(error){errors.push(error.message);}
+ }
+ input.value='';
+ const importMessage=`動画を ${added} 本追加しました。`+(errors.length?` ${errors.length} 本は検査または取り込みに失敗しました。${errors[0]}`:'');
+ const hasNewEligibleVideo=state.session.project.sourceRefs.some(source=>source.mediaKind==='video'
+  && !before.has(source.assetId)&&['master','verified'].includes(source.syncStatus));
+ if(!hasNewEligibleVideo){localGoogleMessage=importMessage+(added?' 追加した動画は、同期位置を確認してから下書きに使えます。':'');return;}
+ try{
+  state.firstCut=await api('/api/first-cut',{method:'POST',body:JSON.stringify({mode})});
+  localGoogleMessage=importMessage+' 自動編集の候補は下の「自動編集の下書き候補」で確認できます。';
+ }catch{
+  localGoogleMessage=importMessage+' 下書き作成の条件は「自動編集の下書き候補」で確認できます。';
+ }
+});
 $('project-name').onchange=()=>act(async()=>{const p=structuredClone(state.session.project);p.name=$('project-name').value;await edit(p);});
 $('camera').onchange=()=>{try{$('trim-start').value=cameraSourceIn(state.session.project,selected,$('camera').value);}catch(e){$('trim-start').value='';notice(e.message);}showSync();};
 $('apply').onclick=()=>act(async()=>{const source=state.session.project.sourceRefs.find(s=>s.assetId===$('camera').value);

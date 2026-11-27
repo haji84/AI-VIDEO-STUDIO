@@ -3,7 +3,11 @@ import array
 import hashlib
 import json
 import math
+import os
 import random
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 import wave
@@ -51,6 +55,30 @@ class SavedSyncTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):cls.fixture.cleanup()
 
+    def test_cli_reads_utf8_json_for_non_ascii_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / '同期 素材'
+            folder.mkdir()
+            paths = [Path(shutil.copy2(path, folder / path.name)) for path in self.paths[:2]]
+            make_session(folder, paths)
+            output = folder / 'report.json'
+            # A C locale also disables Unicode filesystem paths on Linux.
+            locale_env = {'PYTHONUTF8': '1'}
+            if sys.platform in ('darwin', 'win32'):
+                locale_env = {'PYTHONUTF8': '0', 'PYTHONCOERCECLOCALE': '0', 'LC_ALL': 'C'}
+            result = subprocess.run(
+                [sys.executable, '-m', 'engine.sync_saved_project',
+                 '--project', str(folder / 'project.json'), '--bindings', str(folder / 'bindings.json'),
+                 '--request', str(folder / 'request.json'), '--workspace', str(folder / 'analysis'),
+                 '--output', str(output)],
+                cwd=ROOT, capture_output=True, timeout=45, check=False,
+                env={**os.environ, **locale_env},
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(output.read_bytes())
+            self.assertEqual(report['status'], 'CANDIDATE')
+            self.assertAlmostEqual(report['candidateOffsetSec'], 5, delta=.21)
+
     def test_known_offset_is_only_a_candidate_bound_to_saved_identity(self):
         from .sync_saved_project import analyse_saved_project
         with tempfile.TemporaryDirectory(prefix='aivs-sync-') as tmp:
@@ -60,7 +88,7 @@ class SavedSyncTests(unittest.TestCase):
             self.assertGreaterEqual(report['confidence'],.43);self.assertGreaterEqual(report['uniqueness'],.045)
             self.assertEqual(report['driftMeasurement'],'NOT_ESTIMATED');self.assertEqual(report['analysisWindowSec'],300)
             self.assertEqual((folder/'project.json').read_bytes(),before);self.assertNotIn(self.fixture.name,json.dumps(report))
-            self.assertEqual(report,json.loads((folder/'report.json').read_text()))
+            self.assertEqual(report,json.loads((folder/'report.json').read_text(encoding='utf-8')))
             self.assertEqual(report['targetIdentity']['sha256'],hashlib.sha256(self.paths[1].read_bytes()).hexdigest())
 
     def test_silent_or_missing_master_sound_is_not_a_verified_sync(self):
@@ -69,7 +97,7 @@ class SavedSyncTests(unittest.TestCase):
             folder=Path(tmp);make_session(folder,[self.paths[0],self.paths[2]])
             report=analyse_saved_project(folder/'project.json',folder/'bindings.json',folder/'request.json',folder/'analysis',folder/'report.json')
             self.assertEqual(report['status'],'UNVERIFIED');self.assertIsNone(report['candidateOffsetSec'])
-            self.assertEqual(json.loads((folder/'project.json').read_text())['project']['sourceRefs'][1]['syncStatus'],'unverified')
+            self.assertEqual(json.loads((folder/'project.json').read_text(encoding='utf-8'))['project']['sourceRefs'][1]['syncStatus'],'unverified')
 
     def test_wrong_hash_existing_report_and_indirect_playlist_are_refused(self):
         from .sync_saved_project import analyse_saved_project
@@ -77,7 +105,7 @@ class SavedSyncTests(unittest.TestCase):
             folder=Path(tmp);make_session(folder,self.paths[:2]);before=(folder/'project.json').read_bytes()
             with self.assertRaises(Exception):analyse_saved_project(folder/'project.json',folder/'bindings.json',folder/'request.json',folder/'never',folder/'project.json')
             self.assertEqual((folder/'project.json').read_bytes(),before)
-            file=folder/'project.json';doc=json.loads(file.read_text());doc['project']['sourceRefs'][1]['sha256']='a'*64;file.write_text(json.dumps(doc))
+            file=folder/'project.json';doc=json.loads(file.read_text(encoding='utf-8'));doc['project']['sourceRefs'][1]['sha256']='a'*64;file.write_text(json.dumps(doc))
             with self.assertRaises(Exception):analyse_saved_project(file,folder/'bindings.json',folder/'request.json',folder/'wrong-hash',folder/'out.json')
             self.assertFalse((folder/'out.json').exists())
             playlist=folder/'indirect.m3u8'
@@ -91,7 +119,7 @@ class SavedSyncTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='aivs-sync-no-audio-') as tmp:
             folder=Path(tmp);silent=folder/'no-audio.mp4'
             run(['ffmpeg','-v','error','-i',str(self.paths[0]),'-map','0:v','-an','-c:v','copy',str(silent)])
-            make_session(folder,[silent,self.paths[1]]);file=folder/'project.json';doc=json.loads(file.read_text());doc['project']['sourceRefs'][0]['hasAudio']=False;doc['project']['audioClips']=[];file.write_text(json.dumps(doc))
+            make_session(folder,[silent,self.paths[1]]);file=folder/'project.json';doc=json.loads(file.read_text(encoding='utf-8'));doc['project']['sourceRefs'][0]['hasAudio']=False;doc['project']['audioClips']=[];file.write_text(json.dumps(doc))
             report=analyse_saved_project(file,folder/'bindings.json',folder/'request.json',folder/'analysis',folder/'report.json')
             self.assertEqual(report['status'],'UNVERIFIED');self.assertIsNone(report['candidateOffsetSec'])
 

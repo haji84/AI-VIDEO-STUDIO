@@ -162,8 +162,14 @@ export async function createSourceRelinkManager({folder,getSession,getRegistry,c
      if(stamp(await safeStat(staged))!==proof.stamp)fail('SOURCE_CHANGED');
      await fs.rename(staged,local);
      const afterRename=await safeStat(local);
-     if(afterRename.size!==proof.size||afterRename.dev!==beforeProbe.dev||afterRename.ino!==beforeProbe.ino||afterRename.mtimeMs!==beforeProbe.mtimeMs)fail('SOURCE_CHANGED');
-     const movedProof={...proof,path:local,stamp:stamp(afterRename)};
+     if(afterRename.size!==proof.size||afterRename.dev!==beforeProbe.dev)fail('SOURCE_CHANGED');
+     let movedProof={...proof,path:local,stamp:stamp(afterRename)};
+     if(afterRename.ino!==beforeProbe.ino||afterRename.mtimeMs!==beforeProbe.mtimeMs){
+      // exFAT may assign a new file identity when the directory entry changes.
+      // Re-read stable bytes before accepting that identity transition.
+      movedProof=await stableHash(local);
+      if(movedProof.size!==proof.size||movedProof.sha256!==proof.sha256)fail('SOURCE_CHANGED');
+     }
      for(const source of matched)resolved.set(source.assetId,{entry:{assetId:source.assetId,file,path:local,label:label.slice(0,160),byteLength:length,source:structuredClone(source)},proof:movedProof});
     }
     active(id);await unchanged(resolved);await addEntries(matched,resolved);active(id);

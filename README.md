@@ -7,19 +7,14 @@
 The public GitHub source is independent from GORIQ. This Goal covers a local-first video editing application, **not** immediate paid/public product release. An existing browser device lab is not proof of native/full-duration product completion.
 
 
-**Status: common project/audio engine + local desktop editing slice; GUI browser verification pending. NOT a finished four-platform product.**
+The local desktop editor has synthetic browser acceptance on Apple Silicon MacBook and hosted Linux and Windows.
 
 ## ローカルPC編集版を起動
 
-端末内で動かす開発版と[起動・復旧手順](apps/local-editor/README.md)を追加しました。
-128テストと実MP4の合成試験が通過。画面操作のブラウザ受入は実行環境に
-ブラウザ本体がないため未実施です。一般公開やクラウド処理は開始していません。
+MacBook では `start-mac.command`、Windows では `start-windows.cmd` を開くと、ブラウザに編集画面が開きます。
+「動画を追加」「下書き候補を作る」「完成動画を作る」から、端末内で取り込み、編集、MP4 出力を行えます。
 
-```sh
-node apps/local-editor/server.mjs --workspace "$HOME/AI_VIDEO_STUDIO_DATA"
-```
-
-Windows用のコマンド、前提ツール、制限は上記の起動手順に記載しています。
+[Mac と Windows の起動、復旧手順](apps/local-editor/README.md#起動)
 
 AI VIDEO STUDIO is a standalone, local-first, non-destructive AI-assisted video editing project. It is **not** part of GORIQ, and does not share GORIQ's release status, repository, credentials or personal media. The goal is a beginner-friendly editor for **iPhone, Android, Windows and macOS**, supporting 1 to N cameras, Japanese subtitles/TTS, animated titles/video effects, BGM/SE, and optional cloud processing with separate consent.
 
@@ -36,7 +31,7 @@ AI VIDEO STUDIO is a standalone, local-first, non-destructive AI-assisted video 
 
 | Path | Reality / status |
 |---|---|
-| `apps/local-editor/` | Local desktop UI/server; real API/MP4 and edit-operation tests pass, browser UI acceptance BLOCKED. |
+| `apps/local-editor/` | Local desktop UI and server with synthetic browser acceptance for import, editing and MP4 export. |
 | `packages/project/` | Versioned project, persistent history, streaming source hashes/relink, render plan. |
 | `engine/` | Existing FFmpeg Python processor from v0.2.1; synthetic-media tests only. |
 | `cloud/` | Existing Cloudflare Workers/D1/R2 prototype; NOT deployed; optional cloud code, not default. |

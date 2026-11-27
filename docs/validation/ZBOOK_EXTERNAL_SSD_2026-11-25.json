@@ -1,0 +1,232 @@
+{
+  "schema": "aivs-zbook-external-ssd-validation-v1",
+  "date": "2026-11-25",
+  "timezone": "Asia/Tokyo",
+  "status": "TESTED_SYNTHETIC",
+  "productComplete": false,
+  "implementationCommit": "4253284038f2e49aeb4c8061b8459f97fe610235",
+  "implementationTree": "bb78c83bc5c45b1b725b6576c6b3df7a9b546fea",
+  "main": "e1bf222dfe0043e307e3fc3c122e2fe52423dac8",
+  "pullRequest": 51,
+  "execution": {
+    "physicalComputerObserved": true,
+    "manufacturer": "HP",
+    "model": "HP ZBook Fury 15.6 inch G8 Mobile Workstation PC",
+    "os": "Windows 11 Pro",
+    "osVersion": "10.0.26200",
+    "architecture": "x64",
+    "node": "24.19.0",
+    "python": "3.11.9",
+    "ffmpeg": "9.0.2 Gyan",
+    "ffprobe": "9.0.2 Gyan",
+    "chrome": "158.0.8127.37",
+    "playwright": "1.64.1",
+    "pillow": "13.0.0",
+    "font": "installed Meiryo",
+    "media": "FFmpeg-generated synthetic media only"
+  },
+  "storage": {
+    "ownerRequestedExternalSSD": true,
+    "bus": "USB",
+    "model": "BUFFALO SSD-PUTU3C",
+    "filesystem": "exFAT",
+    "everydayWorkspace": "D:\\AI_VIDEO_STUDIO_DATA\\editor",
+    "fixturesAndTemporaryMediaOnExternalSSD": true,
+    "desktopShortcutCreated": true,
+    "editorBind": "127.0.0.1",
+    "editorPort": 8765,
+    "restrictedLaunchPathMediaDiscovery": "PASS",
+    "finalEverydayLaunchObserved": true
+  },
+  "tests": {
+    "python": {
+      "passed": 28,
+      "failed": 0
+    },
+    "importAndLauncher": {
+      "passed": 10,
+      "failed": 0,
+      "skipped": 1
+    },
+    "scopedSourceRestore": {
+      "passed": 22,
+      "failed": 0,
+      "excludedSymlinkFixture": 1
+    },
+    "outputTamperWithRestoredTimestamp": "PASS",
+    "fullLocalEditor": {
+      "command": "node --test --test-concurrency=1 apps/local-editor/*.test.mjs",
+      "exitCode": 1,
+      "total": 119,
+      "passed": 102,
+      "failed": 6,
+      "skipped": 11,
+      "allPassed": false,
+      "failedFixtureDisposition": "exFAT cannot create the required symbolic links: EISDIR",
+      "failedTests": [
+        "latest-job reader rejects oversized and linked records before interpreting them",
+        "a workspace reached through a parent alias can render and reopen both verified outputs",
+        "malformed, oversized, duplicate and unsafe journals never admit entries",
+        "symbolic links in output or report paths are rejected even if target bytes match",
+        "private editing state cannot be written into the public source checkout",
+        "changed, missing or linked registered media is not treated as verified"
+      ]
+    },
+    "hostedCI": "NOT_RUN",
+    "staticReview": "NO_UNRESOLVED_FINDINGS",
+    "hostedCIBlocker": "Connected tools have no workflow dispatch operation; the physical ZBook browser is signed out of GitHub. No run started.",
+    "hostedCIAttemptedHead": "768707cc32b0b6829d949993066607c5affb3c17"
+  },
+  "browser": {
+    "recovery": {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "import-recovery-first-cut",
+      "runtime": {
+        "node": "v24.19.0",
+        "platform": "win32",
+        "arch": "x64",
+        "browser": "158.0.8127.37",
+        "ffmpeg": "ffmpeg version 9.0.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+        "ffprobe": "ffprobe version 9.0.2-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers"
+      },
+      "inputsSha256": [
+        "dafd6cd13a1f00a050554eaef19045630e8816ed12fa2ff4aa4d2a2b9d0b56df",
+        "22e028ca505857654dd7643a46ea3437abf5e08eca93f2c94c5752410e0a61a7"
+      ],
+      "uploadRequests": 2,
+      "retryRequests": 2,
+      "mediaResentOnRetry": false,
+      "savedProjectSha256": "2a79fe962089be37aa727acd2077583b1bfe3d384f93f1f9e187c55ce5317b54",
+      "outputSha256": "e630e112d3477b73d3dd2b851010f9ce73553a1fd1371040f85d87398101a514",
+      "qaSha256": "d8abe15cc8e3448993dab7c777c0a9cfdac633fe5970e75dc0f9f8ca7e157e72",
+      "bytes": 424136,
+      "firstCut": "NUMERICAL_EXPLICITLY_REVIEWED",
+      "originalAudio440": 0.12460506830830695,
+      "otherCamera660": 5.255980708708603E-07,
+      "media": {
+        "videoCodec": "h264",
+        "audioCodec": "aac",
+        "durationSec": 4.021322,
+        "videoFrames": 96
+      },
+      "playback": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.021322
+      },
+      "replayAfterRestart": {
+        "advanced": true,
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.021322
+      },
+      "caption": {
+        "glyphCoverage": "CMAP_VERIFIED",
+        "glyphCodepointsChecked": 9
+      },
+      "restartReadback": "SHA256_MATCH",
+      "wholeFileDecode": "PASS"
+    },
+    "googlePhotos": {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "google-photos-import",
+      "provider": "FIXTURE_ONLY",
+      "automation": {
+        "downloadedFileDraftAfterPartialFailure": "PASS",
+        "pickerWithoutOpenEditorPage": "PASS",
+        "downloadBeforeSelection": false,
+        "pendingShownWithoutReload": "PASS",
+        "unsavedCaptionPreservedAndSaved": "PASS"
+      },
+      "runtime": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.19.0",
+        "browser": "158.0.8127.37"
+      },
+      "inputSha256": "ed03fd958cbde8a6963914aacc35fb2a7bfd12c1e4aa09ecb55fcdaafb6bdb07",
+      "downloadedFileInputSha256": "ed03fd958cbde8a6963914aacc35fb2a7bfd12c1e4aa09ecb55fcdaafb6bdb07",
+      "outputSha256": "198219d4e7328ec9aa8d00763d175b9f3e2d9f3793841252c222cf974668f02e",
+      "bytes": 471893,
+      "media": {
+        "videoCodec": "h264",
+        "audioCodec": "aac",
+        "frames": 96
+      },
+      "playback": {
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.021322
+      },
+      "replayAfterRestart": {
+        "ended": true,
+        "width": 960,
+        "height": 540,
+        "durationSec": 4.021322
+      },
+      "wholeFileDecode": "PASS",
+      "restartReadback": "SHA256_MATCH"
+    },
+    "sourceRelink": {
+      "status": "PASS_SYNTHETIC_BROWSER",
+      "scope": "two-workspace-source-relink",
+      "runtime": {
+        "node": "v24.19.0",
+        "playwright": "1.64.1",
+        "browser": "158.0.8127.37"
+      },
+      "inputs": {
+        "videoSha256": "cbc5a8e1169a2380a839fdbc70019560549ed07f0ed050a8247d20b965fabaa1",
+        "historicalBgmSha256": "842470648c4749c40d7bc0da3da82284459d37d4ec3a672c6cc474f1fa296b4b",
+        "wrongSameNameBgmSha256": "696d950187fca0d5e50efa1d9e859b91b6d22c5c31105a79bae43cb4621b64aa"
+      },
+      "savedProjectSha256": "8d441fe4b959e44eb43e59176d59800f99888423b86a5a8dd667373474716704",
+      "previousWorkspaceSha256": "c301c299744ba89a9479a707df2a42f0bf8a2372cfde128e8b913581f637d8cf",
+      "recoveredProjectSha256": "eb13c10b14e400e68bd57322c5e416654087e46f24d4c952b0d0c1c2089240ce",
+      "qaSha256": "5f07bab0da19273ce1cd760583fe52961fc9b81d1977d97123ea91c08bf84db2",
+      "outputSha256": "3fd316eb99d3c129761c0195aca41f6c139957a558bb972a09544b3c82f15c4d",
+      "bytes": 42062,
+      "sourceIds": 3,
+      "physicalFiles": 2,
+      "sameMp4RecoveredBothRoles": true,
+      "partialFailurePreservesSession": true,
+      "restartRequiresExplicitOpen": true,
+      "savedHistoryRecovered": true,
+      "manualGainSurvivesRestart": true,
+      "historicalBgmAmplitude": 0.08799289721039336,
+      "playback": {
+        "advanced": true,
+        "width": 960
+      },
+      "wholeFileDecode": "PASS",
+      "originalsAndFirstWorkspaceUnchanged": true
+    }
+  },
+  "provenanceNote": "Generic fixtures do not attest physical hardware or archive inventory. Their static physicalDevice/physicalZBook/zipSource placeholders are omitted; device and storage observations are recorded separately above.",
+  "originalArchives": [
+    {
+      "file": "training_video_studio_v22_4devices.zip",
+      "sha256": "70432406fc393dac93208acca45804ac0c8559bb9f142f17162f360f2dac5f22",
+      "handoffDigestMatched": true,
+      "oldRuntimeExecuted": false
+    },
+    {
+      "file": "training_video_studio_v221_fix_ZBook.zip",
+      "sha256": "1b4df4a5042506f1e3e773a9f3d11298a7d486664a75735444d961fb814c4380",
+      "handoffDigestMatched": true,
+      "oldRuntimeExecuted": false
+    }
+  ],
+  "limitations": [
+    "Live Google Photos requires dedicated Desktop OAuth setup and owner consent",
+    "Six native symlink fixtures remain unverified on exFAT",
+    "Large Windows output accesses rehash bytes; Range replay performance remains unmeasured",
+    "Original distributed runtime call-site and repair acceptance remain unverified",
+    "No off-network phone, interrupted chunk transfer, unplug/power-loss or one-hour/tens-of-GB real-media acceptance",
+    "No semantic understanding/ASR/TTS or whole-product completion claim"
+  ]
+}

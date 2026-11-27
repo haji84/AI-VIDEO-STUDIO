@@ -21,6 +21,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any, Callable
+from .media_tools import MediaToolError, parse_probe_json, resolve_tool
 
 PROFILES = {
     "review": {"width": 960, "height": 540, "fps": 24, "crf": 25},
@@ -39,20 +40,10 @@ def utcnow() -> str:
 
 
 def _which(program: str) -> str:
-    from_env = os.environ.get("AIVS_FFMPEG_DIR", "")
-    if from_env:
-        name = program + (".exe" if os.name == "nt" else "")
-        candidate = Path(from_env) / name
-        if candidate.is_file():
-            return str(candidate)
-    local_dir = Path(__file__).resolve().parent.parent / "tools" / "ffmpeg" / "bin"
-    candidate = local_dir / (program + (".exe" if os.name == "nt" else ""))
-    if candidate.is_file():
-        return str(candidate)
-    found = shutil.which(program)
-    if not found:
-        raise StudioError(f"{program} が見つかりません。FFmpegを初回セットアップしてください。")
-    return found
+    try:
+        return resolve_tool(program)
+    except MediaToolError as error:
+        raise StudioError(str(error)) from error
 
 
 def command(args: list[str], timeout: int | None = None) -> subprocess.CompletedProcess[str]:
@@ -62,6 +53,8 @@ def command(args: list[str], timeout: int | None = None) -> subprocess.Completed
         raise StudioError(f"実行ファイルが見つかりません: {args[0]}") from exc
     except subprocess.TimeoutExpired as exc:
         raise StudioError(f"処理が制限時間を超えました: {args[0]}") from exc
+    except OSError as exc:
+        raise StudioError('MEDIA_TOOL_START_FAILED: 検出した実行ファイルを起動できません。起動設定と実行許可を確認してください。') from exc
 
 
 def media_info(path: str) -> dict[str, Any]:
@@ -70,18 +63,20 @@ def media_info(path: str) -> dict[str, Any]:
         raise StudioError(f"対応する動画ファイルではありません: {original.name}")
     cp = command([_which("ffprobe"), "-v", "error", "-show_entries", "format=duration,format_name:format_tags=creation_time:stream=index,codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate:stream_tags=creation_time:stream_side_data=side_data_type,projection", "-of", "json", str(original)], timeout=120)
     if cp.returncode:
-        raise StudioError(f"動画を解析できません: {original.name}\n{cp.stderr[-900:]}")
+        raise StudioError(f"動画を解析できません: {original.name}\n{(cp.stderr or '')[-900:]}")
     try:
-        data = json.loads(cp.stdout)
+        data = parse_probe_json(cp.stdout)
         stream = next(s for s in data.get("streams", []) if s.get("codec_type") == "video")
         duration = float(data.get("format", {}).get("duration") or 0)
         if not math.isfinite(duration) or duration <= 0:
             raise ValueError("duration")
-    except (ValueError, StopIteration, KeyError) as exc:
+    except MediaToolError as exc:
+        raise StudioError(str(exc)) from exc
+    except (ValueError, TypeError, StopIteration, KeyError) as exc:
         raise StudioError(f"有効な動画ストリームが見つかりません: {original.name}") from exc
     has_audio = any(s.get("codec_type") == "audio" for s in data.get("streams", []))
     width, height = int(stream.get("width") or 0), int(stream.get("height") or 0)
-    tags = data.get("format", {}).get("tags", {})
+    tags = data.get("format", {}).get("tags") or {}
     created = tags.get("creation_time") or (stream.get("tags") or {}).get("creation_time")
     projections = json.dumps(stream.get("side_data_list", []), ensure_ascii=False).lower()
     spherical = "spherical" in projections or "equirect" in projections

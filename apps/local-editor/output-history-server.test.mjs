@@ -1,7 +1,7 @@
 /** Actual loopback API and generated MP4s; no browser/device claim. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,readFile,writeFile,mkdir,unlink} from 'node:fs/promises';
+import {mkdtemp,rm,readFile,writeFile,mkdir,unlink,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {execFile} from 'node:child_process';
@@ -12,14 +12,21 @@ import {reviewTarget} from './qa.mjs';
 const exec=promisify(execFile),delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 
-test('two completed outputs and bound reports can be selected after restart without editing current state',async()=>{
- const dir=await mkdtemp(join(tmpdir(),'aivs-output-history-http-')),workspace=join(dir,'data');let server,state;
+test('a workspace reached through a parent alias can render and reopen both verified outputs',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'aivs-output-history-http-'));
+ const storage=join(dir,'storage'),alias=join(dir,'storage-alias'),workspace=join(alias,'data');let server,state;
  try{
+  await mkdir(storage);
+  await symlink(storage,alias,'junction');
   const source=join(dir,'source.mp4');
   await exec('ffmpeg',['-v','error','-f','lavfi','-i','color=c=blue:s=160x90:r=10:d=2',
    '-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=2','-c:v','libx264','-c:a','aac','-shortest',source]);
   const sourceBytes=await readFile(source);
   server=await startServer({workspace,port:0});
+  await assert.rejects(async()=>{
+   const duplicate=await startServer({workspace:join(storage,'data'),port:0});
+   await duplicate.close();
+  },/WORKSPACE_IN_USE/);
   const call=async(path,options={})=>{
    const response=await fetch(server.url+path,{...options,headers:{'X-AIVS-Token':server.token,'X-AIVS-Revision':String(state?.session.project.revision??0),...options.headers}});
    if(response.ok&&response.headers.get('content-type')?.startsWith('application/json')){const data=await response.clone().json();if(data.session)state=data;}

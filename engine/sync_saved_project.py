@@ -16,7 +16,7 @@ def analyse_saved_project(project_file,bindings_file,request_file,workspace,outp
     workspace.mkdir(parents=True,exist_ok=False);bundle_file=workspace/'checked-sync.json'
     _run(['node',str(ROOT/'tools/project-sync.mjs'),'--project',str(project_file),'--bindings',str(bindings_file),
           '--request',str(request_file),'--output',str(bundle_file)],timeout=3600)
-    bundle=json.loads(bundle_file.read_text());sources=[bundle['master'],bundle['target']]
+    bundle=json.loads(bundle_file.read_text(encoding='utf-8'));sources=[bundle['master'],bundle['target']]
     for source in sources:
         metadata=_probe_local(Path(source['path']))
         if not any(s.get('codec_type')=='video' for s in metadata.get('streams',[])):raise ManifestError('VIDEO_SOURCE_REQUIRED')

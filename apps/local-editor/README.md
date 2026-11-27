@@ -4,13 +4,83 @@
 GitHubのUbuntu環境と実Chromeで、編集・書き出しと別保存先への素材再リンクの
 合成素材による画面試験が成功しました。PR24はmainへ統合済みで、
 [mainの実行40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)でも両経路と通常CIが成功しました。
-iPhone/Android/Windows/Macの実機成功とは扱っていません。
+Apple Silicon MacBook では、以下の起動方法から利用できることも確認しました。
 
 ## 起動
 
-リポジトリを取得したPCで、Node、Python 3.11以上、FFmpeg/ffprobeが使える状態にします。
+### MacBook
+
+Finder でリポジトリ直下の `start-mac.command` をダブルクリックします。
+編集画面が開き、同じ Mac の `~/AI_VIDEO_STUDIO_DATA` に素材のコピー、編集、完成動画を保存します。
+終了するときは起動に使ったターミナルで Control+C を押します。次に開くと保存した編集を再開できます。
+すでに起動している場合は [編集画面](http://127.0.0.1:8765/) を開きます。
+
+ランチャーは標準の Homebrew のインストール先も探し、`.venv/bin/python` があれば使用します。
+字幕の依存を用意する場合は、リポジトリ直下で一度だけ次を実行します。
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-media.txt
+```
+
+`~/Library/Application Support/AI VIDEO STUDIO/ffmpeg/bin` にアプリ専用の組がある場合は、
+その FFmpeg と ffprobe を使います。それ以外は通常のツール検出を使います。
+環境変数 `AIVS_PYTHON` と `AIVS_FFMPEG_DIR` で使用先を指定できます。
+別の編集を始める場合は、新しい専用フォルダで起動できます。
+
+```sh
+./start-mac.command --workspace "$HOME/AI_VIDEO_STUDIO_TEST" --port 8766
+```
+
+### Windows / ZBook
+
+リポジトリ直下の `start-windows.cmd` をダブルクリックします。Windows の既定ブラウザが
+`http://127.0.0.1:8765/` を開きます。既定の保存先は `%USERPROFILE%\AI_VIDEO_STUDIO_DATA` です。
+終了は起動に使ったターミナルで Control+C を押し、終了するまで待ちます。
+起動済みの場合は、同じ Windows PC のブラウザで [編集画面](http://127.0.0.1:8765/) を開きます。
+
+Node.js 22 以上、Python 3.11 以上、FFmpeg／ffprobe を用意します。WinGet で導入済みの
+Gyan.FFmpeg は、起動時の PATH に見えない場合も既知のユーザー用インストール先を確認します。
+日本語字幕用の依存を用意する場合は、リポジトリ直下で一度だけ次を実行します。
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-media.txt
+```
+
+`py` が使えない場合は、確認済みの Python 3.11 以上の実行ファイルを使います。ランチャーは
+`AIVS_PYTHON`、`.venv`、Windows の `py`、`python` の順に使える設定を選びます。
+空き容量に合わせ、所有者が選んだ外部 SSD 上の専用フォルダを指定できます。
+
+```powershell
+.\start-windows.cmd --workspace "E:\AI_VIDEO_STUDIO_DATA"
+```
+
+[Windows の Python セットアップ](https://learn.microsoft.com/en-us/windows/python/beginners) ·
+[Node.js の配布ページ](https://nodejs.org/en/download)
+
+iPhone の Codex から操作する場合は、接続先で ZBook を選びます。編集画面は
+ZBook 上のブラウザで開き、動画の処理と MP4 の保存は ZBook で実行します。
+[Codex の接続先を選ぶ手順](https://learn.chatgpt.com/docs/remote-connections)
+
+### 共通の設定とコマンド
+
+リポジトリを取得した PC で、Node.js、Python 3.11 以上、FFmpeg／ffprobe が使える状態にします。
 実測した環境は Linux / Node24.22.1 / Python3.12.14 / FFmpeg6.1.1です。
-Windows/Macへの導入・動作は別途確認が必要です。追加課金・アカウント登録なし。
+MacBook Pro（Apple Silicon）では macOS 26.6.2 / Node24.21.0 / Python3.14.7 /
+FFmpeg 8.0.3 で合成素材の取り込み、下書き編集、MP4 の書き出しと再生を確認しました。
+Windows Server 2025 の CI では、WinGet 配布物の FFmpeg／ffprobe 9.0.2 で
+日本語を含むパスの取り込み復旧、Google フォトを模擬した動画選択、下書き編集、
+MP4 の再生と再起動後の取得を確認しました。
+ZBook 実機では、外付け SSD（USB / exFAT）での起動、合成素材の取り込み・復旧、
+保存した編集の復元、字幕と元音声付き MP4 の全編再生・decode・再起動後の照合を確認しました。
+この ZBook のデスクトップに用意した `AI VIDEO STUDIO - 外付けSSD` は
+`D:\AI_VIDEO_STUDIO_DATA\editor` を使います。SSD を接続してから起動してください。
+Google フォトの実アカウント接続、大容量・実素材、スマホ別回線の受入は未完了です。
+[ZBook と外付け SSD の実機検証・試験上の制限](../../docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
+[Windows ランナー検証](../../docs/validation/WINDOWS_MEDIA_GATE_A_2026-11-24.md) ·
+[Windows の Google フォト検証](../../docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md) ·
+[MacBook 検証記録](../../docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md)
 
 字幕を書き出す場合は、同じPythonへローカル描画用の依存を導入します。
 
@@ -44,10 +114,72 @@ node apps/local-editor/server.mjs --workspace "$HOME/AI_VIDEO_STUDIO_DATA"
 ポートが使用中なら起動時に `--port 8766` を追加。Pythonを別名で導入した場合は
 `AIVS_PYTHON` に、その実行ファイルを指定します。
 
+### ツール検出と送信済み素材の再試行（Issue #37）
+
+取り込み検査、数値による下書き解析、MP4描画は同じFFmpeg/ffprobeの組を使います。
+`AIVS_FFMPEG_DIR` を指定する場合は両方がある `bin` フォルダを選んでください。
+指定先が不完全なときは別の導入先へ黙って切り替えません。未指定なら同梱用フォルダ、
+PATH、Windowsの既知のWinGet導入先を確認します。複数候補が残れば明示指定が必要です。
+FFmpeg 8.0 には複数チャンネルの true peak を過小に測る不具合があります。
+8.0 系列では 8.0.1 から修正が含まれています。
+[FFmpeg の修正コミット](https://github.com/FFmpeg/FFmpeg/commit/5630394ebf2956a3f8e1eac00912467a582ac94d)
+検出のために再インストール、ダウンロード、Smart App Controlの変更は行いません。
+Pythonは `AIVS_PYTHON` で選択できます。ZBookの別配布v2.x ZIPはこの実装とは別です。
+
+送信が完了した後に検査が失敗した素材は「送信済み・検査待ち」に残ります。
+起動設定を修正したら「再送せずに取り込みを再試行」で同じコピーを検査できます。
+アプリを正常終了して同じ保存先から再開しても残り、取り込み完了までは編集に加えません。
+再試行でサイズ・SHA-256を照合し、改変されていれば取り込みを止めます。
+16 MiBを超える動画の読み込みが中断したら、同じ保存先で編集画面を開き、元動画を選び直してください。
+最初に選んだ時の動画全体と内容が一致すれば、保存済みの位置から残りだけを読み込みます。
+中断分を取りやめるときは「読み込みの途中データを削除」を使えます。
+読み込み途中と検査待ちの素材も100本の上限と保存容量を使います。
+exFATなどハードリンクのない保存先では、上書き禁止のコピーで確定します。その場合は
+素材1本分と作業用余白の空き容量が追加で必要です。不足やコピー失敗では送信済みデータを残します。
+
 外部接続用のサーバーではありません。LANやインターネットには公開しません。
 元動画は変更せず、選んだ素材を同じPCの専用フォルダへコピーします。容量が
 不足する場合は読み込みを止めます。現在の上限は素材100本、1本16GiB/4時間、
 書き出し音声クリップ64個。大容量素材の実測性能は未検証です。
+
+## Google フォトから動画を追加
+
+「Google フォトから追加」を開きます。Google フォトのメニューからダウンロードした
+MP4/MOV は「ダウンロードした動画を追加して下書きを作る」で選べます。取り込み後、対応した素材から下書きを作ります。
+ZIP で届いた場合は Finder またはエクスプローラーで展開して動画ファイルを選びます。
+[Google フォトのダウンロード手順](https://support.google.com/photos/answer/7652919?hl=ja)
+
+Mac または Windows で直接取り込むには、AI VIDEO STUDIO 用の Google Cloud プロジェクトで **Google Photos Picker API** を
+有効にし、種類が **デスクトップ アプリ** の OAuth クライアントを用意します。テスト公開中は、利用する
+Google アカウントをテストユーザーに登録します。ダウンロードした OAuth JSON を使用する PC の
+次の場所に保存し、ランチャーで再起動します。別の場所は `AIVS_GOOGLE_PHOTOS_CLIENT_FILE` で指定できます。
+
+| 端末 | OAuth JSON の保存先 |
+| --- | --- |
+| Mac | `~/Library/Application Support/AI VIDEO STUDIO/google-photos-client.json` |
+| Windows | `%LOCALAPPDATA%\AI VIDEO STUDIO\google-photos-client.json` |
+
+[Picker API の設定](https://developers.google.com/photos/overview/configure-your-app) ·
+[デスクトップアプリの OAuth](https://developers.google.com/identity/protocols/oauth2/native-app) ·
+[OAuth のテスト公開](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
+
+1. 「Google フォトで選んで下書きを作る」を押し、PC の既定ブラウザで Google の許可と素材の選択を済ませます。
+2. Google フォトで「完了」を押すと、起動中のローカル編集アプリが取り込みと下書き作成を始めます。
+3. 「自動編集の下書き候補」で内容を確認・適用し、「完成動画を作る」で出力します。検査待ちの動画は同じ画面から再試行できます。
+
+自動で受け取る対象は、Google の画面で選択を完了した動画です。編集アプリを起動している間に選択を待ち、
+取り込み途中は画面でキャンセルできます。下書きの解析には同期基準や確認済みのカメラが使われます。
+すでに素材があるプロジェクトに追加したカメラは、同期位置を確認してから下書きに使えます。
+[Google フォトの選択セッション](https://developers.google.com/photos/picker/guides/sessions)
+
+直接取込では、Google フォトで選んだ項目の種類を確認し、再生できる動画を PC の通常の素材コピーとして
+保存します。Google が取得用に用意する高品質版を使うため、ファイルが元のアップロードと異なる場合があります。
+Google 接続は読み取り専用で、選択セッションとアクセストークンを作業中のメモリで扱います。
+[Google の取得用動画仕様](https://developers.google.com/photos/picker/guides/media-items#video-base-urls)
+
+素材のコピー、編集、MP4 は起動時の保存フォルダで管理します。既定は各 PC のホームフォルダ内の `AI_VIDEO_STUDIO_DATA` です。
+その保存フォルダの編集とコピーをすべて消す場合は、アプリを終了してから Finder またはエクスプローラーでフォルダをゴミ箱へ移します。
+Google 側の接続許可は Google アカウントで管理できます。[Google アカウントの接続管理](https://myaccount.google.com/connections)
 
 ## 操作
 
@@ -207,7 +339,7 @@ OSや保存装置の応答が止まった場合、その処理の完了まで保
 
 ## 終了・復旧
 
-起動したターミナルでCtrl+C。通常のSIGTERMでも同じ終了処理を呼びます。進行中の書き出し・同期・下書き解析を待ってから終了します。保存済みカットの確認処理は停止を試みます。
+起動したターミナルでCtrl+C。通常のSIGTERMでも同じ終了処理を呼びます。新しい接続を止め、受信途中の転送を中断し、進行中の取り込み検査・再試行・書き出し・同期・下書き解析を待ってから保存先のロックを解放します。保存済みカットの確認処理は停止を試みます。
 異常終了後に `WORKSPACE_IN_USE` が出た場合は、同じ保存先のアプリが動いて
 いないことを確認してから、保存フォルダの `.editor.lock` を削除して再起動。
 処理中だった出力や解析は中断として表示し、新しいジョブで作り直します。
@@ -222,10 +354,11 @@ node --test apps/local-editor/*.test.mjs
 node apps/local-editor/browser-acceptance.mjs
 node apps/local-editor/browser-relink-acceptance.mjs
 node apps/local-editor/browser-preview-acceptance.mjs
+node apps/local-editor/browser-import-recovery-acceptance.mjs
 ```
 
 最初のコマンドはHTTP・実ファイル・FFmpeg・DOMスタブと編集・検査参照操作のテストです。
-後の3つはPlaywrightと実ブラウザを使います。H.264/AACの完成動画を再生できる
+後の4つはPlaywrightと実ブラウザを使います。H.264/AACの完成動画を再生できる
 既存Google Chromeの実在するパスを `AIVS_BROWSER_EXECUTABLE` に設定し、
 `AIVS_PYTHON` にPython 3.11以上・Pillow 13の実行ファイル、`AIVS_CAPTION_FONT` に
 日本語を表示できるフォントを指定します。ブラウザやPlaywrightがなければ `BLOCKED`、
@@ -241,6 +374,13 @@ node apps/local-editor/browser-preview-acceptance.mjs
 途中まで確認した素材の再起動後の再利用、明示的に「開く」を押すまでの編集保全、
 Undo/Redo・音量編集・再起動、完成動画の実再生とBGM成分も確認する試験です。
 ファイル選択・編集・保存・書き出しは実際の画面から行います。
+
+`browser-import-recovery-acceptance.mjs` は合成2本を実際の画面から送信し、検査を失敗させ、
+再起動後に再送なしで取り込みます。その後、同期位置の確認、数値的な下書きの生成・明示適用、
+日本語字幕、MP4再生・保存・全編デコード、元音声成分、再起動後の読戻しを検査します。
+この試験はPATHからPythonも一時的に外すため、実行前に `AIVS_PYTHON` の絶対パス指定が必要です。
+成果物は Chrome で終端まで再生し、FFmpeg で映像・音声を全編デコードします。
+分割転送、無人バッチ、実技の意味理解、実機Windowsや遠隔スマホの成功は証明しません。
 
 既存 `manual-smoke.yml` の手動実行に、独立した `synthetic-browser-acceptance` ジョブを
 追加しています。標準Ubuntu runnerのChromeを利用し、Playwright1.64.1、Node24.22.1、
@@ -261,6 +401,8 @@ SHA256、実ブラウザの版、再生・全編デコード結果を記録し�
 [main実行40806270812](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/40806270812)でも、
 両ブラウザ経路と通常CI（Node167件・Python60件、失敗・skip0）が成功しました。
 新しい保存済みカット確認機能のブラウザ結果とは区別しています。
-Windows/macOS/iPhone/Androidの実機、初心者評価、実11GB素材、プレビューと書き出しの
-一致、製品全体の完成は未確認です。詳細は
+Windows/iPhone/Androidの実機、初心者評価、実11GB素材、プレビューと書き出しの
+一致、製品全体の受入は未確認です。macOS の短い合成素材は別の
+[MacBook 検証記録](../../docs/validation/MACOS_MEDIA_GATE_A_2026-11-23.md) で確認できます。
+Ubuntu の結果の詳細は
 `docs/validation/BROWSER_ACCEPTANCE_2026-10-29.md` を参照してください。
