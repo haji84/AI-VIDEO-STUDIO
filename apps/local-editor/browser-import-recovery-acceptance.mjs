@@ -123,7 +123,7 @@ try{
   savedProjectSha256:sha(savedProject),outputSha256:sha(bytes),qaSha256:sha(await readFile(qaFile)),bytes:bytes.length,
   firstCut:'NUMERICAL_EXPLICITLY_REVIEWED',originalAudio440,otherCamera660,media,playback,replayAfterRestart,
   caption:{glyphCoverage:caption.glyphCoverage,glyphCodepointsChecked:caption.glyphCodepointsChecked},
-  restartReadback:'SHA256_MATCH',wholeFileDecode:'PASS',physicalZBook:'NOT_RUN',zipSource:'UNAVAILABLE',chunkedUpload:'NOT_IMPLEMENTED',remotePhone:'NOT_RUN'};
+  restartReadback:'SHA256_MATCH',wholeFileDecode:'PASS',physicalZBook:'NOT_RUN',zipSource:'UNAVAILABLE',chunkedUpload:'NOT_RUN',remotePhone:'NOT_RUN'};
  if(process.env.AIVS_EVIDENCE_DIR){
   const target=resolve(process.env.AIVS_EVIDENCE_DIR);assert.ok(target!==root&&!target.startsWith(root+sep),'evidence must stay outside source');await mkdir(target,{recursive:true});
   const id=randomUUID();await writeFile(join(target,'recovered-'+id+'.mp4'),bytes,{flag:'wx'});await writeFile(join(target,'evidence-'+id+'.json'),JSON.stringify(evidence,null,2),{flag:'wx'});
