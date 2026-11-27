@@ -18,7 +18,9 @@ Evaluation is based on verified, usable product requirements, not number of comm
 - [x] Fix native exFAT import/output publication, source restoration after rename, and Windows output integrity checks; verify synthetic MP4 playback, full decode and restart readback. [Evidence](docs/validation/ZBOOK_EXTERNAL_SSD_2026-11-25.md)
 - [x] Run hosted Linux/Windows checks on the branch with the SSD fixes. [All three jobs passed on `7c0addc19`](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589)
 - [ ] Resolve the six native symlink-fixture failures on exFAT or verify the supported native suite with equivalent coverage on that filesystem.
-- [ ] Gate B: chunked/reconnectable transfer and unattended batching; Gate C: private separate-network phone acceptance; Gates D/E: semantics/ASR/TTS and one-hour/tens-of-GB four-device acceptance.
+- [x] Gate B local video transfer resumes from the last confirmed chunk after interruption and editor restart. Verify the complete file identity before sending the remaining bytes.
+- [ ] Gate B: verify long video continuation on the physical exFAT SSD and complete unattended batching.
+- [ ] Gate C: private separate-network phone acceptance. Gates D/E: semantics, ASR, TTS and one-hour or tens-of-GB four-device acceptance.
 - [x] MacBook Google Photos panel accepts downloaded videos. Optional Photos Picker passes simulated Google selection through actual local editing, MP4 export and replay. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md)
 - [x] After a user's Picker selection, automatically import and prepare a first-cut candidate on Mac. Verify a closed editor page, cancellation, project reopening and pending imports with synthetic footage. [Verification](docs/validation/MACOS_GOOGLE_PHOTOS_2026-11-24.md#選択後の自動取り込みと下書き作成)
 - [x] Windows runner confirms the desktop launcher, simulated Picker selection and local file import, automatic first-cut preparation, reviewed export, complete playback and restart readback. [Verification](docs/validation/WINDOWS_GOOGLE_PHOTOS_2026-11-24.md)

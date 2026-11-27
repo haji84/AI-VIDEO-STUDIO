@@ -7,6 +7,15 @@ Production release: **NO**.
 Public video-editing product deployment: **NO**. A static, public GitHub Pages **device diagnostic page only** is deployed from the separate `gh-pages` branch; no source-media upload is implemented.
 Subscription / billing: deferred.
 
+## Local video upload continuation (2026-11-27 JST)
+
+**TESTED_SYNTHETIC on MacBook Chrome.** After interrupting a 16 MiB + 4 KiB
+fixture and reopening the editor, the original file sent only the last 4 KiB.
+The saved SHA-256 matched the selected MP4 and its browser preview opened.
+A second file with the same name, size and first 16 MiB was rejected because its
+tail differed. The local code path passed independent review. Long real media,
+physical exFAT, unattended batching and separate-network devices still need acceptance.
+
 ## Hosted Windows launcher and media checks (2026-11-27 JST)
 
 **TESTED_SYNTHETIC.** The Windows runner verified cmd startup, its Japanese

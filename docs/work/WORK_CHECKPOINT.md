@@ -2,6 +2,14 @@
 Updated: 2026-11-27 JST
 Status: IN_PROGRESS. Physical ZBook, physical MacBook and Windows runner with generated media are TESTED_SYNTHETIC.
 
+**Local video upload continuation, 2026-11-27 JST.** MacBook Chrome interrupted
+a generated MP4 after 16 MiB, reopened the same workspace, rejected a file with
+the same name and prefix but a different tail, and transferred the remaining
+4 KiB from the original file. The imported MP4 SHA-256 matched and the browser
+loaded its preview. Reproduce with `node apps/local-editor/browser-resumable-import-acceptance.mjs`.
+Independent review also checked append bounds, restart recovery and idempotent
+finish. Next for Gate B is long-media continuation on physical exFAT and unattended batching.
+
 **Hosted Windows launcher and media checks, 2026-11-27 JST.** Draft #51 code
 `7c0addc19a7011b1c81cd83e1eec0e00d2274464` passed all three
 [manual smoke jobs](https://github.com/haji84/AI-VIDEO-STUDIO/actions/runs/45945991589).
