@@ -17,6 +17,7 @@ import {createOutputHistory,captureOutputReceipt,readLastOutputJob} from './outp
 import {createSourceRelinkManager} from './source-relink.mjs';
 import {createPreviewManager} from './preview-job.mjs';
 import {createPendingImports} from './pending-imports.mjs';
+import {createResumableImport} from './resumable-import.mjs';
 import {createGooglePhotosImport} from './google-photos.mjs';
 import {createSystemBrowserOpener} from './system-browser.mjs';
 const exec=promisify(execFile),HERE=dirname(fileURLToPath(import.meta.url)),ROOT=resolve(HERE,'../..');
@@ -95,7 +96,14 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
     await saveSession(projectFile,session,{protectedPaths:[...registry.values()].map(s=>s.path)});
   }
   await persist();
-  const remainingImports=()=>100-registry.size-pendingImports.size();
+  async function availableImportBytes(){
+    const disk=await statfs(folder);
+    return Number(disk.bavail)*Number(disk.bsize)-importDiskReserve;
+  }
+  const resumableImport=await createResumableImport({folder,assets,atomicJson,maxImportBytes,
+    getProjectId:()=>session.current.projectId, handedOff:id=>Boolean(pendingImports.get(id)||registry.has(id)),
+    requireImportSpace,availableImportBytes});
+  const remainingImports=()=>100-registry.size-pendingImports.size()-Number(resumableImport.active());
   function requireImportSpace(){
     if(remainingImports()<=0)fail('素材数の上限は100本です（検査待ちを含む）');
   }
@@ -106,8 +114,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
     if(declared!==null&&(!Number.isSafeInteger(declared)||declared<=0||declared>maxImportBytes)){
       fail('素材のサイズに対応していません',413);
     }
-    const disk=await statfs(folder);
-    const available=Number(disk.bavail)*Number(disk.bsize)-importDiskReserve;
+    const available=await availableImportBytes();
     if(available<=0||(declared!==null&&declared>available))fail('保存先の空き容量が不足しています');
     const uploadId='asset_'+randomUUID().replaceAll('-',''),file=uploadId+extension,staged=join(assets,file)+'.tmp';
     let received=0,created=false,recorded=false;
@@ -237,7 +244,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
   function state(){
     const run=photosAutomation?.projectKey===photosProjectKey()?photosAutomation:undefined;
     const googleState={...googlePhotos.state(photosProjectKey()),...(run?{status:run.status,error:run.error}:{})};
-    return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),pendingImports:pendingImports.views(),googlePhotos:googleState,
+    return {session:JSON.parse(session.serialize()),sources:session.current.sourceRefs.map(s=>({assetId:s.assetId,label:registry.get(s.assetId).label,mediaKind:s.mediaKind})),pendingImports:pendingImports.views(),resumableImport:resumableImport.view(),googlePhotos:googleState,
       ...(run?.report?{googleImport:run.report}:{}),job,sync:syncManager.state(),firstCut:firstCutManager.state(),preview:previewManager.state()};
   }
   async function transaction(change){const previous=session.serialize();try{await change();await persist();}catch(e){session=EditSession.open(previous);throw e;}}
@@ -283,7 +290,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
         }
         return;
       }
-      const modules={'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
+      const modules={'/video-upload.mjs':join(HERE,'video-upload.mjs'),'/editor-edits.mjs':join(HERE,'edits.mjs'),'/editor-qa.mjs':join(HERE,'qa.mjs'),
         '/output-history-panel.mjs':join(HERE,'output-history-panel.mjs'),
         '/source-relink-panel.mjs':join(HERE,'source-relink-panel.mjs'),
         '/preview-panel.mjs':join(HERE,'preview-panel.mjs'),
@@ -327,7 +334,7 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
         const finishCancellation=googlePhotos.interrupt();
         await mutationDone;await finishCancellation();await running;send(res,200,state());return;
       }
-      if(req.method!=='POST'||!['/api/import','/api/import/retry','/api/google-photos/start','/api/google-photos/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/preview','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
+      if(req.method!=='POST'||!['/api/import','/api/import/retry','/api/import/resume/start','/api/import/resume/chunk','/api/import/resume/finish','/api/import/resume/discard','/api/google-photos/start','/api/google-photos/import','/api/edit','/api/open','/api/undo','/api/redo','/api/render','/api/preview','/api/sync','/api/sync/apply','/api/first-cut','/api/first-cut/apply','/api/relink/prepare','/api/relink/media','/api/relink/open','/api/relink/cancel'].includes(path))fail('見つかりません',404);
       const finishMutation=beginMutation();
       if(!finishMutation)fail('処理が終わるまでお待ちください',409);
       try{
@@ -343,6 +350,23 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
           const body=await jsonBody(req);
           if(!body||Array.isArray(body)||typeof body.planId!=='string'||Object.keys(body).some(k=>k!=='planId'))fail('再接続するプロジェクトの確認形式が不正です');
           send(res,200,await (path.endsWith('/open')?relink.open(body.planId):relink.cancel(body.planId)));return;
+        }else if(path==='/api/import/resume/start'){
+          send(res,200,await resumableImport.start(await jsonBody(req)));return;
+        }else if(path==='/api/import/resume/chunk'){
+          send(res,200,await resumableImport.chunk(req,req.headers));return;
+        }else if(path==='/api/import/resume/finish'||path==='/api/import/resume/discard'){
+          const body=await jsonBody(req);
+          if(!body||Array.isArray(body)||typeof body.uploadId!=='string'||Object.keys(body).length!==1)fail('RESUMABLE_IMPORT_INVALID_ID');
+          const {uploadId}=body;
+          if(path.endsWith('/discard'))await resumableImport.discard(uploadId);
+          else{
+            const prepared=await resumableImport.prepareFinish(uploadId);
+            if(prepared)await pendingImports.record(prepared);
+            if(pendingImports.get(uploadId)){
+              if(registry.has(uploadId)&&session.current.sourceRefs.some(source=>source.assetId===uploadId))await pendingImports.forget(uploadId);
+              else await finishImport(uploadId);
+            }
+          }
         }else if(path==='/api/import/retry'){
           const body=await jsonBody(req);
           if(!body||Array.isArray(body)||typeof body.uploadId!=='string'||Object.keys(body).some(k=>k!=='uploadId')||!/^asset_[a-f0-9]{32}$/.test(body.uploadId))fail('IMPORT_ID_INVALID');
