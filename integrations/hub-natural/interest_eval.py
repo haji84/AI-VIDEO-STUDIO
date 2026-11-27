@@ -8,6 +8,7 @@ Public code never contains actual footage, human identities or review data.
 """
 from __future__ import annotations
 
+from collections import defaultdict, deque
 import hashlib
 import json
 from pathlib import Path
@@ -121,11 +122,58 @@ def rank_reviewed(data):
                             "NO_PERFORMANCE_DATA_TO_VALIDATE_INTEREST_SCORE"]}
 
 
+def _maximum_event_matches(detected, positives, min_overlap):
+    # Only compare intervals from the same source and event class.
+    truth_groups = defaultdict(list)
+    for ti, t in enumerate(positives):
+        truth_groups[(t['sourceSha256'], t['event'])].append((ti, t))
+    adjacency = []
+    for p in detected:
+        candidates = []
+        for ti, t in truth_groups[(p['sourceSha256'], p['event'])]:
+            intersection = max(0, min(p['end'], t['end']) - max(p['start'], t['start']))
+            union = max(p['end'], t['end']) - min(p['start'], t['start'])
+            score = intersection / union
+            if score >= min_overlap:
+                candidates.append((score, ti))
+        adjacency.append([ti for _, ti in sorted(candidates, key=lambda x: (-x[0], x[1]))])
+    # Find augmenting paths, not just the highest individual IoU. Iterative
+    # search avoids recursion limits on long chains of overlapping events.
+    pred_to_truth = {}
+    truth_to_pred = {}
+    for root in range(len(detected)):
+        pending = deque([root])
+        visited = {root}
+        parent = {}
+        free = None
+        while pending and free is None:
+            p = pending.popleft()
+            for t in adjacency[p]:
+                if t in parent:
+                    continue
+                parent[t] = p
+                if t not in truth_to_pred:
+                    free = t
+                    break
+                nxt = truth_to_pred[t]
+                if nxt not in visited:
+                    visited.add(nxt)
+                    pending.append(nxt)
+        while free is not None:
+            p = parent[free]
+            previous = pred_to_truth.get(p)
+            pred_to_truth[p] = free
+            truth_to_pred[free] = p
+            free = previous
+    return set(pred_to_truth), set(truth_to_pred)
+
+
 def evaluated_detections(truth, predictions, *, min_overlap=.4):
     """Measure predictions against human-checked intervals; never call it model accuracy without coverage.
 
     Records: {sourceSha256, start, end, event}. `truth` may include 'no_event'.
-    Predicted labels are matched 1-to-1 by event and temporal IoU.
+    Maximize the number of 1-to-1 matches by source, event and minimum temporal IoU.
+    This is not an optimization of the sum of matched IoUs.
     A short biased holdout yields metrics marked insufficient, not a PASS.
     """
     if not _bounded(min_overlap, 0, 1) or min_overlap == 0:
@@ -165,21 +213,7 @@ def evaluated_detections(truth, predictions, *, min_overlap=.4):
             declared_nights.add(night)
     positives=[x for x in truth if x['event'] not in ('no_event','unknown')]
     detected=[x for x in predictions if x['event'] not in ('no_event','unknown')]
-    matches=[]
-    for pi,p in enumerate(detected):
-        for ti,t in enumerate(positives):
-            if p['sourceSha256']!=t['sourceSha256'] or p['event']!=t['event']:
-                continue
-            intersection=max(0,min(p['end'],t['end'])-max(p['start'],t['start']))
-            union=max(p['end'],t['end'])-min(p['start'],t['start'])
-            score=intersection/union if union else 0
-            if score >= min_overlap:
-                matches.append((score,pi,ti))
-    matches.sort(reverse=True)
-    seenp=set(); seent=set()
-    for _,p,t in matches:
-        if p not in seenp and t not in seent:
-            seenp.add(p); seent.add(t)
+    seenp, seent = _maximum_event_matches(detected, positives, min_overlap)
     def counts(tp, fp, fn):
         return {
             "truePositive": tp, "falsePositive": fp, "falseNegative": fn,
