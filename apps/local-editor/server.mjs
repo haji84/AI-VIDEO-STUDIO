@@ -425,15 +425,21 @@ export async function startServer({workspace,port=8765,previewOptions={},googleP
   }catch(error){if(await readFile(lockFile,'utf8').catch(()=>null)===lockToken)await unlink(lockFile);throw error;}
 }
 
-if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
-  const args=process.argv.slice(2),options={};
+export function parseLocalEditorArgs(args,browserSupported=Boolean(openSystemBrowser)){
+  const options={};
   let openBrowser=false;
   for(let i=0;i<args.length;i++){
     if(args[i]==='--workspace')options.workspace=args[++i];
     else if(args[i]==='--port')options.port=Number(args[++i]);
-    else if(args[i]==='--open-browser'&&openSystemBrowser)openBrowser=true;
-    else throw new Error('Use --workspace <local folder> [--port 8765] [--open-browser on macOS or Windows]');
+    else if(args[i]==='--open-browser'&&browserSupported)openBrowser=true;
+    else if(args[i]==='--no-open-browser')openBrowser=false;
+    else throw new Error('Use --workspace <local folder> [--port 8765] [--open-browser (macOS or Windows) | --no-open-browser]');
   }
+  return {options,openBrowser};
+}
+
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
+  const {options,openBrowser}=parseLocalEditorArgs(process.argv.slice(2));
   const app=await startServer(options);console.log(app.url);
   let shuttingDown=false;
   const shutdown=()=>{

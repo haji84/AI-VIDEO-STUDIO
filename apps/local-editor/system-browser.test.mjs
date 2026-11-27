@@ -9,6 +9,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {promisify} from 'node:util';
 import test from 'node:test';
 import {createSystemBrowserOpener} from './system-browser.mjs';
+import {parseLocalEditorArgs} from './server.mjs';
 
 const exec = promisify(execFile);
 
@@ -124,6 +125,17 @@ test('the native opener permits the app UI and Google sign-in only', async () =>
   assert.equal(createSystemBrowserOpener({platform:'linux'}),undefined);
 });
 
+test('explicit suppression overrides the native launcher default and retains its workspace configuration', () => {
+  const workspace='C:\\利用者 フォルダ\\AI_VIDEO_STUDIO_DATA';
+  const launcherArgs=['--workspace',workspace,'--open-browser','--port','0'];
+  const options={workspace,port:0};
+  assert.deepEqual(parseLocalEditorArgs(launcherArgs,true),{options,openBrowser:true});
+  assert.deepEqual(parseLocalEditorArgs([...launcherArgs,'--no-open-browser'],true),{options,openBrowser:false});
+  assert.deepEqual(parseLocalEditorArgs(['--workspace',workspace,'--no-open-browser'],false),{
+    options:{workspace},openBrowser:false,
+  });
+});
+
 test('Windows launches the local editor from its cmd entry point in a Japanese workspace', {
   skip:process.platform!=='win32',timeout:30000,
 }, async t => {
@@ -153,7 +165,8 @@ test('Windows launches the local editor from its cmd entry point in a Japanese w
   const env={...process.env,USERPROFILE:userProfile,LOCALAPPDATA:configRoot};
   delete env.AIVS_GOOGLE_PHOTOS_CLIENT_FILE;
   const cmd=process.env.ComSpec||win32.join(system32,'cmd.exe');
-  child=spawn(cmd,['/d','/s','/c',`""${launcher}" --port 0"`],{
+  // The cmd child uses the fixture profile. The native opener below uses this process’s host profile.
+  child=spawn(cmd,['/d','/s','/c',`""${launcher}" --port 0 --no-open-browser"`],{
     cwd:temp,env,windowsVerbatimArguments:true,windowsHide:true,stdio:['ignore','pipe','pipe'],
   });
   childExit=once(child,'exit').catch(()=>{});
