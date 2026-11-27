@@ -5,7 +5,7 @@
 #google-photos summary{cursor:pointer}
 </style><main><header><div><h1>AI VIDEO STUDIO</h1><div class="muted">ローカル編集・開発版</div></div><div class="row"><button id="undo">戻す</button><button id="redo">やり直す</button><button id="save-project">プロジェクト保存</button><label>開く<input id="open-project" type="file" accept=".json"></label></div></header>
 <button id="conflict-save" hidden>未保存の変更を保存</button><p id="notice" role="status" aria-live="polite">保存内容を読み込んでいます</p>
-<section id="source-relink" hidden></section><section id="pending-imports" hidden></section>
+<section id="source-relink" hidden></section><section id="resumable-import" hidden></section><section id="pending-imports" hidden></section>
 <section><div class="row"><label>動画を追加<input id="video-files" type="file" multiple accept="video/mp4,video/quicktime,.mkv,.webm"></label><label>名前<input id="project-name" maxlength="160"></label></div><p class="muted">素材はこのPC内の専用フォルダに保存します。元ファイルは変更しません。</p>
 <details id="google-photos"><summary>Google フォトから追加</summary>
 <p>AI VIDEO STUDIO は、Google フォトで選んだ動画を読み取り、この PC の作業フォルダにコピーします。編集と書き出しはこの PC 内で行います。</p>
@@ -25,6 +25,7 @@ import {mountFirstCutPanel} from '/first-cut-panel.mjs';
 import {mountOutputHistory} from '/output-history-panel.mjs';
 import {mountSourceRelink} from '/source-relink-panel.mjs';
 import {mountPreviewPanel} from '/preview-panel.mjs';
+import {resumeVideoUpload,resumableVideoThreshold} from '/video-upload.mjs';
 const token='__TOKEN__',$=id=>document.getElementById(id);let state,selected=0,working=false,poll,outputView=0;
 let googlePhotosPoll,localGoogleMessage='';
 const names={source:'元音声',narration:'ナレーション',bgm:'BGM',sfx:'効果音'};
@@ -52,9 +53,22 @@ function showPendingImports(){
   button.onclick=()=>act(async()=>{state=await api('/api/import/retry',{method:'POST',body:JSON.stringify({uploadId:item.uploadId})});});row.append(label,button);panel.append(row);
  }
 }
+function showResumableImport(){
+ const panel=$('resumable-import'),record=state.resumableImport;
+ panel.replaceChildren();panel.hidden=!record;if(!record)return;
+ const title=document.createElement('h2');title.textContent='途中から読み込める動画';
+ const label=document.createElement('p');
+ label.textContent=record.name+' の '+Math.floor(record.offset*100/record.totalBytes)+'% を保存しました。同じ動画を選ぶと続きから読み込みます。';
+ const discard=document.createElement('button');discard.type='button';discard.textContent='読み込みの途中データを削除';
+ discard.onclick=()=>act(async()=>{state=await api('/api/import/resume/discard',{
+  method:'POST',body:JSON.stringify({uploadId:record.uploadId}),
+ });});
+ panel.append(title,label,discard);
+}
 function updateRenderAvailability(){$('render').disabled=!state.session.project.timeline.length||state.job.status==='RUNNING'||state.sync?.status==='RUNNING'||state.firstCut?.status==='RUNNING'||state.preview?.status==='RUNNING';}
 function show({keepForm=false}={}){const p=state.session.project;selected=Math.min(selected,Math.max(0,p.timeline.length-1));
  if(!keepForm)$('project-name').value=p.name;
+ showResumableImport();
  showPendingImports();
  showGooglePhotos();
  $('undo').disabled=!state.session.undo.length;$('redo').disabled=!state.session.redo.length;
@@ -80,8 +94,33 @@ function showSync(){const s=state.session.project.sourceRefs.find(s=>s.assetId==
 async function act(action){if(working)return;working=true;try{notice('処理中…');await action();show();notice('端末内に保存済み');}catch(e){if(e.status===409&&e.message.includes('REVISION_CONFLICT')){try{state=await api('/api/state');show();if(e.draft){$('conflict-save').hidden=false;$('conflict-save').onclick=()=>downloadJson(e.draft,'unsaved-edit.aivs.json');}notice('別の画面の更新を読み直しました。未保存の変更は保存ボタンから取り出せます。');}catch{notice(e.message);}}else notice(e.message);}finally{working=false;}}
 async function edit(p){try{state=await api('/api/edit',{method:'POST',body:JSON.stringify(p)});}catch(e){e.draft=JSON.stringify({...state.session,project:p},null,2);throw e;}}
 function downloadJson(json,name){const url=URL.createObjectURL(new Blob([json],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-async function uploadFile(file,kind){notice(file.name+' を端末内へ読み込んでいます');state=await api('/api/import?kind='+kind,{method:'POST',headers:{'X-File-Name':encodeURIComponent(file.name)},body:file});}
-async function upload(input,kind){for(const file of input.files)await uploadFile(file,kind);input.value='';}
+async function uploadFile(file,kind){
+ notice(file.name+' を端末内へ読み込んでいます');
+ if(kind!=='video'||(file.size<=resumableVideoThreshold&&state.resumableImport?.name!==file.name)){
+  state=await api('/api/import?kind='+kind,{method:'POST',headers:{'X-File-Name':encodeURIComponent(file.name)},body:file});
+  return;
+ }
+ try{
+  state=await resumeVideoUpload({file,receipt:state.resumableImport,request:api,onProgress:record=>{
+   state.resumableImport=record;showResumableImport();
+  }});
+ }catch(error){
+  const uploadId=state.resumableImport?.uploadId;
+  const current=await api('/api/state').catch(()=>null);
+  if(current){
+   state=current;showResumableImport();showPendingImports();
+   if(uploadId&&state.session.project.sourceRefs.some(source=>source.assetId===uploadId))return;
+  }
+  if(error instanceof TypeError)throw new Error('接続が切れました。画面を開き直し、同じ動画を選ぶと続きから読み込めます。');
+  throw error;
+ }
+}
+async function upload(input,kind){
+ const files=[...input.files];
+ if(kind==='video')input.value='';
+ for(const file of files)await uploadFile(file,kind);
+ input.value='';
+}
 $('video-files').onchange=()=>act(()=>upload($('video-files'),'video'));for(const kind of ['bgm','narration','sfx'])$(kind+'-file').onchange=()=>act(()=>upload($(kind+'-file'),kind));
 function showGooglePhotos(){
  const google=state.googlePhotos??{phase:'SETUP_REQUIRED'},phase=google.phase;
