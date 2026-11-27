@@ -5,6 +5,7 @@ import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join, win32} from 'node:path';
 import {createInterface} from 'node:readline';
+import {setTimeout as delay} from 'node:timers/promises';
 import {promisify} from 'node:util';
 import test from 'node:test';
 import {createSystemBrowserOpener} from './system-browser.mjs';
@@ -16,15 +17,19 @@ const windowsCleanupTimeout = 5000;
 async function finishWindowsLauncher(stopTree, childExit, removeWorkspace, timeoutMs = windowsCleanupTimeout) {
   let stage = 'process-tree stop';
   let timer;
+  const cleanup = new AbortController();
   const deadline = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error('WINDOWS_LAUNCHER_CLEANUP_UNCONFIRMED: ' + stage)), timeoutMs);
+    timer = setTimeout(() => {
+      reject(new Error('WINDOWS_LAUNCHER_CLEANUP_UNCONFIRMED: ' + stage));
+      cleanup.abort();
+    }, timeoutMs);
   });
   try {
     await Promise.race([stopTree(), deadline]);
     stage = 'launcher exit';
     await Promise.race([childExit, deadline]);
     stage = 'workspace removal';
-    await Promise.race([removeWorkspace(), deadline]);
+    await Promise.race([removeWorkspace(cleanup.signal), deadline]);
   } finally {
     clearTimeout(timer);
   }
@@ -37,6 +42,57 @@ test('Windows launcher cleanup fails within its deadline when the launcher never
     /WINDOWS_LAUNCHER_CLEANUP_UNCONFIRMED: launcher exit/,
   );
   assert.equal(removed, false);
+});
+
+function startWorkspaceCleanup(args, signal) {
+  return spawn(process.execPath, args, {windowsHide:true, stdio:'ignore', signal, killSignal:'SIGKILL'});
+}
+
+async function removeWorkspaceInChild(folder, signal) {
+  // Recursive removal can outlive its timeout. The deadline stops this worker only.
+  const script = "const {rm}=require('node:fs/promises');rm(process.argv[1],{recursive:true,force:true,maxRetries:3,retryDelay:100}).catch(()=>{process.exitCode=1;})";
+  const cleanup = startWorkspaceCleanup(['-e',script,'--',folder], signal);
+  try {
+    const [code] = await once(cleanup,'exit');
+    if (code !== 0) throw new Error('WINDOWS_LAUNCHER_WORKSPACE_REMOVE_FAILED');
+  } finally {
+    cleanup.unref();
+  }
+}
+
+test('workspace removal deletes the selected fixture and preserves neighboring data', async () => {
+  const root = await mkdtemp(join(tmpdir(),'aivs-cleanup-test-'));
+  const fixture = join(root,'合成 素材');
+  const retained = join(root,'retained.txt');
+  try {
+    await mkdir(fixture);
+    await writeFile(join(fixture,'fixture.txt'),'temporary data');
+    await writeFile(retained,'keep');
+    await finishWindowsLauncher(async () => {}, Promise.resolve(), signal => removeWorkspaceInChild(fixture, signal));
+    await assert.rejects(readFile(join(fixture,'fixture.txt')), {code:'ENOENT'});
+    assert.equal(await readFile(retained,'utf8'),'keep');
+  } finally {
+    await rm(root,{recursive:true,force:true});
+  }
+});
+
+test('workspace removal deadline terminates only its owned cleanup process', async () => {
+  let cleanup, exited;
+  try {
+    await assert.rejects(
+      finishWindowsLauncher(async () => {}, Promise.resolve(), signal => {
+        cleanup = startWorkspaceCleanup(['-e','setInterval(() => {}, 1000)'], signal);
+        exited = new Promise(resolve => cleanup.once('exit', resolve));
+        return once(cleanup, 'exit');
+      }, 100),
+      /WINDOWS_LAUNCHER_CLEANUP_UNCONFIRMED: workspace removal/,
+    );
+    const terminated = await Promise.race([exited.then(() => true), delay(1000,false,{ref:false})]);
+    assert.equal(terminated,true,'the expired cleanup process still owns an event-loop handle');
+  } finally {
+    if (cleanup?.exitCode === null && cleanup.signalCode === null) cleanup.kill('SIGKILL');
+    await exited;
+  }
 });
 
 test('Windows sends the full browser address as data and keeps the PowerShell command fixed', async () => {
@@ -87,7 +143,7 @@ test('Windows launches the local editor from its cmd entry point in a Japanese w
           try{await exec(taskkill,['/pid',String(child.pid),'/t','/f'],{windowsHide:true,timeout:windowsCleanupTimeout});}
           catch(error){if(child.exitCode===null&&child.signalCode===null)throw error;}
         }
-      }, childExit, () => rm(temp,{recursive:true,force:true,maxRetries:3,retryDelay:100}));
+      }, childExit, signal => removeWorkspaceInChild(temp, signal));
     } finally {
       child?.unref();
     }
