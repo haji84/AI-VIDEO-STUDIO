@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
@@ -34,6 +34,11 @@ try {
   free.write('free', 4);
   const media = Buffer.concat([video, free]);
   await writeFile(input, media);
+  const alternate = join(folder, 'different', '再開テスト.mp4');
+  await mkdir(join(folder, 'different'));
+  const different = Buffer.from(media);
+  different[different.length - 1] ^= 1;
+  await writeFile(alternate, different);
 
   browser = await toolkit.chromium.launch({headless: true, executablePath: process.env.AIVS_BROWSER_EXECUTABLE});
   const offsets = [];
@@ -62,6 +67,9 @@ try {
 
   page = await openEditor(false);
   assert.match(await page.locator('#resumable-import').innerText(), /99% を保存/);
+  await page.locator('#video-files').setInputFiles(alternate);
+  await page.waitForFunction(() => document.getElementById('notice').textContent.includes('同じ動画を選んで'));
+  assert.deepEqual(offsets, [0, chunkBytes]);
   await page.locator('#video-files').setInputFiles(input);
   await page.waitForFunction(() => document.getElementById('notice').textContent === '端末内に保存済み');
   assert.deepEqual(offsets, [0, chunkBytes, chunkBytes]);
@@ -72,7 +80,7 @@ try {
   assert.equal(state.session.project.sourceRefs[0].sha256, sha256(media));
   assert.equal(state.resumableImport, null);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({scope: 'browser-resumable-import', verified: true,
+  console.log(JSON.stringify({scope: 'browser-resumable-import', verified: true, alteredSuffixRejected: true,
     committedBeforeInterruption: chunkBytes, sentAfterRestart: media.length - chunkBytes, sha256: sha256(media)}));
 } finally {
   await browser?.close();
