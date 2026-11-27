@@ -11,6 +11,34 @@ import {createSystemBrowserOpener} from './system-browser.mjs';
 
 const exec = promisify(execFile);
 
+const windowsCleanupTimeout = 5000;
+
+async function finishWindowsLauncher(stopTree, childExit, removeWorkspace, timeoutMs = windowsCleanupTimeout) {
+  let stage = 'process-tree stop';
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('WINDOWS_LAUNCHER_CLEANUP_UNCONFIRMED: ' + stage)), timeoutMs);
+  });
+  try {
+    await Promise.race([stopTree(), deadline]);
+    stage = 'launcher exit';
+    await Promise.race([childExit, deadline]);
+    stage = 'workspace removal';
+    await Promise.race([removeWorkspace(), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+test('Windows launcher cleanup fails within its deadline when the launcher never exits', async () => {
+  let removed = false;
+  await assert.rejects(
+    finishWindowsLauncher(async () => {}, new Promise(() => {}), async () => { removed = true; }, 20),
+    /WINDOWS_LAUNCHER_CLEANUP_UNCONFIRMED: launcher exit/,
+  );
+  assert.equal(removed, false);
+});
+
 test('Windows sends the full browser address as data and keeps the PowerShell command fixed', async () => {
   const calls = [];
   const open = createSystemBrowserOpener({platform:'win32', environment:{SystemRoot:'C:\\Windows'},
@@ -50,16 +78,18 @@ test('Windows launches the local editor from its cmd entry point in a Japanese w
   let child,childExit,lines,timer;
   t.after(async()=>{
     clearTimeout(timer);lines?.close();
-    try{
-      if(child?.pid&&child.exitCode===null&&child.signalCode===null){
-        const taskkill=win32.join(system32,'taskkill.exe');
-        try{await exec(taskkill,['/pid',String(child.pid),'/t','/f'],{windowsHide:true,timeout:5000});}
-        catch(error){if(child.exitCode===null&&child.signalCode===null)throw error;}
-      }
-      await childExit;
-    }finally{
-      child?.stdout.destroy();child?.stderr.destroy();
-      await rm(temp,{recursive:true,force:true,maxRetries:3,retryDelay:100});
+    // The system browser may retain inherited pipes after the launch checks.
+    child?.stdout.destroy();child?.stderr.destroy();
+    try {
+      await finishWindowsLauncher(async () => {
+        if(child?.pid&&child.exitCode===null&&child.signalCode===null){
+          const taskkill=win32.join(system32,'taskkill.exe');
+          try{await exec(taskkill,['/pid',String(child.pid),'/t','/f'],{windowsHide:true,timeout:windowsCleanupTimeout});}
+          catch(error){if(child.exitCode===null&&child.signalCode===null)throw error;}
+        }
+      }, childExit, () => rm(temp,{recursive:true,force:true,maxRetries:3,retryDelay:100}));
+    } finally {
+      child?.unref();
     }
   });
   await mkdir(userProfile);await mkdir(configDir,{recursive:true});
