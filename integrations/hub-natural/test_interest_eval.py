@@ -120,4 +120,22 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewHold,'EVAL_INPUT_INVALID'):
             evaluated_detections(None,[])
 
+    def test_overlapping_events_require_maximum_cardinality_not_greedy_iou(self):
+        truth = [scene(SHA1, 0, 10), scene(SHA1, 5, 15)]
+        predictions = [scene(SHA1, 1, 11), scene(SHA1, 0, 5)]
+        for t in (truth, truth[::-1]):
+            for p in (predictions, predictions[::-1]):
+                result = evaluated_detections(t, p)
+                self.assertEqual((result['truePositive'], result['falsePositive'], result['falseNegative']), (2, 0, 0))
+                self.assertEqual(result['perEvent']['capture']['f1'], 1.0)
+                self.assertEqual(result['holdoutIndependence'], 'NOT_VERIFIED')
+
+    def test_matching_does_not_reuse_truth_or_cross_source_or_event(self):
+        truth = [scene(SHA1, 0, 10)]
+        predictions = [scene(SHA1, 0, 10), scene(SHA1, 0, 10),
+                       scene(SHA2, 0, 10), scene(SHA1, 0, 10, 'discovery')]
+        result = evaluated_detections(truth, predictions)
+        self.assertEqual((result['truePositive'], result['falsePositive'], result['falseNegative']), (1, 3, 0))
+        self.assertEqual(result['perEvent']['discovery']['falsePositive'], 1)
+
 if __name__=='__main__': unittest.main()
