@@ -246,6 +246,98 @@ def evaluated_detections(truth, predictions, *, min_overlap=.4):
     }
 
 
+
+def evaluated_species_windows(truth, predictions):
+    """Evaluate species presence on predeclared, disjoint reviewed windows.
+
+    habu/not_habu mean presence/absence of a habu in the window, not
+    event labels, motion, or a confidence score. Unidentifiable truth is
+    unknown; a missed or abstained prediction never earns a correct answer.
+    No independent holdout or trained detector is certified by this function.
+    """
+    labels = ('habu', 'not_habu', 'unknown')
+
+    def index(rows, require_review):
+        if not isinstance(rows, list) or len(rows) > 10000:
+            raise ReviewHold('SPECIES_INPUT_INVALID')
+        result = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ReviewHold('SPECIES_INPUT_INVALID')
+            sha = row.get('sourceSha256')
+            if not isinstance(sha, str) or not HEX64.fullmatch(sha):
+                raise ReviewHold('SPECIES_SOURCE_INVALID')
+            start, end = row.get('start'), row.get('end')
+            if not (_bounded(start, 0, 14400) and _bounded(end, 0, 14400) and end > start):
+                raise ReviewHold('SPECIES_WINDOW_INVALID')
+            if row.get('species') not in labels:
+                raise ReviewHold('SPECIES_LABEL_INVALID')
+            if require_review and (row.get('reviewed') is not True or
+                                   row.get('speciesEvidence') != 'human_checked'):
+                raise ReviewHold('SPECIES_TRUTH_UNVERIFIED')
+            key = (sha, start, end)
+            if key in result:
+                raise ReviewHold('SPECIES_WINDOW_DUPLICATE')
+            result[key] = row
+        return result
+
+    gold = index(truth, True)
+    predicted = index(predictions, False)
+    if predicted.keys() - gold.keys():
+        raise ReviewHold('SPECIES_PREDICTION_OUT_OF_SCOPE')
+    last_end, nights = {}, {}
+    for key in sorted(gold):
+        sha, start, end = key
+        if start < last_end.get(sha, 0):
+            raise ReviewHold('SPECIES_WINDOW_OVERLAP')
+        last_end[sha] = end
+        night = gold[key].get('reviewNight')
+        if not isinstance(night, str) or not night or night.strip() != night:
+            raise ReviewHold('SPECIES_NIGHT_INVALID')
+        if nights.setdefault(sha, night) != night:
+            raise ReviewHold('SPECIES_NIGHT_CONFLICT')
+
+    tp = fp = tn = fn = ap = an = unknown = missing = 0
+    known_nights = set()
+    for key, row in gold.items():
+        actual = row['species']
+        guess = predicted[key]['species'] if key in predicted else 'unknown'
+        missing += key not in predicted
+        if actual == 'unknown':
+            unknown += 1
+            continue
+        known_nights.add(nights[key[0]])
+        if actual == 'habu':
+            tp += guess == 'habu'
+            fn += guess == 'not_habu'
+            ap += guess == 'unknown'
+        else:
+            fp += guess == 'habu'
+            tn += guess == 'not_habu'
+            an += guess == 'unknown'
+    positive = tp + fn + ap
+    negative = tn + fp + an
+    known = positive + negative
+    def ratio(a, b):
+        return round(a / b, 4) if b else None
+    return {
+        'status': 'SPECIES_WINDOW_METRICS_ONLY_INDEPENDENCE_NOT_VERIFIED',
+        'truePositive': tp, 'falsePositive': fp, 'trueNegative': tn,
+        'falseNegative': fn, 'abstainedPositive': ap, 'abstainedNegative': an,
+        'labeledPositive': positive, 'labeledNegative': negative,
+        'unknownTruth': unknown, 'missingPredictions': missing,
+        'precision': ratio(tp, tp + fp),
+        'strictRecall': ratio(tp, positive),
+        'strictSpecificity': ratio(tn, negative),
+        'strictF1': ratio(2 * tp, 2 * tp + fp + fn + ap),
+        'strictAccuracy': ratio(tp + tn, known),
+        'knownTruthCoverage': ratio(known - ap - an, known),
+        'declaredNights': len(known_nights), 'independentNights': None,
+        'holdoutIndependence': 'NOT_VERIFIED', 'productionApproved': False,
+        'note': 'SPECIES_WINDOW_ONLY_NOT_EVENT_OR_VIRALITY_EVALUATION',
+    }
+
+
 def rank_private_file(input_path, output_path):
     inp=Path(input_path).resolve(strict=True)
     out=Path(output_path).resolve()
