@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from interest_eval import (SCHEMA, ReviewHold, rank_reviewed,
-                           rank_private_file, evaluated_detections)
+                           rank_private_file, evaluated_detections, evaluated_species_windows)
 
 SHA1=hashlib.sha256(b'fixture-capture').hexdigest()
 SHA2=hashlib.sha256(b'fixture-vehicle-road').hexdigest()
@@ -137,5 +137,49 @@ class Tests(unittest.TestCase):
         result = evaluated_detections(truth, predictions)
         self.assertEqual((result['truePositive'], result['falsePositive'], result['falseNegative']), (1, 3, 0))
         self.assertEqual(result['perEvent']['discovery']['falsePositive'], 1)
+
+
+    def test_species_window_metrics_penalize_abstentions_and_missing_predictions(self):
+        def window(start, label):
+            return dict(sourceSha256=SHA1, start=start, end=start+1,
+                        species=label, reviewed=True, speciesEvidence='human_checked',
+                        reviewNight='synthetic-night')
+        truth=[window(i, label) for i,label in enumerate(
+            ['habu','habu','habu','not_habu','not_habu','not_habu','unknown'])]
+        predictions=[dict(truth[i], species=label) for i,label in
+                     [(0,'habu'),(1,'unknown'),(3,'habu'),(4,'not_habu'),(6,'habu')]]
+        r=evaluated_species_windows(truth,predictions)
+        self.assertEqual((r['truePositive'],r['falsePositive'],r['trueNegative'],r['falseNegative']), (1,1,1,0))
+        self.assertEqual((r['abstainedPositive'],r['abstainedNegative'],r['missingPredictions']), (2,1,2))
+        self.assertEqual((r['precision'],r['strictRecall'],r['strictSpecificity'],r['strictAccuracy']), (.5,.3333,.3333,.3333))
+        self.assertEqual(r['knownTruthCoverage'], .5)
+        self.assertEqual(r['unknownTruth'],1)
+        self.assertEqual(r['holdoutIndependence'],'NOT_VERIFIED')
+        self.assertFalse(r['productionApproved'])
+
+    def test_species_windows_require_human_species_evidence_and_exact_scope(self):
+        a=dict(scene(),species='habu',speciesEvidence='human_checked',reviewNight='night-1')
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_TRUTH_UNVERIFIED'):
+            evaluated_species_windows([dict(a,speciesEvidence='model_suggestion')],[])
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_WINDOW_DUPLICATE'):
+            evaluated_species_windows([a,a],[])
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_WINDOW_OVERLAP'):
+            evaluated_species_windows([a,dict(a,start=2,end=5)],[])
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_PREDICTION_OUT_OF_SCOPE'):
+            evaluated_species_windows([a],[dict(a,sourceSha256=SHA2)])
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_WINDOW_DUPLICATE'):
+            evaluated_species_windows([a],[a,a])
+
+    def test_species_unknown_truth_not_a_negative_and_event_not_species(self):
+        a=dict(scene(event='capture'),species='unknown',speciesEvidence='human_checked',reviewNight='night-1')
+        r=evaluated_species_windows([a],[dict(a,species='habu')])
+        self.assertEqual((r['unknownTruth'],r['labeledNegative'],r['falsePositive']),(1,0,0))
+        self.assertIsNone(r['strictAccuracy'])
+        b=dict(a); b.pop('species')
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_LABEL_INVALID'):
+            evaluated_species_windows([b],[])
+        c=dict(a,start=5,end=8,reviewNight='night-2')
+        with self.assertRaisesRegex(ReviewHold,'SPECIES_NIGHT_CONFLICT'):
+            evaluated_species_windows([a,c],[])
 
 if __name__=='__main__': unittest.main()
